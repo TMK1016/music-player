@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-25",
+  "updated_at": "2026-10-26",
   "title": "Music Player 開發流程",
   "mode": "development-with-manual-evidence",
   "platform_assumption": "Mac M2／Xcode 開發已確認；最終車用播放端待確認；UI 可於 macOS 操作並支援 iOS 編譯",
@@ -209,7 +209,8 @@
         "複製／資料庫失敗可恢復"
       ],
       "evidence": [
-        "docs/zh-TW/本機音訊實作與驗收.md"
+        "docs/zh-TW/本機音訊實作與驗收.md",
+        "docs/product/UIUX-首頁與播放體驗.md"
       ],
       "implementation_scope": "已實作複製、去重、原子索引與收藏；命名歌單、標籤／封面與大量曲庫待完成。",
       "implemented_paths": [
@@ -239,7 +240,8 @@
         "候選格式逐一測試"
       ],
       "evidence": [
-        "docs/zh-TW/本機音訊實作與驗收.md"
+        "docs/zh-TW/本機音訊實作與驗收.md",
+        "docs/product/UIUX-首頁與播放體驗.md"
       ],
       "implementation_scope": "本機播放、暫停、定位、切歌與自然結尾已接入；格式矩陣、長時連播與路由驗證未完成。",
       "implemented_paths": [
@@ -312,7 +314,8 @@
         "docs/zh-TW/音效模式驗收.md",
         "docs/zh-TW/車輛設定簡化.md",
         "docs/zh-TW/七段等化器與模式管理.md",
-        "docs/zh-TW/模式內嵌展開與儲存提示.md"
+        "docs/zh-TW/模式內嵌展開與儲存提示.md",
+        "docs/product/UIUX-首頁與播放體驗.md"
       ],
       "implemented_paths": [
         "apps/apple/OrcaPlayer/SoundProfiles.swift",
@@ -675,7 +678,8 @@
       "evidence": [
         "docs/zh-TW/介面實作與驗收.md",
         "docs/zh-TW/七段等化器與模式管理.md",
-        "docs/zh-TW/模式內嵌展開與儲存提示.md"
+        "docs/zh-TW/模式內嵌展開與儲存提示.md",
+        "docs/product/UIUX-首頁與播放體驗.md"
       ],
       "implementation_scope": "v0.6 七段無橫移調整區、單列模式與完整選擇面板；360 點寬預覽驗證。橫向手勢自動展開已接入，手機手勢實測待確認。"
     }

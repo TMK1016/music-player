@@ -3,6 +3,41 @@
   "updated_at": "2026-10-26",
   "entries": [
     {
+      "id": "uiux-requirements-20261026",
+      "version": "需求 2.0",
+      "date": "2026-10-26",
+      "title": "完整首頁、播放器及曲庫規格",
+      "summary": "整理三頁導覽、清單／歌手／評分／排行榜／人工資料編輯，明確待決策與驗收。",
+      "changes": [
+        {
+          "id": "uiux-library-player-spec",
+          "title": "功能與UIUX需求基準",
+          "summary": "保存完整英文對照；更新PM工作與驗收，保留3星重疊規則，未改App。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01",
+            "PLAY-01",
+            "PROFILE-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/product/UIUX-首頁與播放體驗.md",
+              "label": "UIUX-首頁與播放體驗.md"
+            },
+            {
+              "path": "docs/en/library-and-player-ui-requirements.md",
+              "label": "library-and-player-ui-requirements.md"
+            },
+            {
+              "path": "planning/pm-plan.json",
+              "label": "pm-plan.json"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "github-backup-20261026",
       "version": "備份 1.0",
       "date": "2026-10-26",

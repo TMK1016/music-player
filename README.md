@@ -4,6 +4,8 @@
 
 [專案主筆記（Obsidian 編輯入口）](notes/專案主筆記.md)
 
+[2026-10-26 功能與UIUX規格](docs/product/UIUX-首頁與播放體驗.md)（規劃，尚未改版）
+
 **PM 管理入口**：[產品需求基準](docs/product/PRD-music-player.md)／[流程與驗收](docs/product/PM流程與驗收.md)／[互動 PM 與工程圖](planning/flow-inspector.html)／[任務來源](planning/pm-plan.json)
 
 **v0.6.1 模式改為橫欄下方原位展開，手動調整滑桿後提供「儲存新模式」。v0.6 改為合理分佈的 7 段 EQ，七欄完整適配螢幕；模式改為單列／完整選單，支援自訂新增、移除與舊資料轉換。保留合成響應餘裕，未加入響度補償或限制器。**
@@ -23,7 +25,7 @@
 - [Mac v0.4 開發包](deliverables/OrcaPlayer-macOS-0.4-sound-profiles.zip)：歷史開發包，未公證／上架，v0.4 已另透過 Xcode 更新並啟動於連線 iPhone；實車驗證仍待完成。
 
 - [開發日誌與更新流程](docs/zh-TW/開發日誌與更新流程.md)
-- [日誌資料來源](planning/changelog.json)：16 階段、38 項改動，與 App 共用。
+- [日誌資料來源](planning/changelog.json)：17 階段、39 項改動，與 App 共用。
 - [本次需求英文翻譯](docs/en/development-journal-requirements.md)
 - [Mac v0.3 開發日誌版本](deliverables/OrcaPlayer-macOS-0.3-development-log.zip)：歷史開發包，首頁側邊欄包含開發日誌。
 
