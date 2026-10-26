@@ -10,7 +10,9 @@ struct ContentView: View {
                 if wide { sidebar.frame(width: 210) }
                 VStack(spacing: 0) {
                     header(wide: wide)
-                    ScrollView {
+                    if model.page == .player {
+                        MusicPlayerPage(model: model)
+                    } else { ScrollView {
                         Group {
                             switch model.page {
                             case .settings: MusicSettingsView(model: model)
@@ -20,7 +22,7 @@ struct ContentView: View {
                             case .developmentLog: DevelopmentLogView(model: model)
                             }
                         }.padding(wide ? 28 : (model.page == .equalizer ? 12 : 20))
-                    }.id(model.page.rawValue)
+                    }.id(model.page.rawValue) }
                     if model.hasPlaybackSession && model.page != .player { CompactMusicPlayer(model: model) }
                     if !wide { mobileNavigation }
                 }
@@ -73,7 +75,7 @@ struct ContentView: View {
                 Image(systemName: "sparkles").foregroundStyle(OrcaTheme.cyan)
                 Text("為每段旅程\n找到你的聲音。")
                     .font(.system(size: 15, weight: .medium)).lineSpacing(5)
-                Text("MUSIC PLAYER / 0.7.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
+                Text("MUSIC PLAYER / 0.8.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
             }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                 .background(LinearGradient(colors: [OrcaTheme.blue.opacity(0.17), OrcaTheme.panel], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 15))
                 .padding(.bottom, 22)
@@ -92,12 +94,12 @@ struct ContentView: View {
                 Spacer()
                 if wide { Tag(text: "本機播放", symbol: "waveform") }
             }.padding(.horizontal, wide ? 28 : 20).padding(.top, wide ? 26 : 16).padding(.bottom, 15)
-            HStack(spacing: 6) {
+            if model.page != .player { HStack(spacing: 6) {
                 Image(systemName: "info.circle").foregroundStyle(OrcaTheme.cyan)
                 Text(model.statusText)
                 Spacer(minLength: 0)
             }.font(.system(size: 11)).foregroundStyle(OrcaTheme.muted)
-                .padding(.horizontal, wide ? 28 : 20).padding(.bottom, 13)
+                .padding(.horizontal, wide ? 28 : 20).padding(.bottom, 13) }
             Rectangle().fill(OrcaTheme.line.opacity(0.7)).frame(height: 1)
         }
     }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ModeSelectionStrip: View {
     @ObservedObject var model: PlayerModel
+    var useSongPolicy = false
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
@@ -14,7 +15,7 @@ struct ModeSelectionStrip: View {
             }.buttonStyle(.plain).foregroundStyle(OrcaTheme.cyan)
             scrollingModes
             if model.modesExpanded {
-                ExpandedModeGrid(model: model).transition(.opacity.combined(with: .move(edge: .top)))
+                ExpandedModeGrid(model: model, useSongPolicy: useSongPolicy).transition(.opacity.combined(with: .move(edge: .top)))
             }
             Text("左右滑動可在下方展開全部模式；長按模式可管理。").font(.system(size: 10)).foregroundStyle(OrcaTheme.muted)
         }
@@ -35,7 +36,7 @@ struct ModeSelectionStrip: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(model.modeOptions) { option in
-                    Button { model.applyPreset(id: option.id) } label: {
+                    Button { if useSongPolicy && model.useSongProfiles { model.bindSong(to: option.id) } else { model.applyPreset(id: option.id) } } label: {
                         HStack(spacing: 5) {
                             if option.isCustom { Image(systemName: "person.crop.circle").font(.system(size: 10)) }
                             Text(option.name).lineLimit(1)
@@ -71,6 +72,7 @@ struct ModeActions: View {
 }
 struct ExpandedModeGrid: View {
     @ObservedObject var model: PlayerModel
+    var useSongPolicy = false
     var body: some View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("自訂模式 \(model.customPresets.count) / 20").font(.caption).foregroundStyle(OrcaTheme.muted)
@@ -84,7 +86,7 @@ struct ExpandedModeGrid: View {
                                         .accessibilityLabel("管理 \(option.name)")
                                 }
                                 Button {
-                                    model.applyPreset(id: option.id)
+                                    if useSongPolicy && model.useSongProfiles { model.bindSong(to: option.id) } else { model.applyPreset(id: option.id) }
                                 } label: {
                                     VStack(alignment: .leading, spacing: 5) {
                                         Text(option.name).font(.system(size: 14, weight: .semibold)).lineLimit(2)

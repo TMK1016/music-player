@@ -40,6 +40,7 @@ extension PlayerModel {
     func rating(_ id: String) -> Int { collection.songs[id]?.rating ?? 0 }
     func setRating(_ id: String, _ value: Int) {
         guard tracks.contains(where: { $0.id == id }), (0...5).contains(value) else { return }
+        guard rating(id) != value else { return }
         var info = details(id); info.rating = value == 0 ? nil : value; collection.songs[id] = info
     }
     func editSong(_ track: AudioTrack, title: String, artistName: String) {
@@ -130,5 +131,20 @@ enum PreferencesCleanup {
         object.removeValue(forKey: "vehicle")
         object.removeValue(forKey: "seatDistances")
         return try JSONSerialization.data(withJSONObject: object)
+    }
+}
+
+enum RatingInteraction {
+    static func value(at x: Double, width: Double) -> Int {
+        guard x.isFinite, width.isFinite, width > 0 else { return 0 }
+        return min(5, max(1, Int(ceil(min(width, max(0, x)) / width * 5))))
+    }
+}
+extension PlayerModel {
+    func setPlaybackMode(_ name: String) {
+        guard ["順序播放", "單曲重複", "清單循環", "隨機播放"].contains(name) else { return }
+        repeatOne = name == "單曲重複"
+        repeatAll = name == "清單循環"
+        shuffle = name == "隨機播放"
     }
 }

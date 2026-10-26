@@ -3,6 +3,143 @@
   "updated_at": "2026-10-26",
   "entries": [
     {
+      "id": "release-0-8",
+      "version": "v0.8.0",
+      "date": "2026-10-26",
+      "title": "依設計稿重做播放頁與原位EQ",
+      "summary": "封面右滑切七段EQ、固定播放控制、五星滑動評分與整合播放模式。",
+      "changes": [
+        {
+          "id": "v08-cover-eq",
+          "title": "封面與七段EQ共用播放頁",
+          "summary": "封面右滑或按鈕切面；不重載播放器，進度與控制固定。",
+          "node_ids": [
+            "UI-01",
+            "EQ-01",
+            "PLAY-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+              "label": "ModeSelectionView.swift"
+            }
+          ]
+        },
+        {
+          "id": "v08-rating-modes",
+          "title": "五星評分與單一播放模式入口",
+          "summary": "空心星可點選／滑動／VoiceOver調整；模式選單互斥。",
+          "node_ids": [
+            "LIB-01",
+            "PLAY-01",
+            "QA-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "MusicCollection.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            }
+          ]
+        },
+        {
+          "id": "v08-design-source",
+          "title": "採用本機UIUX技能與參考圖",
+          "summary": "保存設計來源及實際技能查詢，不將下載技能誤稱已全域安裝。",
+          "node_ids": [
+            "UI-01",
+            "FLOW-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "DESIGN.md",
+              "label": "DESIGN.md"
+            },
+            {
+              "path": "docs/zh-TW/播放頁滑動調音改版.md",
+              "label": "播放頁滑動調音改版.md"
+            },
+            {
+              "path": "docs/design/references/playback-annotated.png",
+              "label": "playback-annotated.png"
+            },
+            {
+              "path": "docs/design/references/inline-equalizer.png",
+              "label": "inline-equalizer.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-7-1",
+      "version": "v0.7.1",
+      "date": "2026-10-26",
+      "title": "修復音訊通知執行緒崩潰",
+      "summary": "依iPhone真實堆疊修正Swift 6 actor隔離錯誤，新增設定頁版本標籤與背景通知回歸。",
+      "changes": [
+        {
+          "id": "v071-audio-callback",
+          "title": "音訊引擎通知安全切回主actor",
+          "summary": "明確非隔離Sendable訂閱及主actor處理；不關閉並行檢查。",
+          "node_ids": [
+            "PLAY-01",
+            "IOS-01",
+            "QA-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/v0.7.1音訊回呼崩潰修復.md",
+              "label": "v0.7.1音訊回呼崩潰修復.md"
+            }
+          ]
+        },
+        {
+          "id": "v071-visible-version",
+          "title": "設定頁直接核對版本與build",
+          "summary": "從安裝包Info.plist顯示版本，避免僅以Xcode Running判定交付成功。",
+          "node_ids": [
+            "UI-01",
+            "RELEASE-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "設定頁版本資訊"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-0-7",
       "version": "v0.7.0",
       "date": "2026-10-26",

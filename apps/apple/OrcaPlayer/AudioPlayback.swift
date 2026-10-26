@@ -83,29 +83,26 @@ enum EqualizerSettings {
         engine.attach(equalizer)
         engine.attach(bassUnit)
         engine.attach(reverb)
-        NotificationCenter.default.publisher(for: .AVAudioEngineConfigurationChange, object: engine)
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    guard let self, self.file != nil else { return }
-                    let position = self.currentTime
-                    self.generation += 1
-                    self.player.stop()
-                    self.engine.stop()
-                    self.segmentStart = AVAudioFramePosition(position * (self.file?.processingFormat.sampleRate ?? 44_100))
-                    self.scheduled = false
-                    self.needsReconnect = true
-                    self.onInterruption?("音訊輸出已變更，播放已暫停。請按播放重新連接。")
-                }
-            }.store(in: &observers)
+        AudioNotificationBridge.observe(.AVAudioEngineConfigurationChange, object: engine) { [weak self] in
+            guard let self, self.file != nil else { return }
+            let position = self.currentTime
+            self.generation += 1
+            self.player.stop()
+            self.engine.stop()
+            self.segmentStart = AVAudioFramePosition(position * (self.file?.processingFormat.sampleRate ?? 44_100))
+            self.scheduled = false
+            self.needsReconnect = true
+            self.onInterruption?("音訊輸出已變更，播放已暫停。請按播放重新連接。")
+        }.store(in: &observers)
         #if os(iOS)
         NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)
-            .sink { [weak self] notification in
+            .sink { @Sendable [weak self] notification in
                 let began = (notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt) == AVAudioSession.InterruptionType.began.rawValue
                 guard began else { return }
                 Task { @MainActor [weak self] in self?.pause(); self?.onInterruption?("播放已被系統中斷，請在方便時重新播放。") }
             }.store(in: &observers)
         NotificationCenter.default.publisher(for: AVAudioSession.routeChangeNotification)
-            .sink { [weak self] notification in
+            .sink { @Sendable [weak self] notification in
                 let disconnected = (notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt) == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue
                 guard disconnected else { return }
                 Task { @MainActor [weak self] in self?.pause(); self?.onInterruption?("音訊裝置已中斷，播放已暫停。") }
@@ -170,7 +167,7 @@ enum EqualizerSettings {
         let token = generation
         let frames = AVAudioFrameCount(file.length - segmentStart)
         scheduled = true
-        player.scheduleSegment(file, startingFrame: segmentStart, frameCount: frames, at: nil, completionCallbackType: .dataPlayedBack) { [weak self] _ in
+        player.scheduleSegment(file, startingFrame: segmentStart, frameCount: frames, at: nil, completionCallbackType: .dataPlayedBack) { @Sendable [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, self.generation == token else { return }
                 self.scheduled = false
@@ -226,5 +223,17 @@ enum EqualizerSettings {
         equalizer.globalGain = EQHeadroom.gain(gains: gains, bass: amount, sampleRate: sampleRate, ambience: ambience, mix: mix)
         reverb.wetDryMix = enabled && ambience != .off ? Float(mix.isFinite ? min(35, max(0, mix)) : 0) : 0
         reverb.bypass = !enabled || ambience == .off
+    }
+}
+
+/// Notifications may arrive on AVAudioEngine's serial queue. The subscriber must
+/// be nonisolated; only the action is scheduled onto the main actor.
+enum AudioNotificationBridge {
+    nonisolated static func observe(_ name: Notification.Name, object: AnyObject? = nil,
+                                   action: @escaping @MainActor @Sendable () -> Void) -> AnyCancellable {
+        NotificationCenter.default.publisher(for: name, object: object)
+            .sink { @Sendable _ in
+                Task { @MainActor in action() }
+            }
     }
 }

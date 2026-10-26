@@ -3,6 +3,7 @@ import SwiftUI
 struct EqualizerCard: View {
     @ObservedObject var model: PlayerModel
     var condensed = false
+    var isPlaybackPanel = false
     var body: some View {
         Panel(padding: 14) {
             VStack(alignment: .leading, spacing: 20) {
@@ -31,7 +32,7 @@ struct EqualizerCard: View {
                             .buttonStyle(.borderedProminent).disabled(model.customPresets.count >= 20)
                     }
                 }
-                ModeSelectionStrip(model: model)
+                ModeSelectionStrip(model: model, useSongPolicy: isPlaybackPanel)
                 HStack {
                     Text(String(format: "前級餘裕 %+.1f dB", model.headroomDB)).font(.system(size: 10)).foregroundStyle(OrcaTheme.muted)
                     Spacer()

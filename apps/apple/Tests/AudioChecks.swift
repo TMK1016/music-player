@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import Combine
 
 @MainActor final class FakeAudioPlayer: AudioPlayback {
     var currentTime = 0.0
@@ -25,6 +26,19 @@ import AVFoundation
 
 @main struct AudioChecks {
     @MainActor static func main() async throws {
+        // Reproduce the real engine notification's queue boundary without audio hardware.
+        let notification = Notification.Name("MusicPlayer.background-engine-regression")
+        let signal = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+            var token: AnyCancellable?
+            token = AudioNotificationBridge.observe(notification) {
+                MainActor.assertIsolated()
+                token?.cancel()
+                continuation.resume(returning: true)
+            }
+            DispatchQueue.global().async { NotificationCenter.default.post(name: notification, object: nil) }
+        }
+        precondition(signal, "Background audio notification safely reaches MainActor")
+        print("PASS: real notification bridge accepts a background callback and executes its handler on MainActor")
         let work = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true).appendingPathComponent("test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: work) }
@@ -64,6 +78,17 @@ import AVFoundation
         let uiModel = PlayerModel(audio: uiAudio, libraryRoot: uiRoot, demoURL: fixture)
         await uiModel.loadLibrary()
         precondition(uiModel.songs(in: "liked").isEmpty && uiModel.songs(in: "unfamiliar").isEmpty, "Unrated excluded from both modes")
+        precondition(RatingInteraction.value(at: -20, width: 220) == 1 && RatingInteraction.value(at: 500, width: 220) == 5, "Star drag clamps at both edges")
+        precondition(RatingInteraction.value(at: 44, width: 220) == 1 && RatingInteraction.value(at: 45, width: 220) == 2 && RatingInteraction.value(at: 220, width: 220) == 5, "Star drag maps all five hit regions")
+        precondition(RatingInteraction.value(at: .nan, width: 220) == 0 && RatingInteraction.value(at: 5, width: 0) == 0, "Invalid geometry never creates invalid rating")
+        uiModel.setPlaybackMode("單曲重複")
+        precondition(uiModel.repeatOne && !uiModel.repeatAll && !uiModel.shuffle, "Unified mode selects repeat-one exclusively")
+        uiModel.setPlaybackMode("隨機播放")
+        precondition(!uiModel.repeatOne && !uiModel.repeatAll && uiModel.shuffle, "Unified mode clears conflicting options")
+        uiModel.setPlaybackMode("清單循環")
+        precondition(!uiModel.repeatOne && uiModel.repeatAll && !uiModel.shuffle, "Unified loop mode is exclusive")
+        uiModel.setPlaybackMode("順序播放")
+        precondition(!uiModel.repeatOne && !uiModel.repeatAll && !uiModel.shuffle, "Sequential restores no-repeat state")
         uiModel.setRating(AudioTrack.demo.id, 3)
         precondition(uiModel.songs(in: "liked").count == 1 && uiModel.songs(in: "unfamiliar").count == 1, "Three stars belongs to both modes")
         precondition(uiModel.favorites.isEmpty, "Rating does not change favorites")
@@ -78,6 +103,13 @@ import AVFoundation
         uiModel.updateArtist(artistID, name: "New Artist", avatar: nil)
         precondition(uiModel.artist(.demo) == "New Artist" && uiModel.title(.demo) == "Renamed", "Artist rename preserves song identity")
         uiModel.choose(.demo)
+        let loadedBeforeUI = uiAudio.loadedURL
+        uiModel.page = .player
+        uiModel.adjustBand(0, to: 1.5)
+        precondition(uiModel.isPlaying && uiAudio.playing && uiAudio.loadedURL == loadedBeforeUI && uiAudio.appliedGains[0] == 1.5, "In-player EQ reaches backend without stopping or reloading the track")
+        uiModel.setRating(AudioTrack.demo.id, 5)
+        precondition(uiModel.isPlaying && uiAudio.playing, "Rating while listening never interrupts playback")
+        uiModel.setRating(AudioTrack.demo.id, 3)
         let clock = ProcessInfo.processInfo.systemUptime
         uiAudio.currentTime = 9; uiModel.pollPlayback(now: clock + 9)
         precondition(uiModel.playCount(AudioTrack.demo.id, monthly: false) == 0, "Exactly half is not counted")

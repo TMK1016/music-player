@@ -1,7 +1,1063 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-24",
+  "updated_at": "2026-10-26",
   "entries": [
+    {
+      "id": "release-0-8",
+      "version": "v0.8.0",
+      "date": "2026-10-26",
+      "title": "依設計稿重做播放頁與原位EQ",
+      "summary": "封面右滑切七段EQ、固定播放控制、五星滑動評分與整合播放模式。",
+      "changes": [
+        {
+          "id": "v08-cover-eq",
+          "title": "封面與七段EQ共用播放頁",
+          "summary": "封面右滑或按鈕切面；不重載播放器，進度與控制固定。",
+          "node_ids": [
+            "UI-01",
+            "EQ-01",
+            "PLAY-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+              "label": "ModeSelectionView.swift"
+            }
+          ]
+        },
+        {
+          "id": "v08-rating-modes",
+          "title": "五星評分與單一播放模式入口",
+          "summary": "空心星可點選／滑動／VoiceOver調整；模式選單互斥。",
+          "node_ids": [
+            "LIB-01",
+            "PLAY-01",
+            "QA-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "MusicCollection.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            }
+          ]
+        },
+        {
+          "id": "v08-design-source",
+          "title": "採用本機UIUX技能與參考圖",
+          "summary": "保存設計來源及實際技能查詢，不將下載技能誤稱已全域安裝。",
+          "node_ids": [
+            "UI-01",
+            "FLOW-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "DESIGN.md",
+              "label": "DESIGN.md"
+            },
+            {
+              "path": "docs/zh-TW/播放頁滑動調音改版.md",
+              "label": "播放頁滑動調音改版.md"
+            },
+            {
+              "path": "docs/design/references/playback-annotated.png",
+              "label": "playback-annotated.png"
+            },
+            {
+              "path": "docs/design/references/inline-equalizer.png",
+              "label": "inline-equalizer.png"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-7-1",
+      "version": "v0.7.1",
+      "date": "2026-10-26",
+      "title": "修復音訊通知執行緒崩潰",
+      "summary": "依iPhone真實堆疊修正Swift 6 actor隔離錯誤，新增設定頁版本標籤與背景通知回歸。",
+      "changes": [
+        {
+          "id": "v071-audio-callback",
+          "title": "音訊引擎通知安全切回主actor",
+          "summary": "明確非隔離Sendable訂閱及主actor處理；不關閉並行檢查。",
+          "node_ids": [
+            "PLAY-01",
+            "IOS-01",
+            "QA-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/v0.7.1音訊回呼崩潰修復.md",
+              "label": "v0.7.1音訊回呼崩潰修復.md"
+            }
+          ]
+        },
+        {
+          "id": "v071-visible-version",
+          "title": "設定頁直接核對版本與build",
+          "summary": "從安裝包Info.plist顯示版本，避免僅以Xcode Running判定交付成功。",
+          "node_ids": [
+            "UI-01",
+            "RELEASE-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "設定頁版本資訊"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-7",
+      "version": "v0.7.0",
+      "date": "2026-10-26",
+      "title": "三頁曲庫、迷你播放器與聆聽限制",
+      "summary": "開始新版UIUX：半透明歌曲格、三頁導覽、曲庫評分與人工分類、跨頁播放、定時及歌曲數停止。",
+      "changes": [
+        {
+          "id": "v07-navigation-mini",
+          "title": "三頁導覽與底部迷你播放器",
+          "summary": "背景50%歌曲格；成功播放後跨頁保留迷你播放器，可展開與控制。",
+          "node_ids": [
+            "UI-01",
+            "PLAY-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryView.swift",
+              "label": "LibraryView.swift"
+            }
+          ]
+        },
+        {
+          "id": "v07-collection",
+          "title": "清單、評分、歌手及播放統計",
+          "summary": "保留原ID；清單引用、人工編輯、頭貼、星等、半曲計次與刪App音檔。",
+          "node_ids": [
+            "LIB-01",
+            "PLAY-01",
+            "QA-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "MusicCollection.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryStore.swift",
+              "label": "LibraryStore.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            }
+          ]
+        },
+        {
+          "id": "v07-sleep-route",
+          "title": "聆聽限制與系統輸出",
+          "summary": "分鐘倒數或自然播完首數停止；使用系統音訊路由選擇，不提供藍牙輸入。",
+          "node_ids": [
+            "PLAY-01",
+            "IOS-01",
+            "QA-02"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "docs/zh-TW/三頁曲庫與定時實作.md",
+              "label": "三頁曲庫與定時實作.md"
+            }
+          ]
+        },
+        {
+          "id": "v07-remove-vehicle",
+          "title": "撤除車輛設定與試音資料",
+          "summary": "刪除車輛頁／模型／試音資源，啟動清理現用與舊備份偏好中的車輛欄位；保留歌曲及音效。",
+          "node_ids": [
+            "PROFILE-01",
+            "UI-01",
+            "GATE-02"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/移除車輛設定.md",
+              "label": "移除車輛設定.md"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/OrcaPlayerApp.swift",
+              "label": "OrcaPlayerApp.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "MusicCollection.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            }
+          ]
+        },
+        {
+          "id": "v07-iphone-deployment",
+          "title": "更新連線iPhone並確認啟動",
+          "summary": "Clean後以新版路徑部署v0.7.0／9，確認Running與簽章產物；不等於完整播放或背景測試。",
+          "node_ids": [
+            "IOS-01",
+            "RELEASE-01",
+            "QA-02"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/iPhone安裝紀錄.md",
+              "label": "iPhone安裝紀錄"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rating-delete-count-20261026",
+      "version": "需求 2.1",
+      "date": "2026-10-26",
+      "title": "確認未評分、刪除及播放計次規則",
+      "summary": "未評分排除喜好／陌生；移除清單與刪檔分開，刪檔需二次確認；超過半曲計次、重播可計。",
+      "changes": [
+        {
+          "id": "rating-delete-count-rules",
+          "title": "三項產品決策與邊界驗收",
+          "summary": "更新UIUX與PM規格，區分50%邊界、實際播放時長與清單／檔案影響；尚未實作。",
+          "node_ids": [
+            "LIB-01",
+            "PLAY-01",
+            "UI-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/product/UIUX-首頁與播放體驗.md",
+              "label": "UIUX-首頁與播放體驗.md"
+            },
+            {
+              "path": "planning/pm-plan.json",
+              "label": "pm-plan.json"
+            },
+            {
+              "path": "docs/en/library-and-player-ui-requirements.md",
+              "label": "library-and-player-ui-requirements.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uiux-requirements-20261026",
+      "version": "需求 2.0",
+      "date": "2026-10-26",
+      "title": "完整首頁、播放器及曲庫規格",
+      "summary": "整理三頁導覽、清單／歌手／評分／排行榜／人工資料編輯，明確待決策與驗收。",
+      "changes": [
+        {
+          "id": "uiux-library-player-spec",
+          "title": "功能與UIUX需求基準",
+          "summary": "保存完整英文對照；更新PM工作與驗收，保留3星重疊規則，未改App。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01",
+            "PLAY-01",
+            "PROFILE-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/product/UIUX-首頁與播放體驗.md",
+              "label": "UIUX-首頁與播放體驗.md"
+            },
+            {
+              "path": "docs/en/library-and-player-ui-requirements.md",
+              "label": "library-and-player-ui-requirements.md"
+            },
+            {
+              "path": "planning/pm-plan.json",
+              "label": "pm-plan.json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "github-backup-20261026",
+      "version": "備份 1.0",
+      "date": "2026-10-26",
+      "title": "建立Music Player獨立Git備份",
+      "summary": "保存原始碼、文件與歷史交付；GitHub推送需連線恢復後確認。",
+      "changes": [
+        {
+          "id": "music-github-backup",
+          "title": "Git與GitHub持續備份",
+          "summary": "排除簽章與快取，工作區準則新增每次更新同步GitHub；本機備份與遠端結果分別驗證。",
+          "node_ids": [
+            "RELEASE-01",
+            "FLOW-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "BACKUP.md",
+              "label": "備份範圍"
+            },
+            {
+              "path": ".gitignore",
+              "label": "追蹤排除規則"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pm-workflow-20261025",
+      "version": "PM 架構 1.0",
+      "date": "2026-10-25",
+      "title": "導入 PM Skill 整體流程",
+      "summary": "建立產品基準、成果路線、工作排序與可追溯驗收，連結既有工程節點。",
+      "changes": [
+        {
+          "id": "pm-project-framework",
+          "title": "PM 流程與可驗收工作項",
+          "summary": "10項工作、前5優先序、5階段流程；保留已確認與候選需求的界線。",
+          "node_ids": [
+            "FLOW-01",
+            "ARCH-01",
+            "QA-02"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/product/PRD-music-player.md",
+              "label": "PRD-music-player.md"
+            },
+            {
+              "path": "docs/product/PM流程與驗收.md",
+              "label": "PM流程與驗收.md"
+            },
+            {
+              "path": "planning/pm-plan.json",
+              "label": "pm-plan.json"
+            },
+            {
+              "path": "planning/pm-panel.js",
+              "label": "pm-panel.js"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "music-player-organization",
+      "version": "專案整理 1.0",
+      "date": "2026-10-25",
+      "title": "Music Player 更名與檔案分層",
+      "summary": "區分 Orca 工作區與 Music Player 專案，專案移至 projects/music-player，工程指示下移。",
+      "changes": [
+        {
+          "id": "music-player-name-storage",
+          "title": "專案更名與檔案重新歸類",
+          "summary": "保留根目錄共用準則，將播放器內容與專用指示集中於專案內；維持既有資料識別碼。",
+          "node_ids": [
+            "FLOW-01",
+            "UI-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "AGENTS.md",
+              "label": "AGENTS.md"
+            },
+            {
+              "path": "README.md",
+              "label": "README.md"
+            },
+            {
+              "path": "docs/zh-TW/專案更名與檔案分類.md",
+              "label": "專案更名與檔案分類.md"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "flow-comments-20261025",
+      "version": "流程工具 1.1",
+      "date": "2026-10-25",
+      "title": "可縮放流程圖與節點註解",
+      "summary": "調整圖面大小，在節點直接記錄修改需求並匯出交辦。",
+      "changes": [
+        {
+          "id": "flow-sizing-comments",
+          "title": "圖面縮放與節點註解",
+          "summary": "縮放、符合寬度、圖框高度調整；註解自動保存、解決狀態與 JSON 匯入匯出。",
+          "node_ids": [
+            "FLOW-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "planning/inspector-annotations.js",
+              "label": "inspector-annotations.js"
+            },
+            {
+              "path": "planning/inspector-template.html",
+              "label": "inspector-template.html"
+            },
+            {
+              "path": "docs/zh-TW/流程圖縮放與節點註解.md",
+              "label": "流程圖縮放與節點註解.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-6-1",
+      "version": "v0.6.1",
+      "date": "2026-10-24",
+      "title": "模式原位展開與手動調音儲存",
+      "summary": "完整模式在橫欄下方展開；手動移動滑桿後顯示儲存新模式。",
+      "changes": [
+        {
+          "id": "inline-mode-grid",
+          "title": "模式在原頁下方展開",
+          "summary": "滑動或點全部展開模式格，提供收合與原有管理。",
+          "node_ids": [
+            "UI-01",
+            "PROFILE-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+              "label": "ModeSelectionView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            }
+          ]
+        },
+        {
+          "id": "manual-eq-save",
+          "title": "手動調音後儲存新模式",
+          "summary": "手動滑桿變更才顯示提示，取消保留，成功儲存或套用模式後清除。",
+          "node_ids": [
+            "EQ-01",
+            "PROFILE-01",
+            "QA-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/模式內嵌展開與儲存提示.md",
+              "label": "模式內嵌展開與儲存提示.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-6",
+      "version": "v0.6.0",
+      "date": "2026-10-24",
+      "title": "七段等化器與單列模式選擇",
+      "summary": "七段完整適配窄螢幕，重排控制順序；單列模式可展開完整選單，新增自訂模式直接進列表，支援移除與舊資料轉換。",
+      "changes": [
+        {
+          "id": "seven-band-audio",
+          "title": "合理分佈的 7 段 EQ",
+          "summary": "50／125／315／800／2k／5k／12.5k Hz，約 1⅓ 倍頻程；正式 Apple 濾波與餘裕估算一起調整。",
+          "node_ids": [
+            "EQ-01",
+            "QA-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/EQBands.swift",
+              "label": "EQBands.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EQHeadroom.swift",
+              "label": "EQHeadroom.swift"
+            },
+            {
+              "path": "apps/apple/Tests/NativeEQChecks.swift",
+              "label": "NativeEQChecks.swift"
+            }
+          ]
+        },
+        {
+          "id": "seven-band-layout",
+          "title": "七欄完整適配螢幕",
+          "summary": "依開關、分佈、七滑桿、模式順序排列；七欄等分寬度，滑桿區不提供橫移。",
+          "node_ids": [
+            "UI-01",
+            "EQ-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            }
+          ]
+        },
+        {
+          "id": "mode-strip-management",
+          "title": "單列模式與自訂管理",
+          "summary": "單列橫向模式、滑動展開完整選單、右上自訂；新增即進清單，自訂可刪除，內建可移除並還原。",
+          "node_ids": [
+            "PROFILE-01",
+            "EQ-01",
+            "UI-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+              "label": "ModeSelectionView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ProfileControls.swift",
+              "label": "ProfileControls.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            }
+          ]
+        },
+        {
+          "id": "seven-band-migration",
+          "title": "舊模式相容與原始設定備份",
+          "summary": "v1／v2 的 10 段值以對數頻率插值轉為 7 段，保留名稱與綁定並寫 v3；首次轉換前保留原始偏好。",
+          "node_ids": [
+            "PROFILE-01",
+            "QA-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/OrcaPlayerApp.swift",
+              "label": "OrcaPlayerApp.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EQBands.swift",
+              "label": "EQBands.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/七段等化器與模式管理.md",
+              "label": "七段等化器與模式管理.md"
+            }
+          ]
+        },
+        {
+          "id": "seven-band-docs",
+          "title": "技術區塊與 Obsidian 紀錄同步",
+          "summary": "互動範例重建為新七段配置，保留舊版歷史；記錄完整英文需求、來源與驗收限制。",
+          "node_ids": [
+            "FLOW-01",
+            "EQ-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "planning/eq-technical-source.json",
+              "label": "eq-technical-source.json"
+            },
+            {
+              "path": "planning/eq-technical-panel.html",
+              "label": "eq-technical-panel.html"
+            },
+            {
+              "path": "docs/en/seven-band-eq-requirements.md",
+              "label": "seven-band-eq-requirements.md"
+            },
+            {
+              "path": "docs/zh-TW/七段等化器與模式管理.md",
+              "label": "七段等化器與模式管理.md"
+            },
+            {
+              "path": "notes/專案主筆記.md",
+              "label": "專案主筆記.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "obsidian-project-notes",
+      "version": "筆記工作區",
+      "date": "2026-10-24",
+      "title": "Obsidian 專案主筆記",
+      "summary": "開啟 Orca 為獨立筆記庫，建立使用者編輯、交辦與成果查閱的入口；未建立自動執行或轉檔服務。",
+      "changes": [
+        {
+          "id": "obsidian-main-note",
+          "title": "專案主筆記與交辦流程",
+          "summary": "使用者先編輯筆記，再交辦 Orca 處理並依指定格式輸出；保留原文與現有工程文件。",
+          "node_ids": [
+            "FLOW-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "notes/專案主筆記.md",
+              "label": "專案主筆記.md"
+            },
+            {
+              "path": "docs/en/obsidian-workflow-requirements.md",
+              "label": "obsidian-workflow-requirements.md"
+            },
+            {
+              "path": "README.md",
+              "label": "README.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-5",
+      "version": "v0.5.0",
+      "date": "2026-10-24",
+      "title": "EQ 技術說明與音量改善第一階段",
+      "summary": "加入互動音訊流程、方案與新舊響應比較；先修正正增益總和造成的過度衰減，尚未加入響度補償或限制器。",
+      "changes": [
+        {
+          "id": "eq-technical-panel",
+          "title": "互動 EQ 技術細節",
+          "summary": "新增音訊步驟、4 種方案及可切換的新舊曲線；數值來自正式 Swift 估算器，不是即時量測。",
+          "node_ids": [
+            "EQ-01",
+            "FLOW-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "planning/eq-technical-panel.html",
+              "label": "eq-technical-panel.html"
+            },
+            {
+              "path": "planning/eq-technical-source.json",
+              "label": "eq-technical-source.json"
+            },
+            {
+              "path": "scripts/generate_eq_technical.py",
+              "label": "generate_eq_technical.py"
+            },
+            {
+              "path": "docs/zh-TW/EQ音量處理技術.md",
+              "label": "EQ音量處理技術.md"
+            }
+          ]
+        },
+        {
+          "id": "eq-response-headroom",
+          "title": "合成響應餘裕取代增益累加",
+          "summary": "一起估算 10 段 EQ 與低音增強的重疊；保留 3 dB 餘裕及有效殘響預留，減少不必要衰減。",
+          "node_ids": [
+            "EQ-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/EQHeadroom.swift",
+              "label": "EQHeadroom.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            }
+          ]
+        },
+        {
+          "id": "eq-response-verification",
+          "title": "125 個原生響應探測點",
+          "summary": "16／44.1／48 kHz 原生 PCM 與模型交叉檢查，最大誤差約 0.029 dB；不代表任意波形峰值或實車驗收。",
+          "node_ids": [
+            "QA-01",
+            "EQ-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "apps/apple/Tests/NativeEQChecks.swift",
+              "label": "NativeEQChecks.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            },
+            {
+              "path": "docs/en/eq-technical-and-headroom-requirements.md",
+              "label": "eq-technical-and-headroom-requirements.md"
+            },
+            {
+              "path": "docs/zh-TW/EQ音量處理技術.md",
+              "label": "EQ音量處理技術.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-4-1",
+      "version": "v0.4.1",
+      "date": "2026-10-24",
+      "title": "簡化車輛設定",
+      "summary": "依使用者要求移除座位距離與延遲參考，保留一般車輛配置與聲道試音。",
+      "changes": [
+        {
+          "id": "remove-seat-distance",
+          "title": "移除座位距離與延遲參考",
+          "summary": "移除距離介面、計算與保存；舊設定仍可載入，保留喇叭類型、座位預覽及試音。",
+          "node_ids": [
+            "PROFILE-01",
+            "CAL-01",
+            "UI-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "archive/retired-vehicle/VehicleCalibration.swift.txt",
+              "label": "VehicleCalibration.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/SoundProfiles.swift",
+              "label": "SoundProfiles.swift"
+            },
+            {
+              "path": "archive/retired-vehicle/VehicleView.swift.txt",
+              "label": "VehicleView.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/車輛設定簡化.md",
+              "label": "車輛設定簡化.md"
+            },
+            {
+              "path": "docs/en/remove-seat-distance-requirements.md",
+              "label": "remove-seat-distance-requirements.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "iphone-update-0-4",
+      "version": "v0.4 手機更新",
+      "date": "2026-10-24",
+      "title": "v0.4 已更新至 iPhone",
+      "summary": "透過 Xcode 完成連線 iPhone 的建置、安裝與啟動；尚未代表車內藍牙或完整真機音訊驗收。",
+      "changes": [
+        {
+          "id": "iphone-v04-deployed",
+          "title": "手機更新與啟動確認",
+          "summary": "真機建置版本 0.4.0／4；Xcode 顯示 App 正在實體 iPhone 執行。同步本次安裝記錄，保留既有 App 識別碼。",
+          "node_ids": [
+            "IOS-01",
+            "RELEASE-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/iPhone安裝紀錄.md",
+              "label": "iPhone 更新結果"
+            },
+            {
+              "path": "scripts/generate_xcode_project.py",
+              "label": "版本與日誌資源同步"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-4",
+      "version": "v0.4.0",
+      "date": "2026-10-24",
+      "title": "音效模式與 Fiesta 車輛設定",
+      "summary": "加入實際低音濾波、立體聲殘響、20 組自訂模式及歌曲綁定；車輛設定明確區分參考資料與可執行的聲道控制。",
+      "changes": [
+        {
+          "id": "bass-and-presets",
+          "title": "低音增強與 13 組預設",
+          "summary": "新增 90 Hz 低架濾波 0～+9 dB、13 組音色預設及頻段說明；夜間為音色調整，非動態壓縮。",
+          "node_ids": [
+            "EQ-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ProfileControls.swift",
+              "label": "ProfileControls.swift"
+            }
+          ]
+        },
+        {
+          "id": "custom-song-profiles",
+          "title": "20 組命名模式與歌曲自動套用",
+          "summary": "支援新增／命名／覆蓋／刪除與歌曲綁定；未綁定歌曲恢復一般調音，設定 v2 可讀取 v1。",
+          "node_ids": [
+            "EQ-01",
+            "PROFILE-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/SoundProfiles.swift",
+              "label": "SoundProfiles.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            }
+          ]
+        },
+        {
+          "id": "stereo-ambience",
+          "title": "演唱會與空間殘響",
+          "summary": "錄音室、演唱會、音樂廳與寬廣空間的可旁通立體聲殘響，混合 0～35%；不是 Dolby 或獨立環繞。",
+          "node_ids": [
+            "FX-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ProfileControls.swift",
+              "label": "ProfileControls.swift"
+            },
+            {
+              "path": "apps/apple/Tests/NativeEQChecks.swift",
+              "label": "NativeEQChecks.swift"
+            }
+          ]
+        },
+        {
+          "id": "fiesta-configuration",
+          "title": "Fiesta 藍牙與喇叭配置",
+          "summary": "依使用者確認資料預填 2017 Fiesta、藍牙、前分音後同軸；可選喇叭類型與座位，各座位距離分開保存。",
+          "node_ids": [
+            "GATE-02",
+            "PROFILE-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "archive/retired-vehicle/VehicleView.swift.txt",
+              "label": "VehicleView.swift"
+            },
+            {
+              "path": "archive/retired-vehicle/VehicleCalibration.swift.txt",
+              "label": "VehicleCalibration.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/SoundProfiles.swift",
+              "label": "SoundProfiles.swift"
+            }
+          ]
+        },
+        {
+          "id": "channel-checks-and-delays",
+          "title": "聲道試音與距離參考",
+          "summary": "原創左右與中央音像試音；全部距離填妥時計算相對最遠單體延遲。藍牙無逐單體路由，因此不套用逐路校正。",
+          "node_ids": [
+            "PROFILE-01",
+            "MULTI-01",
+            "CAL-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "archive/retired-vehicle/VehicleCalibration.swift.txt",
+              "label": "VehicleCalibration.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "archive/retired-vehicle/generate_channel_checks.py.txt",
+              "label": "generate_channel_checks.py"
+            },
+            {
+              "path": "docs/zh-TW/音效模式與車輛調音.md",
+              "label": "音效模式與車輛調音.md"
+            }
+          ]
+        },
+        {
+          "id": "sound-profile-verification",
+          "title": "音訊與模式驗證",
+          "summary": "實際 PCM 驗證低架濾波與殘響尾音；模型測試覆蓋模式與歌曲綁定、上限、持久化、距離公式。未完成實車驗證。",
+          "node_ids": [
+            "QA-01",
+            "FX-01",
+            "EQ-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/音效模式驗收.md",
+              "label": "音效模式驗收.md"
+            },
+            {
+              "path": "docs/en/sound-profiles-and-vehicle-requirements.md",
+              "label": "sound-profiles-and-vehicle-requirements.md"
+            },
+            {
+              "path": "scripts/check_audio.py",
+              "label": "check_audio.py"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "iphone-install-20261024",
+      "version": "安裝紀錄",
+      "date": "2026-10-24",
+      "title": "iPhone 真機安裝",
+      "summary": "已完成實體裝置選取與開發簽章；啟動目前等待手機信任開發者憑證，尚不代表真機音訊驗收通過。",
+      "changes": [
+        {
+          "id": "iphone-signing",
+          "title": "實體 iPhone 與自動簽章",
+          "summary": "使用既有 Personal Team 建置及安裝，保存本機簽章設定，避免重建專案時遺失；目前等待手機端憑證信任。",
+          "node_ids": [
+            "IOS-01",
+            "RELEASE-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "docs/zh-TW/iPhone安裝紀錄.md",
+              "label": "iPhone 安裝與目前狀態"
+            },
+            {
+              "path": "scripts/generate_xcode_project.py",
+              "label": "保留本機簽章設定"
+            }
+          ]
+        }
+      ]
+    },
     {
       "id": "release-0-3",
       "version": "v0.3.0",
@@ -250,10 +1306,10 @@
             "UI-01",
             "PROFILE-01"
           ],
-          "target_page": "vehicle",
+          "target_page": null,
           "locations": [
             {
-              "path": "apps/apple/OrcaPlayer/VehicleView.swift",
+              "path": "archive/retired-vehicle/VehicleView.swift.txt",
               "label": "VehicleView.swift"
             },
             {
