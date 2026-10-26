@@ -73,4 +73,4 @@ Rust 2024 edition 預計負責後續 DSP 與共用邏輯；目前採 SwiftUI＋A
 
 最新本機測試版：[MusicPlayer-macOS-0.8.0.zip](deliverables/MusicPlayer-macOS-0.8.0.zip)。macOS／iOS編譯及模型檢查通過；已查看macOS封面／EQ原生畫面，iPhone觸控驗收仍待完成。
 
-2026-10-26 手機已透過Xcode更新至0.8.0／build 11並重新啟動；[部署結果與限制](docs/zh-TW/v0.8手機部署.md)。完整觸控與音訊驗收仍待完成。
+2026-10-26 手機已透過Xcode更新至0.8.0／build 11，啟動後觀察到signal 9終止，持續運行待釐清；[部署結果與限制](docs/zh-TW/v0.8手機部署.md)。完整觸控與音訊驗收仍待完成。
