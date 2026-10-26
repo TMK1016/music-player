@@ -44,3 +44,10 @@ Xcode 回報：“The application could not be launched because the Developer Ap
 ## v0.6.0 更新結果（2026-10-24）
 
 沿用原 App 識別碼，Xcode 建置／更新並顯示實體 iPhone 的 Running 狀態。真機產物版本 0.6.0／7，內含最新七段 EQ 與模式管理日誌。7 段及 1⅓ 倍頻程已經原生 PCM 驗證；手機的滑動展開手勢、完整功能與實車聽感仍待試用。設定首次轉換前由 App 保留原始偏好備份；沒有刪除 App 或重置音樂庫。
+
+
+## 2026-10-26｜v0.7.0／9 實體iPhone更新
+
+由搬移後的 projects/music-player/apps/apple/OrcaPlayer.xcodeproj 執行 Clean Build Folder，選擇 OrcaPlayer-iOS／已連接iPhone，Run完成後Xcode顯示Running與程序。核對簽章產物版本0.7.0／9、canonical開發日誌一致且無3份已撤除試音WAV。
+
+已確認安裝與程序啟動，啟動程式含舊車輛欄位清理；未從手機容器直接讀取UserDefaults，因此不冒稱已逐項讀回清理結果。播放、背景定時與藍牙操作仍需實機驗收。控制台出現AURemoteIO初始化診斷，沒有以此證明實際音訊播放通過。

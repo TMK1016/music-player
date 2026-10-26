@@ -115,6 +115,23 @@
               "label": "AudioChecks.swift"
             }
           ]
+        },
+        {
+          "id": "v07-iphone-deployment",
+          "title": "更新連線iPhone並確認啟動",
+          "summary": "Clean後以新版路徑部署v0.7.0／9，確認Running與簽章產物；不等於完整播放或背景測試。",
+          "node_ids": [
+            "IOS-01",
+            "RELEASE-01",
+            "QA-02"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/iPhone安裝紀錄.md",
+              "label": "iPhone安裝紀錄"
+            }
+          ]
         }
       ]
     },
