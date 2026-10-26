@@ -109,6 +109,20 @@ actor LibraryStore {
         }
         return ImportResult(tracks: tracks, added: added, duplicates: duplicates, failures: failures)
     }
+    func remove(_ id: String) throws -> [AudioTrack] {
+        _ = try load()
+        guard let track = tracks.first(where: { $0.id == id }), let filename = track.filename else { return tracks }
+        let source = root.appendingPathComponent(filename)
+        let quarantine = root.appendingPathComponent(".deleted-" + UUID().uuidString)
+        let exists = FileManager.default.fileExists(atPath: source.path)
+        if exists { try FileManager.default.moveItem(at: source, to: quarantine) }
+        let next = tracks.filter { $0.id != id }
+        do { try JSONEncoder().encode(LibraryManifest(tracks: next)).write(to: root.appendingPathComponent("library.json"), options: .atomic) }
+        catch { if exists { try? FileManager.default.moveItem(at: quarantine, to: source) }; throw error }
+        tracks = next
+        if exists { try? FileManager.default.removeItem(at: quarantine) }
+        return tracks
+    }
     private func hash(_ url: URL) throws -> String {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }

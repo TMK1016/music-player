@@ -10,23 +10,19 @@ struct ContentView: View {
                 if wide { sidebar.frame(width: 210) }
                 VStack(spacing: 0) {
                     header(wide: wide)
-                    if model.driveMode {
-                        DriveView(model: model).frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        ScrollView {
-                            Group {
-                                switch model.page {
-                                case .player: PlayerDashboard(model: model, wide: geometry.size.width >= 1180)
-                                case .library: LibraryView(model: model)
-                                case .equalizer: EqualizerPage(model: model)
-                                case .vehicle: VehicleView(model: model)
-                                case .developmentLog: DevelopmentLogView(model: model)
-                                }
-                            }.padding(wide ? 28 : (model.page == .equalizer ? 12 : 20))
-                        }.id(model.page.rawValue)
-                    }
-                    if wide { MiniPlayer(model: model) }
-                    else { mobileNavigation }
+                    ScrollView {
+                        Group {
+                            switch model.page {
+                            case .settings: MusicSettingsView(model: model)
+                            case .player: MusicPlayerPage(model: model)
+                            case .library: MusicHomeView(model: model)
+                            case .equalizer: EqualizerPage(model: model)
+                            case .developmentLog: DevelopmentLogView(model: model)
+                            }
+                        }.padding(wide ? 28 : (model.page == .equalizer ? 12 : 20))
+                    }.id(model.page.rawValue)
+                    if model.hasPlaybackSession && model.page != .player { CompactMusicPlayer(model: model) }
+                    if !wide { mobileNavigation }
                 }
             }.background(OrcaTheme.background).foregroundStyle(OrcaTheme.text)
         }
@@ -50,12 +46,11 @@ struct ContentView: View {
                 Image(systemName: "waveform.path").font(.system(size: 26, weight: .light)).foregroundStyle(OrcaTheme.cyan)
                 Text("MUSIC").font(.system(size: 25, weight: .bold, design: .rounded)).tracking(5)
             }.padding(.top, 38)
-            Text("DRIVE YOUR SOUND").font(.system(size: 8, weight: .medium, design: .monospaced)).tracking(2.1).foregroundStyle(OrcaTheme.muted).padding(.top, 8)
+            Text("PLAY YOUR SOUND").font(.system(size: 8, weight: .medium, design: .monospaced)).tracking(2.1).foregroundStyle(OrcaTheme.muted).padding(.top, 8)
             Eyebrow(text: "WORKSPACE").padding(.top, 53).padding(.bottom, 15)
             ForEach(PlayerPage.allCases) { page in
                 Button {
                     model.page = page
-                    model.driveMode = false
                 } label: {
                     HStack(spacing: 13) {
                         Image(systemName: page.symbol).frame(width: 20)
@@ -69,7 +64,7 @@ struct ContentView: View {
             }
             Eyebrow(text: "YOUR COLLECTION").padding(.top, 34).padding(.bottom, 17)
             Button {
-                model.page = .library; model.favoritesOnly = true; model.driveMode = false
+                model.page = .library; model.favoritesOnly = true
             } label: {
                 Label("喜愛的歌曲", systemImage: "heart").font(.system(size: 13)).foregroundStyle(OrcaTheme.muted)
             }.buttonStyle(.plain).padding(.leading, 14)
@@ -78,7 +73,7 @@ struct ContentView: View {
                 Image(systemName: "sparkles").foregroundStyle(OrcaTheme.cyan)
                 Text("為每段旅程\n找到你的聲音。")
                     .font(.system(size: 15, weight: .medium)).lineSpacing(5)
-                Text("MUSIC PLAYER / 0.6.1").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
+                Text("MUSIC PLAYER / 0.7.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
             }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                 .background(LinearGradient(colors: [OrcaTheme.blue.opacity(0.17), OrcaTheme.panel], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 15))
                 .padding(.bottom, 22)
@@ -91,16 +86,11 @@ struct ContentView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     if wide { Eyebrow(text: "YOUR SOUND. YOUR JOURNEY.") }
-                    Text(model.driveMode ? "專注聆聽" : model.page.rawValue)
+                    Text(model.page.rawValue)
                         .font(.system(size: wide ? 25 : 23, weight: .semibold))
                 }
                 Spacer()
                 if wide { Tag(text: "本機播放", symbol: "waveform") }
-                Button { model.driveMode.toggle() } label: {
-                    Label(model.driveMode ? "離開" : "專注模式", systemImage: "steeringwheel")
-                        .font(.system(size: 12, weight: .medium)).padding(.horizontal, 13).padding(.vertical, 10)
-                        .background(OrcaTheme.elevated, in: Capsule())
-                }.buttonStyle(.plain)
             }.padding(.horizontal, wide ? 28 : 20).padding(.top, wide ? 26 : 16).padding(.bottom, 15)
             HStack(spacing: 6) {
                 Image(systemName: "info.circle").foregroundStyle(OrcaTheme.cyan)
@@ -114,8 +104,8 @@ struct ContentView: View {
 
     private var mobileNavigation: some View {
         HStack(spacing: 0) {
-            ForEach(PlayerPage.allCases) { page in
-                Button { model.page = page; model.driveMode = false } label: {
+            ForEach([PlayerPage.library, .player, .settings]) { page in
+                Button { model.page = page } label: {
                     VStack(spacing: 6) {
                         Image(systemName: page.symbol).font(.system(size: 18))
                         Text(page.rawValue).font(.system(size: 10))
@@ -124,95 +114,6 @@ struct ContentView: View {
                 }.buttonStyle(.plain)
             }
         }.padding(.top, 5).background(OrcaTheme.sidebar)
-    }
-}
-
-struct PlayerDashboard: View {
-    @ObservedObject var model: PlayerModel
-    let wide: Bool
-    var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            if wide {
-                HStack(alignment: .top, spacing: 24) {
-                    VStack(spacing: 24) {
-                        NowPlayingCard(model: model)
-                        recent
-                    }.frame(maxWidth: .infinity)
-                    VStack(spacing: 20) {
-                        EqualizerCard(model: model, condensed: true)
-                        soundProfile
-                    }.frame(width: 340)
-                }
-            } else {
-                NowPlayingCard(model: model)
-                EqualizerCard(model: model, condensed: true)
-                recent
-            }
-        }
-    }
-    private var recent: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("旅途歌單").font(.system(size: 17, weight: .semibold))
-                Text("本機離線").font(.system(size: 11)).foregroundStyle(OrcaTheme.muted)
-                Spacer()
-                Button { model.page = .library } label: { Label("查看全部", systemImage: "arrow.up.right").font(.system(size: 11)) }.buttonStyle(.plain).foregroundStyle(OrcaTheme.cyan)
-            }
-            ForEach(model.tracks.prefix(3)) { track in TrackRow(model: model, track: track) }
-            if model.tracks.count == 1 {
-                Button { model.showImporter = true } label: {
-                    Label("匯入你的音樂", systemImage: "plus.circle").font(.system(size: 13)).foregroundStyle(OrcaTheme.cyan)
-                }.buttonStyle(.plain).padding(.top, 4)
-            }
-        }
-    }
-    private var soundProfile: some View {
-        Panel(padding: 20) {
-            VStack(alignment: .leading, spacing: 13) {
-                HStack { Eyebrow(text: "SOUND PROFILE"); Spacer(); Image(systemName: "car.side").foregroundStyle(OrcaTheme.cyan) }
-                Text("你的專屬聆聽座艙").font(.system(size: 17, weight: .medium))
-                Text("先從立體聲開始，讓調音更貼近你的喜好。")
-                    .font(.system(size: 12)).foregroundStyle(OrcaTheme.muted).lineSpacing(4)
-                Button { model.page = .vehicle } label: {
-                    HStack { Text("檢視車輛設定"); Spacer(); Image(systemName: "arrow.right") }
-                        .font(.system(size: 12, weight: .medium)).foregroundStyle(OrcaTheme.cyan)
-                }.buttonStyle(.plain)
-            }
-        }
-    }
-}
-
-struct NowPlayingCard: View {
-    @ObservedObject var model: PlayerModel
-    var body: some View {
-        Panel {
-            VStack(alignment: .leading, spacing: 21) {
-                HStack { Eyebrow(text: "NOW PLAYING"); Spacer(); Image(systemName: "waveform.path").foregroundStyle(OrcaTheme.cyan) }
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .center, spacing: 26) {
-                        AlbumArtwork(variant: model.track.artwork).frame(width: 205)
-                        trackInfo.frame(minWidth: 185)
-                    }
-                    VStack(alignment: .leading, spacing: 22) {
-                        AlbumArtwork(variant: model.track.artwork).frame(maxWidth: 310).frame(maxWidth: .infinity)
-                        trackInfo
-                    }
-                }
-                TransportControls(model: model)
-            }
-        }
-    }
-    private var trackInfo: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Tag(text: model.track.isDemo ? "ORIGINAL AUDIO" : "LOCAL AUDIO", symbol: "music.note")
-            Text(model.track.title).font(.system(size: 30, weight: .semibold, design: .rounded)).fixedSize(horizontal: false, vertical: true).padding(.top, 8)
-            Text(model.track.artist).font(.system(size: 13)).foregroundStyle(OrcaTheme.muted)
-            Text(model.track.collection).font(.system(size: 11)).foregroundStyle(OrcaTheme.muted.opacity(0.85))
-            HStack(spacing: 10) {
-                IconButton(symbol: model.favorites.contains(model.track.id) ? "heart.fill" : "heart", label: "切換喜愛歌曲", active: model.favorites.contains(model.track.id)) { model.toggleFavorite(model.track) }
-                Text(model.track.formatLabel).font(.system(size: 10)).foregroundStyle(OrcaTheme.muted)
-            }.padding(.top, 6)
-        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -270,20 +171,5 @@ struct MiniPlayer: View {
             IconButton(symbol: "list.bullet", label: "播放佇列") { model.showQueue = true }
         }.padding(.horizontal, 25).padding(.vertical, 15).background(OrcaTheme.sidebar)
             .overlay(alignment: .top) { Rectangle().fill(OrcaTheme.line).frame(height: 1) }
-    }
-}
-
-struct DriveView: View {
-    @ObservedObject var model: PlayerModel
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                AlbumArtwork(variant: model.track.artwork).frame(maxWidth: 220)
-                Text(model.track.title).font(.system(size: 32, weight: .semibold))
-                Text(model.track.artist).foregroundStyle(OrcaTheme.muted)
-                TransportControls(model: model, large: true).frame(maxWidth: 500)
-                Tag(text: "EQ · \(model.eqEnabled ? model.presetName : "已關閉")", symbol: "slider.vertical.3")
-            }.padding(30).frame(maxWidth: .infinity)
-        }
     }
 }

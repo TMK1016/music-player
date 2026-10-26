@@ -24,10 +24,14 @@ import SwiftUI
 private enum SettingsMigration {
     static func sourceData() -> Data? {
         let defaults = UserDefaults.standard
+        for key in ["orca.ui.settings.v1", "orca.ui.settings.before7band"] {
+            if let original = defaults.data(forKey: key), let cleaned = try? PreferencesCleanup.removingVehicleData(original) {
+                defaults.set(cleaned, forKey: key)
+            }
+        }
         let data = defaults.data(forKey: "orca.ui.settings.v1")
         if let data, let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           (object["version"] as? Int ?? 1) < 3,
-           defaults.data(forKey: "orca.ui.settings.before7band") == nil {
+           (object["version"] as? Int ?? 1) < 3, defaults.data(forKey: "orca.ui.settings.before7band") == nil {
             defaults.set(data, forKey: "orca.ui.settings.before7band")
         }
         return data

@@ -2,14 +2,14 @@ import Foundation
 import Combine
 
 enum PlayerPage: String, CaseIterable, Identifiable {
-    case player = "正在播放", library = "音樂庫", equalizer = "等化器", vehicle = "車輛設定", developmentLog = "開發日誌"
+    case settings = "設定", player = "正在播放", library = "首頁", equalizer = "等化器", developmentLog = "開發日誌"
     var id: String { rawValue }
     var symbol: String {
         switch self {
+        case .settings: "gearshape"
         case .player: "waveform"
         case .library: "square.stack"
         case .equalizer: "slider.vertical.3"
-        case .vehicle: "car.side"
         case .developmentLog: "clock.arrow.circlepath"
         }
     }
@@ -18,7 +18,6 @@ enum PlayerPage: String, CaseIterable, Identifiable {
         case "player": .player
         case "library": .library
         case "equalizer": .equalizer
-        case "vehicle": .vehicle
         case "developmentLog": .developmentLog
         default: nil
         }
@@ -74,18 +73,30 @@ private struct SavedSettings: Codable {
     var mix: Double? = nil
     var customs: [CustomPreset]? = nil
     var bindings: [String: String]? = nil
-    var vehicle: VehicleSettings? = nil
     var hiddenPresets: Set<String>? = nil
+    var useSongProfiles: Bool? = nil
 }
 
 @MainActor final class PlayerModel: ObservableObject {
+    @Published var collection = MusicCollection() { didSet { persistCollection() } }
+    var collectionWriteBlocked = false
+    @Published var repeatOne = false
+    @Published private(set) var hasPlaybackSession = false
+    @Published var sleepDeadline: Date?
+    @Published var sleepSongsRemaining: Int?
+    @Published var useSongProfiles = true
+    var playbackQueue: [String] = []
+    private var listened = 0.0
+    private var counted = false
+    private var lastSample = 0.0
+    private var lastTick = ProcessInfo.processInfo.systemUptime
     static let frequencies = EQBands.labels
-    @Published var page: PlayerPage = .player
+    @Published var page: PlayerPage = .library
     @Published var search = ""
     @Published var favoritesOnly = false
-    @Published private(set) var tracks: [AudioTrack] = [.demo]
-    @Published private(set) var selectedID = AudioTrack.demo.id
-    @Published private(set) var isPlaying = false
+    @Published var tracks: [AudioTrack] = [.demo]
+    @Published var selectedID = AudioTrack.demo.id
+    @Published var isPlaying = false
     @Published private(set) var currentTime = 0.0
     @Published private(set) var isImporting = false
     @Published var showImporter = false
@@ -97,14 +108,11 @@ private struct SavedSettings: Codable {
     @Published var favorites: Set<String> = [] { didSet { save() } }
     @Published var message: String?
     @Published var showQueue = false
-    @Published var driveMode = false
     @Published var bassBoost = 0.0 { didSet { syncAudio(); save() } }
     @Published var ambience: Ambience = .off { didSet { syncAudio(); save() } }
     @Published var ambienceMix = 15.0 { didSet { syncAudio(); save() } }
     @Published private(set) var customPresets: [CustomPreset] = []
-    @Published private(set) var songBindings: [String: String] = [:]
-    @Published var vehicle = VehicleSettings() { didSet { save() } }
-    @Published private(set) var activeChannelTest: String?
+    @Published var songBindings: [String: String] = [:]
     @Published var presetError: String?
     @Published var presetInput = ""
     @Published var showPresetEditor = false
@@ -116,24 +124,18 @@ private struct SavedSettings: Codable {
     @Published var pendingDeleteID: String?
     private var unboundSound: SoundProfile?
     private var applying = false
-    var seat: String {
-        get { vehicle.seat }
-        set { vehicle.seat = newValue }
-    }
     @Published var selectedLogChangeID: String?
     @Published private(set) var importSummary = ""
-    private let audio: any AudioPlayback
-    private let library: LibraryStore
+    let audio: any AudioPlayback
+    let library: LibraryStore
     let libraryRoot: URL
     private let demoURL: URL?
-    private let channelTestURLs: [String: URL]
     private let onSave: ((Data) -> Void)?
     private var timer: AnyCancellable?
-    private var loadedID: String?
+    var loadedID: String?
     private var libraryLoaded = false
 
-    init(savedData: Data? = nil, onSave: ((Data) -> Void)? = nil, audio: (any AudioPlayback)? = nil, libraryRoot: URL? = nil, demoURL: URL? = nil, channelTestURLs: [String: URL]? = nil) {
-        self.channelTestURLs = channelTestURLs ?? Dictionary(uniqueKeysWithValues: ["Left", "Right", "Center"].compactMap { channel in Bundle.main.url(forResource: "Orca-Check-" + channel, withExtension: "wav").map { (channel, $0) } })
+    init(savedData: Data? = nil, onSave: ((Data) -> Void)? = nil, audio: (any AudioPlayback)? = nil, libraryRoot: URL? = nil, demoURL: URL? = nil) {
         self.onSave = onSave
         self.audio = audio ?? NativeAudioPlayer()
         self.libraryRoot = libraryRoot ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("OrcaPlayer/Library", isDirectory: true)
@@ -155,22 +157,34 @@ private struct SavedSettings: Codable {
             hiddenPresets = (settings.hiddenPresets ?? []).intersection(Set(EQPreset.allCases.map(\.id)))
             let valid = Set(EQPreset.allCases.map(\.id).filter { !hiddenPresets.contains($0) } + customPresets.map(\.id))
             songBindings = (settings.bindings ?? [:]).filter { valid.contains($0.value) }
-            vehicle = settings.vehicle ?? VehicleSettings()
+            useSongProfiles = settings.useSongProfiles ?? true
         }
         self.audio.onCompletion = { [weak self] in self?.handleCompletion() }
         self.audio.onInterruption = { [weak self] message in
             guard let self else { return }
-            if self.activeChannelTest != nil { self.stopChannelTest() }
-            else { self.currentTime = self.audio.currentTime }
+            self.accountPlayback()
+            self.currentTime = self.audio.currentTime
             self.isPlaying = false
             self.message = message
+        }
+        let collectionURL = self.libraryRoot.appendingPathComponent("collection-v1.json")
+        if FileManager.default.fileExists(atPath: collectionURL.path) {
+            do {
+                let data = try Data(contentsOf: collectionURL)
+                let decoded = try JSONDecoder().decode(MusicCollection.self, from: data)
+                guard decoded.version == 1,
+                      decoded.songs.values.allSatisfy({ $0.rating == nil || (1...5).contains($0.rating!) }),
+                      Set(decoded.artists.map(\.id)).count == decoded.artists.count,
+                      Set(decoded.playlists.map(\.id)).count == decoded.playlists.count else { throw LibraryError.corruptManifest }
+                collection = decoded
+            } catch { collectionWriteBlocked = true; message = "分類資料無法讀取，已保留原檔並停止覆寫。" }
         }
         applySongBinding()
         syncAudio()
         timer = Timer.publish(every: 0.2, on: .main, in: .common).autoconnect().sink { [weak self] _ in
             Task { @MainActor [weak self] in
-                guard let self, self.isPlaying else { return }
-                self.currentTime = self.audio.currentTime
+                guard let self else { return }
+                self.pollPlayback()
             }
         }
     }
@@ -178,7 +192,7 @@ private struct SavedSettings: Codable {
     var filteredTracks: [AudioTrack] {
         tracks.filter {
             (!favoritesOnly || favorites.contains($0.id)) &&
-            (search.isEmpty || "\($0.title) \($0.artist) \($0.collection)".localizedCaseInsensitiveContains(search))
+            (search.isEmpty || "\(title($0)) \(artist($0)) \($0.collection)".localizedCaseInsensitiveContains(search))
         }
     }
     var progress: Double {
@@ -199,7 +213,7 @@ private struct SavedSettings: Codable {
     var statusText: String { isPlaying ? "正在播放 · \(track.formatLabel)" : "本機離線播放器 · 匯入音檔後即可播放與調音" }
     var settingsData: Data? {
         let base = unboundSound ?? sound
-        return try? JSONEncoder().encode(SavedSettings(gains: base.gains, eqEnabled: base.enabled, volume: volume, favorites: favorites, bass: base.bass, ambience: base.ambience, mix: base.mix, customs: customPresets, bindings: songBindings, vehicle: vehicle, hiddenPresets: hiddenPresets))
+        return try? JSONEncoder().encode(SavedSettings(gains: base.gains, eqEnabled: base.enabled, volume: volume, favorites: favorites, bass: base.bass, ambience: base.ambience, mix: base.mix, customs: customPresets, bindings: songBindings, hiddenPresets: hiddenPresets, useSongProfiles: useSongProfiles))
     }
 
     func loadLibrary() async {
@@ -215,30 +229,35 @@ private struct SavedSettings: Codable {
         do {
             let result = try await library.importFiles(urls)
             tracks = [.demo] + result.tracks
+            var state = collection
+            for track in result.tracks where state.songs[track.id] == nil { state.songs[track.id] = SongDetails() }
+            collection = state
             importSummary = "新增 \(result.added) 首，略過 \(result.duplicates) 首重複音檔"
             if !result.failures.isEmpty { message = importSummary + "\n\n" + result.failures.joined(separator: "\n") }
             else if result.added == 0 { message = importSummary }
         } catch { message = error.localizedDescription }
     }
     func choose(_ track: AudioTrack, autoplay: Bool = true) {
-        stopChannelTest()
+        accountPlayback()
         audio.stop()
         loadedID = nil
         isPlaying = false
         selectedID = track.id
+        listened = 0; counted = false; lastSample = 0; lastTick = ProcessInfo.processInfo.systemUptime
         applySongBinding()
         currentTime = 0
         if autoplay { start() }
     }
     func togglePlayback() {
-        stopChannelTest()
         if isPlaying {
+            accountPlayback()
             currentTime = audio.currentTime
             audio.pause()
             isPlaying = false
         } else { start() }
     }
     private func start() {
+        if expireSleepTimer() { return }
         do {
             if loadedID != selectedID {
                 let url: URL
@@ -251,10 +270,13 @@ private struct SavedSettings: Codable {
             } else if currentTime >= track.duration - 0.02 {
                 try audio.seek(to: 0)
                 currentTime = 0
+                listened = 0; counted = false
             }
             syncAudio()
             try audio.play()
             isPlaying = true
+            hasPlaybackSession = true
+            lastSample = audio.currentTime; lastTick = ProcessInfo.processInfo.systemUptime
         } catch {
             isPlaying = false
             message = error.localizedDescription
@@ -262,48 +284,66 @@ private struct SavedSettings: Codable {
     }
     func seek(to seconds: Double) {
         guard seconds.isFinite else { return }
+        accountPlayback()
         currentTime = min(track.duration, max(0, seconds))
         if loadedID == selectedID {
-            do { try audio.seek(to: currentTime) }
+            do { try audio.seek(to: currentTime); lastSample = currentTime; lastTick = ProcessInfo.processInfo.systemUptime }
             catch { isPlaying = false; message = error.localizedDescription }
         }
     }
     func next() { advance(forward: true) }
     func previous() {
-        if currentTime > 3 { seek(to: 0) } else { advance(forward: false) }
+        if currentTime > 3 { choose(track, autoplay: isPlaying) } else { advance(forward: false) }
+    }
+    func play(_ track: AudioTrack, queue: [AudioTrack]) {
+        playbackQueue = queue.map(\.id); choose(track)
     }
     private func advance(forward: Bool) {
-        guard let index = tracks.firstIndex(where: { $0.id == selectedID }) else { return }
-        let offset = shuffle && tracks.count > 1 ? Int.random(in: 1..<tracks.count) : (forward ? 1 : tracks.count - 1)
-        let target = tracks[(index + offset) % tracks.count]
-        choose(target, autoplay: isPlaying)
+        let queue = playbackQueue.isEmpty ? tracks : playbackQueue.compactMap { id in tracks.first { $0.id == id } }
+        guard !queue.isEmpty else { return }
+        let index = queue.firstIndex(where: { $0.id == selectedID }) ?? 0
+        let offset = shuffle && queue.count > 1 ? Int.random(in: 1..<queue.count) : (forward ? 1 : queue.count - 1)
+        choose(queue[(index + offset) % queue.count], autoplay: isPlaying)
     }
-    func startChannelTest(_ channel: String) {
-        guard ["Left", "Right", "Center"].contains(channel) else { return }
-        if isPlaying { currentTime = audio.currentTime }
-        audio.stop(); loadedID = nil; isPlaying = false
-        guard let url = channelTestURLs[channel] else { message = "找不到測試音檔。"; return }
-        activeChannelTest = channel
-        do {
-            try audio.load(url)
-            audio.configure(gains: EQPreset.flat.gains, enabled: false, volume: 0.2)
-            audio.configureEffects(bass: 0, ambience: .off, mix: 0, enabled: false)
-            try audio.play()
-        } catch { stopChannelTest(); message = error.localizedDescription }
-    }
-    func stopChannelTest() {
-        guard activeChannelTest != nil else { return }
-        audio.stop(); loadedID = nil; activeChannelTest = nil; syncAudio()
-    }
-    private func handleCompletion() {
-        if activeChannelTest != nil { stopChannelTest() }
-        else { finishedTrack() }
-    }
+    private func handleCompletion() { finishedTrack() }
     private func finishedTrack() {
+        accountPlayback(finalPosition: track.duration)
         currentTime = track.duration
-        guard let index = tracks.firstIndex(where: { $0.id == selectedID }) else { return }
-        if repeatAll || shuffle || index < tracks.count - 1 { advance(forward: true) }
+        if let left = sleepSongsRemaining {
+            sleepSongsRemaining = max(0, left - 1)
+            if left <= 1 { stopForSleep(); return }
+        }
+        if expireSleepTimer() { return }
+        if repeatOne { choose(track); return }
+        let ids = playbackQueue.isEmpty ? tracks.map(\.id) : playbackQueue
+        if repeatAll || shuffle || ids.last != selectedID { advance(forward: true) }
         else { isPlaying = false }
+    }
+    func scheduleSleep(minutes: Int? = nil, songs: Int? = nil) {
+        sleepDeadline = minutes.map { Date().addingTimeInterval(Double(max(1, $0)) * 60) }
+        sleepSongsRemaining = songs.map { max(1, $0) }
+    }
+    func cancelSleep() { sleepDeadline = nil; sleepSongsRemaining = nil }
+    private func stopForSleep() {
+        audio.pause(); isPlaying = false; cancelSleep(); message = "已達聆聽設定，播放已暫停。"
+    }
+    @discardableResult private func expireSleepTimer() -> Bool {
+        if let deadline = sleepDeadline, Date() >= deadline { stopForSleep(); return true }
+        return false
+    }
+    func pollPlayback(now: Double = ProcessInfo.processInfo.systemUptime) {
+        if isPlaying { accountPlayback(now: now); currentTime = audio.currentTime }
+        _ = expireSleepTimer()
+    }
+    private func accountPlayback(now: Double = ProcessInfo.processInfo.systemUptime, finalPosition: Double? = nil) {
+        guard isPlaying else { return }
+        let position = finalPosition ?? audio.currentTime
+        let delta = max(0, position - lastSample)
+        listened += min(delta, max(0, now - lastTick) + 0.05)
+        lastSample = position; lastTick = now
+        if !counted, listened > track.duration / 2 {
+            counted = true; collection.plays.append(ListeningEvent(trackID: selectedID, date: Date()))
+        }
     }
     func toggleFavorite(_ track: AudioTrack) {
         if favorites.contains(track.id) { favorites.remove(track.id) } else { favorites.insert(track.id) }
@@ -353,13 +393,14 @@ private struct SavedSettings: Codable {
         gains = p.gains; eqEnabled = p.enabled; bassBoost = p.bass; ambience = p.ambience; ambienceMix = p.mix
         applying = false; syncAudio(); save()
     }
+    func setSongProfilePolicy(_ enabled: Bool) { useSongProfiles = enabled; applySongBinding(); save() }
     func bindSong(to id: String) {
         if id.isEmpty { songBindings.removeValue(forKey: selectedID) }
         else if profile(for: id) != nil { songBindings[selectedID] = id }
         applySongBinding(); save()
     }
     private func applySongBinding() {
-        if let id = songBindings[selectedID], let value = profile(for: id) {
+        if useSongProfiles, let id = songBindings[selectedID], let value = profile(for: id) {
             if unboundSound == nil { unboundSound = sound }
             setSound(value)
         } else if let base = unboundSound {
@@ -397,11 +438,11 @@ private struct SavedSettings: Codable {
         if affectsCurrent { applySongBinding() }; save()
     }
     private func syncAudio() {
-        guard !applying, activeChannelTest == nil else { return }
+        guard !applying else { return }
         audio.configure(gains: gains, enabled: eqEnabled, volume: volume)
         audio.configureEffects(bass: sound.bass, ambience: ambience, mix: sound.mix, enabled: eqEnabled)
     }
-    private func save() { guard !applying else { return }; if let data = settingsData { onSave?(data) } }
+    func save() { guard !applying else { return }; if let data = settingsData { onSave?(data) } }
     static func time(_ seconds: Double) -> String {
         let value = seconds.isFinite ? max(0, Int(min(seconds, Double(Int32.max)))) : 0
         return String(format: "%d:%02d", value / 60, value % 60)

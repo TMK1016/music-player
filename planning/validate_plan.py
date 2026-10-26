@@ -8,12 +8,12 @@ plan = json.loads((root / "flow.json").read_text())
 nodes = plan["nodes"]
 by_id = {n["id"]: n for n in nodes}
 assert len(by_id) == len(nodes), "Duplicate node IDs"
-allowed = {"規劃中", "等待確認", "條件式", "待授權", "介面完成", "部分實作"}
+allowed = {"規劃中", "等待確認", "條件式", "待授權", "介面完成", "部分實作", "已移除"}
 for n in nodes:
     assert 0 <= n["stage"] < len(plan["stages"])
     assert n["status"] in allowed
     assert n["acceptance"] and n["planned_paths"]
-    if n["status"] in {"介面完成", "部分實作"}:
+    if n["status"] in {"介面完成", "部分實作", "已移除"}:
         assert n["evidence"] and n["implemented_paths"]
         for path in n["evidence"] + n["implemented_paths"]:
             assert (root.parent / path).exists(), f"Missing evidence or implementation: {path}"

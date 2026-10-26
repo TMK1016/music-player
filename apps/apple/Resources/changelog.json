@@ -3,6 +3,122 @@
   "updated_at": "2026-10-26",
   "entries": [
     {
+      "id": "release-0-7",
+      "version": "v0.7.0",
+      "date": "2026-10-26",
+      "title": "三頁曲庫、迷你播放器與聆聽限制",
+      "summary": "開始新版UIUX：半透明歌曲格、三頁導覽、曲庫評分與人工分類、跨頁播放、定時及歌曲數停止。",
+      "changes": [
+        {
+          "id": "v07-navigation-mini",
+          "title": "三頁導覽與底部迷你播放器",
+          "summary": "背景50%歌曲格；成功播放後跨頁保留迷你播放器，可展開與控制。",
+          "node_ids": [
+            "UI-01",
+            "PLAY-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryView.swift",
+              "label": "LibraryView.swift"
+            }
+          ]
+        },
+        {
+          "id": "v07-collection",
+          "title": "清單、評分、歌手及播放統計",
+          "summary": "保留原ID；清單引用、人工編輯、頭貼、星等、半曲計次與刪App音檔。",
+          "node_ids": [
+            "LIB-01",
+            "PLAY-01",
+            "QA-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "MusicCollection.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryStore.swift",
+              "label": "LibraryStore.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            }
+          ]
+        },
+        {
+          "id": "v07-sleep-route",
+          "title": "聆聽限制與系統輸出",
+          "summary": "分鐘倒數或自然播完首數停止；使用系統音訊路由選擇，不提供藍牙輸入。",
+          "node_ids": [
+            "PLAY-01",
+            "IOS-01",
+            "QA-02"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "docs/zh-TW/三頁曲庫與定時實作.md",
+              "label": "三頁曲庫與定時實作.md"
+            }
+          ]
+        },
+        {
+          "id": "v07-remove-vehicle",
+          "title": "撤除車輛設定與試音資料",
+          "summary": "刪除車輛頁／模型／試音資源，啟動清理現用與舊備份偏好中的車輛欄位；保留歌曲及音效。",
+          "node_ids": [
+            "PROFILE-01",
+            "UI-01",
+            "GATE-02"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/移除車輛設定.md",
+              "label": "移除車輛設定.md"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/OrcaPlayerApp.swift",
+              "label": "OrcaPlayerApp.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "MusicCollection.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "rating-delete-count-20261026",
       "version": "需求 2.1",
       "date": "2026-10-26",
@@ -543,10 +659,10 @@
             "CAL-01",
             "UI-01"
           ],
-          "target_page": "vehicle",
+          "target_page": null,
           "locations": [
             {
-              "path": "apps/apple/OrcaPlayer/VehicleCalibration.swift",
+              "path": "archive/retired-vehicle/VehicleCalibration.swift.txt",
               "label": "VehicleCalibration.swift"
             },
             {
@@ -554,7 +670,7 @@
               "label": "SoundProfiles.swift"
             },
             {
-              "path": "apps/apple/OrcaPlayer/VehicleView.swift",
+              "path": "archive/retired-vehicle/VehicleView.swift.txt",
               "label": "VehicleView.swift"
             },
             {
@@ -687,14 +803,14 @@
             "GATE-02",
             "PROFILE-01"
           ],
-          "target_page": "vehicle",
+          "target_page": null,
           "locations": [
             {
-              "path": "apps/apple/OrcaPlayer/VehicleView.swift",
+              "path": "archive/retired-vehicle/VehicleView.swift.txt",
               "label": "VehicleView.swift"
             },
             {
-              "path": "apps/apple/OrcaPlayer/VehicleCalibration.swift",
+              "path": "archive/retired-vehicle/VehicleCalibration.swift.txt",
               "label": "VehicleCalibration.swift"
             },
             {
@@ -712,10 +828,10 @@
             "MULTI-01",
             "CAL-01"
           ],
-          "target_page": "vehicle",
+          "target_page": null,
           "locations": [
             {
-              "path": "apps/apple/OrcaPlayer/VehicleCalibration.swift",
+              "path": "archive/retired-vehicle/VehicleCalibration.swift.txt",
               "label": "VehicleCalibration.swift"
             },
             {
@@ -723,7 +839,7 @@
               "label": "PlayerModel.swift"
             },
             {
-              "path": "scripts/generate_channel_checks.py",
+              "path": "archive/retired-vehicle/generate_channel_checks.py.txt",
               "label": "generate_channel_checks.py"
             },
             {
@@ -1036,10 +1152,10 @@
             "UI-01",
             "PROFILE-01"
           ],
-          "target_page": "vehicle",
+          "target_page": null,
           "locations": [
             {
-              "path": "apps/apple/OrcaPlayer/VehicleView.swift",
+              "path": "archive/retired-vehicle/VehicleView.swift.txt",
               "label": "VehicleView.swift"
             },
             {

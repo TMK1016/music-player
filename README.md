@@ -4,6 +4,10 @@
 
 [專案主筆記（Obsidian 編輯入口）](notes/專案主筆記.md)
 
+[Mac v0.7.0 開發包](deliverables/MusicPlayer-macOS-0.7.0.zip)
+
+**v0.7.0 開始實作三頁曲庫、50%背景歌曲格、底部迷你播放器及聆聽限制。** [實作與限制](docs/zh-TW/三頁曲庫與定時實作.md)。車輛設定及試音已依新要求撤除。尚未宣稱全部UIUX或真機驗收完成。
+
 [2026-10-26 功能與UIUX規格](docs/product/UIUX-首頁與播放體驗.md)（規劃，尚未改版）
 
 **PM 管理入口**：[產品需求基準](docs/product/PRD-music-player.md)／[流程與驗收](docs/product/PM流程與驗收.md)／[互動 PM 與工程圖](planning/flow-inspector.html)／[任務來源](planning/pm-plan.json)
@@ -25,7 +29,7 @@
 - [Mac v0.4 開發包](deliverables/OrcaPlayer-macOS-0.4-sound-profiles.zip)：歷史開發包，未公證／上架，v0.4 已另透過 Xcode 更新並啟動於連線 iPhone；實車驗證仍待完成。
 
 - [開發日誌與更新流程](docs/zh-TW/開發日誌與更新流程.md)
-- [日誌資料來源](planning/changelog.json)：18 階段、40 項改動，與 App 共用。
+- [日誌資料來源](planning/changelog.json)：19 階段、44 項改動，與 App 共用。
 - [本次需求英文翻譯](docs/en/development-journal-requirements.md)
 - [Mac v0.3 開發日誌版本](deliverables/OrcaPlayer-macOS-0.3-development-log.zip)：歷史開發包，首頁側邊欄包含開發日誌。
 

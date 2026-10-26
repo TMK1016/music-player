@@ -92,7 +92,6 @@ struct DevelopmentLogView: View {
                     if let destination = PlayerPage.destination(for: change.targetPage), destination != .developmentLog {
                         Button {
                             model.page = destination
-                            model.driveMode = false
                         } label: {
                             Label("前往\(destination.rawValue)", systemImage: "arrow.up.right")
                                 .font(.system(size: 12, weight: .semibold)).foregroundStyle(OrcaTheme.cyan)

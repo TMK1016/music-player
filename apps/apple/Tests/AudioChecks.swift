@@ -58,6 +58,55 @@ import AVFoundation
             precondition(preserved == damaged, "Corrupt index is not overwritten")
         }
 
+        // v0.7 collection and listening rules use an isolated library.
+        let uiRoot = work.appendingPathComponent("Experience")
+        let uiAudio = FakeAudioPlayer()
+        let uiModel = PlayerModel(audio: uiAudio, libraryRoot: uiRoot, demoURL: fixture)
+        await uiModel.loadLibrary()
+        precondition(uiModel.songs(in: "liked").isEmpty && uiModel.songs(in: "unfamiliar").isEmpty, "Unrated excluded from both modes")
+        uiModel.setRating(AudioTrack.demo.id, 3)
+        precondition(uiModel.songs(in: "liked").count == 1 && uiModel.songs(in: "unfamiliar").count == 1, "Three stars belongs to both modes")
+        precondition(uiModel.favorites.isEmpty, "Rating does not change favorites")
+        uiModel.createPlaylist("Drive")
+        let listID = uiModel.collection.playlists[0].id
+        uiModel.addToPlaylist(AudioTrack.demo.id, listID); uiModel.addToPlaylist(AudioTrack.demo.id, listID)
+        precondition(uiModel.songs(in: listID).count == 1, "Playlist insertion is unique")
+        uiModel.removeFromPlaylist(AudioTrack.demo.id, listID)
+        precondition(uiModel.tracks.count == 1 && uiModel.songs(in: listID).isEmpty, "Removing membership retains track")
+        uiModel.editSong(.demo, title: "Renamed", artistName: "Artist")
+        let artistID = uiModel.details(AudioTrack.demo.id).artistID!
+        uiModel.updateArtist(artistID, name: "New Artist", avatar: nil)
+        precondition(uiModel.artist(.demo) == "New Artist" && uiModel.title(.demo) == "Renamed", "Artist rename preserves song identity")
+        uiModel.choose(.demo)
+        let clock = ProcessInfo.processInfo.systemUptime
+        uiAudio.currentTime = 9; uiModel.pollPlayback(now: clock + 9)
+        precondition(uiModel.playCount(AudioTrack.demo.id, monthly: false) == 0, "Exactly half is not counted")
+        uiAudio.currentTime = 9.2; uiModel.pollPlayback(now: clock + 9.2)
+        precondition(uiModel.playCount(AudioTrack.demo.id, monthly: false) == 1, "Strictly over half counts once")
+        uiAudio.currentTime = 17; uiModel.pollPlayback(now: clock + 17)
+        precondition(uiModel.playCount(AudioTrack.demo.id, monthly: false) == 1, "Same session never counts twice")
+        uiModel.choose(.demo)
+        let replayClock = ProcessInfo.processInfo.systemUptime
+        uiAudio.currentTime = 10; uiModel.pollPlayback(now: replayClock + 10)
+        precondition(uiModel.playCount(AudioTrack.demo.id, monthly: false) == 2, "Replay can count again")
+        uiModel.choose(.demo); uiModel.seek(to: 15)
+        let seekClock = ProcessInfo.processInfo.systemUptime
+        uiAudio.currentTime = 16; uiModel.pollPlayback(now: seekClock + 1)
+        precondition(uiModel.playCount(AudioTrack.demo.id, monthly: false) == 2, "Seeked-over duration is excluded")
+        uiModel.scheduleSleep(songs: 1); uiModel.repeatOne = true
+        uiAudio.onCompletion?()
+        precondition(!uiModel.isPlaying && uiModel.sleepSongsRemaining == nil, "Song limit wins over repeat and pauses")
+        uiModel.choose(.demo); uiModel.sleepDeadline = .distantPast; uiModel.pollPlayback()
+        precondition(!uiModel.isPlaying && uiModel.sleepDeadline == nil, "Expired timer pauses")
+        let uiReload = PlayerModel(audio: FakeAudioPlayer(), libraryRoot: uiRoot, demoURL: fixture)
+        precondition(uiReload.rating(AudioTrack.demo.id) == 3 && uiReload.artist(.demo) == "New Artist" && uiReload.playCount(AudioTrack.demo.id, monthly: false) == 2, "Collection persistence round trip")
+        await uiModel.importFiles([fixture])
+        let importedUI = uiModel.tracks.first { !$0.isDemo }!
+        uiModel.addToPlaylist(importedUI.id, listID)
+        await uiModel.deleteAudioFile(importedUI)
+        precondition(uiModel.tracks.count == 1 && uiModel.songs(in: listID).isEmpty && FileManager.default.fileExists(atPath: fixture.path), "Delete removes app copy and memberships, preserves external original")
+        print("PASS: ratings, playlist uniqueness/removal, artist edits, half-duration/replay/seek counting, sleep limits, collection restore and file deletion")
+
         let audio = FakeAudioPlayer()
         var saved: Data?
         let model = PlayerModel(onSave: { saved = $0 }, audio: audio, libraryRoot: root, demoURL: fixture)
@@ -177,28 +226,17 @@ import AVFoundation
         model.bindSong(to: "")
         precondition(model.sound == global, "Unbind restores general sound")
         precondition(sanitized.customPresets.isEmpty && sanitized.bassBoost == 0, "v1 settings migrate with defaults")
-        let legacyVehicle = Data(#"{"name":"舊車輛","connection":"藍牙","front":"二音路分音","rear":"同軸","seat":"駕駛座","subwoofer":false,"seatDistances":{"駕駛座":{"前左 · 高音":80}}}"#.utf8)
-        let migratedVehicle = try JSONDecoder().decode(VehicleSettings.self, from: legacyVehicle)
-        precondition(migratedVehicle.name == "舊車輛" && migratedVehicle.speakers.count == 6, "Legacy distance data does not break retained configuration")
-        let migratedObject = try JSONSerialization.jsonObject(with: JSONEncoder().encode(migratedVehicle)) as! [String: Any]
-        precondition(migratedObject["seatDistances"] == nil, "Removed distance data is no longer persisted")
-        model.vehicle.name = "測試車"; model.vehicle.front = .component3
-        let vehicleRestored = PlayerModel(savedData: model.settingsData, audio: FakeAudioPlayer())
-        precondition(vehicleRestored.vehicle.name == "測試車" && vehicleRestored.vehicle.front == .component3, "Vehicle configuration persists")
-        let checkModel = PlayerModel(audio: audio, libraryRoot: root, demoURL: fixture, channelTestURLs: ["Left": fixture, "Right": fixture, "Center": fixture])
-        checkModel.choose(.demo); audio.currentTime = 7
-        checkModel.startChannelTest("Left")
-        precondition(checkModel.activeChannelTest == "Left" && !checkModel.isPlaying && audio.playing && !audio.eqEnabled && audio.appliedAmbience == .off, "Channel test pauses music and bypasses effects")
-        checkModel.bassBoost = 8
-        precondition(audio.appliedBass == 0, "EQ changes cannot affect identification test")
-        audio.onCompletion?()
-        precondition(checkModel.activeChannelTest == nil && !checkModel.isPlaying && checkModel.currentTime == 7 && audio.appliedBass == 8, "Test completion restores settings without auto-resume or advancing song")
-        checkModel.togglePlayback()
-        precondition(audio.currentTime == 7 && checkModel.isPlaying, "Explicit resume retains music position")
-        checkModel.startChannelTest("Right"); checkModel.choose(.demo, autoplay: false)
-        precondition(checkModel.activeChannelTest == nil && !audio.playing, "Selecting song cancels test")
-        print("PASS: identification-test isolation, natural completion, explicit resume and cancellation")
-        print("PASS: 13 factory modes, real-effect command wiring, custom create/rename/overwrite/delete, 20-mode cap, duplicate/blank validation, song binding and general-mode restoration, v1/v2 migration/v3 persistence, vehicle persistence and legacy-distance migration")
+        var oldPreferences = try JSONSerialization.jsonObject(with: model.settingsData!) as! [String: Any]
+        oldPreferences["vehicle"] = ["name": "Legacy car", "seat": "Driver"]
+        let cleaned = try PreferencesCleanup.removingVehicleData(JSONSerialization.data(withJSONObject: oldPreferences))
+        let cleanedObject = try JSONSerialization.jsonObject(with: cleaned) as! [String: Any]
+        precondition(cleanedObject["vehicle"] == nil && cleanedObject["gains"] != nil, "Vehicle data removed without losing EQ")
+        let restoredClean = PlayerModel(savedData: cleaned, audio: FakeAudioPlayer())
+        let rewritten = try JSONSerialization.jsonObject(with: restoredClean.settingsData!) as! [String: Any]
+        precondition(rewritten["vehicle"] == nil, "Removed vehicle settings are never re-encoded")
+        precondition(PlayerPage.destination(for: "vehicle") == nil, "Historical journal cannot navigate to retired page")
+        print("PASS: retired vehicle preference cleanup, EQ preservation and removed destination")
+        print("PASS: factory/custom sound profiles, bindings and settings migration")
         print("PASS: transactional import, deduplication, invalid audio, offline copy, manifest recovery, playback commands, seek, EOF/repeat, interruption, settings and EQ wiring")
 
         if !CommandLine.arguments.contains("--model-only") { print(try NativeEQChecks.run()) }

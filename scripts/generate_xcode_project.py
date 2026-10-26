@@ -26,7 +26,7 @@ for source in sources:
 obj("demo-audio", 'isa = PBXFileReference; lastKnownFileType = audio.wav; path = "Resources/Orca-Soundcheck.wav"; sourceTree = "<group>";')
 obj("journal-data", 'isa = PBXFileReference; lastKnownFileType = text.json; path = "Resources/changelog.json"; sourceTree = "<group>";')
 
-checks = ["Orca-Check-Left.wav", "Orca-Check-Right.wav", "Orca-Check-Center.wav"]
+checks = []  # Vehicle identification tones retired; not shipped in the app.
 for check in checks:
     obj(check, f'isa = PBXFileReference; lastKnownFileType = audio.wav; path = "Resources/{check}"; sourceTree = "<group>";')
 targets = []
@@ -49,7 +49,7 @@ for platform in ["macOS", "iOS"]:
         settings = {
             "PRODUCT_NAME": "OrcaPlayer", "PRODUCT_BUNDLE_IDENTIFIER": "com.orca.player.preview" + (".mac" if platform == "macOS" else ".ios"),
             "SWIFT_VERSION": "6.0", "GENERATE_INFOPLIST_FILE": "YES", "INFOPLIST_KEY_CFBundleDisplayName": "Music Player",
-            "MARKETING_VERSION": "0.6.1", "CURRENT_PROJECT_VERSION": "8", "CODE_SIGN_STYLE": "Automatic",
+            "MARKETING_VERSION": "0.7.0", "CURRENT_PROJECT_VERSION": "9", "CODE_SIGN_STYLE": "Automatic",
             "SWIFT_OPTIMIZATION_LEVEL": "-Onone" if config == "Debug" else "-O",
             "ENABLE_USER_SCRIPT_SANDBOXING": "YES", "ENABLE_HARDENED_RUNTIME": "YES",
             "SDKROOT": "macosx" if platform == "macOS" else "iphoneos",

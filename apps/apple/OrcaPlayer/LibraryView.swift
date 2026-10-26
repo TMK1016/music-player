@@ -17,7 +17,7 @@ struct TrackRow: View {
                 }.contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("播放 \(track.title)")
             IconButton(symbol: model.favorites.contains(track.id) ? "heart.fill" : "heart", label: "切換 \(track.title) 收藏", active: model.favorites.contains(track.id), size: 36) { model.toggleFavorite(track) }
-        }.padding(10).background(model.track.id == track.id ? OrcaTheme.blue.opacity(0.07) : OrcaTheme.panel.opacity(0.65), in: RoundedRectangle(cornerRadius: 12))
+        }.padding(10).background(model.track.id == track.id ? OrcaTheme.blue.opacity(0.5) : OrcaTheme.panel.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
     }
 }
 

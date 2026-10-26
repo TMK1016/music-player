@@ -36,7 +36,7 @@
       "id": "GATE-02",
       "title": "盤點車內通道",
       "stage": 0,
-      "status": "部分實作",
+      "status": "已移除",
       "depends_on": [],
       "task": "調查車機、分音、擴大機、接線與音訊介面。",
       "input": "車款／年份、車機型號、接線與外接 DSP",
@@ -50,13 +50,14 @@
       ],
       "evidence": [
         "docs/zh-TW/音效模式與車輛調音.md",
-        "docs/zh-TW/音效模式驗收.md"
+        "docs/zh-TW/音效模式驗收.md",
+        "docs/zh-TW/移除車輛設定.md"
       ],
       "implemented_paths": [
         "docs/zh-TW/音效模式與車輛調音.md",
         "apps/apple/OrcaPlayer/SoundProfiles.swift"
       ],
-      "implementation_scope": "使用者確認 2017 Ford Fiesta B299-7v、藍牙、沒有外接 DSP、前分音後同軸。車機型號、分音接線與內部處理仍未知；目前 App 只輸出立體聲。"
+      "implementation_scope": "使用者確認 2017 Ford Fiesta B299-7v、藍牙、沒有外接 DSP、前分音後同軸。車機型號、分音接線與內部處理仍未知；目前 App 只輸出立體聲。；2026-10-26車輛設定及試音已撤除，歷史記錄保留，不再是App能力。"
     },
     {
       "id": "GATE-03",
@@ -178,9 +179,10 @@
       "evidence": [
         "docs/zh-TW/本機音訊實作與驗收.md",
         "docs/zh-TW/EQ音量處理技術.md",
-        "docs/zh-TW/七段等化器與模式管理.md"
+        "docs/zh-TW/七段等化器與模式管理.md",
+        "docs/zh-TW/三頁曲庫與定時實作.md"
       ],
-      "implementation_scope": "已驗證檔案／狀態與原生 EQ 離線 PCM；尚無 Rust、回呼耗時、60 分鐘連播或實車證據。",
+      "implementation_scope": "已驗證檔案／狀態與原生 EQ 離線 PCM；尚無 Rust、回呼耗時、60 分鐘連播或實車證據。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。",
       "implemented_paths": [
         "apps/apple/Tests/AudioChecks.swift",
         "apps/apple/Tests/NativeEQChecks.swift",
@@ -210,9 +212,10 @@
       ],
       "evidence": [
         "docs/zh-TW/本機音訊實作與驗收.md",
-        "docs/product/UIUX-首頁與播放體驗.md"
+        "docs/product/UIUX-首頁與播放體驗.md",
+        "docs/zh-TW/三頁曲庫與定時實作.md"
       ],
-      "implementation_scope": "已實作複製、去重、原子索引與收藏；命名歌單、標籤／封面與大量曲庫待完成。",
+      "implementation_scope": "已實作複製、去重、原子索引與收藏；命名歌單、標籤／封面與大量曲庫待完成。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。",
       "implemented_paths": [
         "apps/apple/OrcaPlayer/LibraryStore.swift",
         "apps/apple/OrcaPlayer/LibraryView.swift"
@@ -241,9 +244,10 @@
       ],
       "evidence": [
         "docs/zh-TW/本機音訊實作與驗收.md",
-        "docs/product/UIUX-首頁與播放體驗.md"
+        "docs/product/UIUX-首頁與播放體驗.md",
+        "docs/zh-TW/三頁曲庫與定時實作.md"
       ],
-      "implementation_scope": "本機播放、暫停、定位、切歌與自然結尾已接入；格式矩陣、長時連播與路由驗證未完成。",
+      "implementation_scope": "本機播放、暫停、定位、切歌與自然結尾已接入；格式矩陣、長時連播與路由驗證未完成。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。",
       "implemented_paths": [
         "apps/apple/OrcaPlayer/AudioPlayback.swift",
         "apps/apple/OrcaPlayer/PlayerModel.swift"
@@ -291,7 +295,7 @@
     },
     {
       "id": "PROFILE-01",
-      "title": "車輛與座位設定",
+      "title": "音效模式與歌曲綁定",
       "stage": 3,
       "status": "部分實作",
       "depends_on": [
@@ -315,14 +319,15 @@
         "docs/zh-TW/車輛設定簡化.md",
         "docs/zh-TW/七段等化器與模式管理.md",
         "docs/zh-TW/模式內嵌展開與儲存提示.md",
-        "docs/product/UIUX-首頁與播放體驗.md"
+        "docs/product/UIUX-首頁與播放體驗.md",
+        "docs/zh-TW/移除車輛設定.md"
       ],
       "implemented_paths": [
         "apps/apple/OrcaPlayer/SoundProfiles.swift",
         "apps/apple/OrcaPlayer/PlayerModel.swift",
-        "apps/apple/OrcaPlayer/VehicleCalibration.swift"
+        "archive/retired-vehicle/VehicleCalibration.swift.txt"
       ],
-      "implementation_scope": "v3 七段自訂音效與歌曲綁定，v1／v2 對數頻率轉換及原始偏好備份；模式列表可移除／還原內建，最多 20 自訂。車輛仍為立體聲配置預覽，不含距離或獨立路由。"
+      "implementation_scope": "v3 七段自訂音效與歌曲綁定，v1／v2 對數頻率轉換及原始偏好備份；模式列表可移除／還原內建，最多 20 自訂。車輛仍為立體聲配置預覽，不含距離或獨立路由。；2026-10-26車輛設定及試音已撤除，歷史記錄保留，不再是App能力。"
     },
     {
       "id": "CLOUD-01",
@@ -413,14 +418,15 @@
         "媒體服務重設可恢復"
       ],
       "evidence": [
-        "docs/zh-TW/iPhone安裝紀錄.md"
+        "docs/zh-TW/iPhone安裝紀錄.md",
+        "docs/zh-TW/三頁曲庫與定時實作.md"
       ],
       "deployment_note": "2026-10-24：v0.6.0／7 已更新並顯示正在實體 iPhone 執行；七段模式與 v3 設定已接入。手機橫向手勢、完整播放／中斷及 Fiesta 實車驗收仍待確認。",
       "implemented_paths": [
         "apps/apple/OrcaPlayer.xcodeproj/project.pbxproj",
         "apps/apple/OrcaPlayer/AudioPlayback.swift"
       ],
-      "implementation_scope": "共用原生 iOS target 已編譯、簽章、安裝與啟動；完整手機功能、背景播放及實車驗證待完成。"
+      "implementation_scope": "共用原生 iOS target 已編譯、簽章、安裝與啟動；完整手機功能、背景播放及實車驗證待完成。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。"
     },
     {
       "id": "CAR-01",
@@ -655,7 +661,7 @@
       "id": "UI-01",
       "title": "科技藍原生介面",
       "stage": 1,
-      "status": "介面完成",
+      "status": "部分實作",
       "depends_on": [],
       "task": "依使用者要求先實作原生科技藍播放、音樂庫、EQ 與車輛設定介面；本節點可獨立審閱，不宣稱音訊核心完成。",
       "input": "Mac M2／Xcode 開發、車用播放情境、科技藍配色與介面優先要求",
@@ -679,9 +685,11 @@
         "docs/zh-TW/介面實作與驗收.md",
         "docs/zh-TW/七段等化器與模式管理.md",
         "docs/zh-TW/模式內嵌展開與儲存提示.md",
-        "docs/product/UIUX-首頁與播放體驗.md"
+        "docs/product/UIUX-首頁與播放體驗.md",
+        "docs/zh-TW/三頁曲庫與定時實作.md",
+        "docs/zh-TW/移除車輛設定.md"
       ],
-      "implementation_scope": "v0.6 七段無橫移調整區、單列模式與完整選擇面板；360 點寬預覽驗證。橫向手勢自動展開已接入，手機手勢實測待確認。"
+      "implementation_scope": "v0.6 七段無橫移調整區、單列模式與完整選擇面板；360 點寬預覽驗證。橫向手勢自動展開已接入，手機手勢實測待確認。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；2026-10-26車輛設定及試音已撤除，歷史記錄保留，不再是App能力。"
     }
   ],
   "progress_summary": "25 節點 · v0.6 七段完整適配／單列模式／v3 相容 · 響度補償待後續"
