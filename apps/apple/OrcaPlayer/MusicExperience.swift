@@ -21,13 +21,12 @@ struct MusicHomeView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HStack {
+            if model.showLibrarySearch {
                 TextField("搜尋歌曲或歌手", text: $model.search).textFieldStyle(.roundedBorder).onSubmit { model.recordSearch() }
-                Button { model.showImporter = true } label: { Image(systemName: "square.and.arrow.down"); Text("匯入音樂") }.disabled(model.isImporting)
-            }
-            if !model.collection.searches.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack { Text("近期搜尋").font(.caption); ForEach(model.collection.searches, id: \.self) { query in Button(query) { model.search = query } }; Button("清除") { model.collection.searches = [] } }
+                if !model.collection.searches.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack { Text("近期搜尋").font(.caption); ForEach(model.collection.searches, id: \.self) { query in Button(query) { model.search = query } }; Button("清除") { model.collection.searches = [] } }
+                    }
                 }
             }
             if !model.importSummary.isEmpty { Text(model.importSummary).font(.caption).foregroundStyle(OrcaTheme.cyan) }
@@ -145,7 +144,7 @@ struct FavoriteRatingButton: View {
     @ViewState private var rating = false
     var body: some View {
         Image(systemName: model.favorites.contains(track.id) ? "heart.fill" : "heart")
-            .foregroundStyle(OrcaTheme.cyan).frame(width: 40, height: 44).contentShape(Rectangle())
+            .foregroundStyle(OrcaTheme.cyan).frame(width: 44, height: 44).contentShape(Rectangle())
             .gesture(LongPressGesture(minimumDuration: 0.5).exclusively(before: TapGesture()).onEnded { value in
                 switch value { case .first: rating = true; case .second: model.toggleFavorite(track) }
             })
@@ -219,64 +218,58 @@ struct ArtistEditor: View {
 struct MusicPlayerPage: View {
     @ObservedObject var model: PlayerModel
     @ViewState private var showingEQ = false
+    @ViewState private var playlists = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: 16) {
-                        if showingEQ {
-                            HStack {
-                                Button { changeFace(false) } label: { Label("返回封面", systemImage: "chevron.left") }
-                                    .frame(minHeight: 44)
-                                Spacer()
-                                Text("播放中調音").font(.caption).foregroundStyle(OrcaTheme.muted)
-                            }
-                            EqualizerCard(model: model, isPlaybackPanel: true)
-                                .accessibilityIdentifier("playing-equalizer")
-                        } else {
-                            HStack { Spacer(); SlidingStarRating(model: model, trackID: model.selectedID) }
-                            AlbumArtwork(variant: model.track.artwork)
-                                .frame(width: max(120, min(340, geometry.size.width - 32, geometry.size.height - 330)))
-                                .contentShape(Rectangle())
-                                .gesture(DragGesture(minimumDistance: 24).onEnded { value in
-                                    if value.translation.width > 48 && abs(value.translation.width) > abs(value.translation.height) * 1.5 { changeFace(true) }
-                                })
-                                .accessibilityLabel("歌曲封面")
-                                .accessibilityHint("向右滑顯示等化器，或使用下方調音按鈕")
-                                .accessibilityAction(named: "顯示等化器") { changeFace(true) }
-                            Text(model.title(model.track)).font(.title2.weight(.semibold)).multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text(model.artist(model.track)).font(.subheadline).foregroundStyle(OrcaTheme.muted)
-                            HStack(spacing: 8) {
-                                Spacer()
-                                Menu {
-                                    ForEach(model.collection.playlists) { list in Button(list.name) { model.addToPlaylist(model.track.id, list.id) } }
-                                    if model.collection.playlists.isEmpty { Text("請先在首頁建立播放清單") }
-                                } label: { Image(systemName: "text.badge.plus").frame(width: 44, height: 44) }
-                                    .accessibilityLabel("加入播放清單")
-                                FavoriteRatingButton(model: model, track: model.track)
-                                SleepMenu(model: model, compact: true)
-                            }
-                        }
-                        HStack(spacing: 12) {
-                            Button { changeFace(false) } label: { Label("封面", systemImage: showingEQ ? "circle" : "circle.fill").frame(minWidth: 64, minHeight: 44) }
-                                .accessibilityAddTraits(!showingEQ ? [.isSelected] : [])
-                            Button { changeFace(true) } label: { Label("調音", systemImage: showingEQ ? "circle.fill" : "circle").frame(minWidth: 64, minHeight: 44) }
-                                .accessibilityAddTraits(showingEQ ? [.isSelected] : [])
-                        }.font(.caption).buttonStyle(.plain).frame(minHeight: 44)
-                            .foregroundStyle(OrcaTheme.cyan)
-                    }.padding(.horizontal, 16).padding(.vertical, 8)
-                        .frame(maxWidth: 650).frame(maxWidth: .infinity)
+            VStack(spacing: 6) {
+                HStack(spacing: 6) {
+                    SlidingStarRating(model: model, trackID: model.selectedID)
+                    Spacer(minLength: 0)
+                    Button { changeFace(true) } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "slider.horizontal.3")
+                            Text(model.presetName).lineLimit(1).minimumScaleFactor(0.7)
+                        }.font(.caption.weight(.semibold)).frame(minHeight: 44)
+                    }.buttonStyle(.plain).foregroundStyle(OrcaTheme.cyan)
+                        .accessibilityLabel("等化器模式：\(model.presetName)，點選調音")
                 }
-                PlaybackTransport(model: model)
-                    .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 8)
-                    .background(OrcaTheme.background)
+                if showingEQ {
+                    InlineTuningPanel(model: model, useSongPolicy: true, onBack: { changeFace(false) })
+                } else {
+                    cover
+                }
+                PlaybackTransport(model: model, compact: geometry.size.height < 420)
+            }.padding(.horizontal, 16).padding(.vertical, 4)
+                .frame(maxWidth: 700).frame(maxWidth: .infinity)
+        }.sheet(isPresented: $playlists) { TrackPlaylistEditor(model: model, trackID: model.selectedID) }
+    }
+    private var cover: some View {
+        VStack(spacing: 6) {
+            GeometryReader { geometry in
+                let side = max(40, min(340, geometry.size.width, geometry.size.height))
+                AlbumArtwork(variant: model.track.artwork).frame(width: side, height: side)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .gesture(DragGesture(minimumDistance: 24).onEnded { value in
+                        if value.translation.width < -48 && abs(value.translation.width) > abs(value.translation.height) * 1.5 { changeFace(true) }
+                    })
+                    .accessibilityLabel("歌曲封面，向左滑動調音")
+                    .accessibilityAction(named: "顯示等化器") { changeFace(true) }
             }
+            Text(model.title(model.track)).font(.title3.weight(.semibold)).lineLimit(2).multilineTextAlignment(.center)
+            Text(model.artist(model.track)).font(.caption).foregroundStyle(OrcaTheme.muted).lineLimit(1)
+            HStack(spacing: 12) {
+                Spacer()
+                Button { playlists = true } label: { Image(systemName: "text.badge.plus").frame(width: 44, height: 44) }.accessibilityLabel("新增或移除播放清單")
+                FavoriteRatingButton(model: model, track: model.track)
+                SleepMenu(model: model, compact: true)
+            }.buttonStyle(.plain)
+            Text("向左滑動封面，或點右上模式調音").font(.caption2).foregroundStyle(OrcaTheme.muted)
         }
     }
     private func changeFace(_ equalizer: Bool) {
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) { showingEQ = equalizer }
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { showingEQ = equalizer }
     }
 }
 
@@ -317,16 +310,17 @@ struct SlidingStarRating: View {
 
 struct PlaybackTransport: View {
     @ObservedObject var model: PlayerModel
-    private var mode: String { model.repeatOne ? "單曲重複" : model.shuffle ? "隨機播放" : model.repeatAll ? "清單循環" : "順序播放" }
+    var compact = false
+    private var mode: String { model.repeatOne ? "單曲循環" : model.shuffle ? "隨機播放" : model.repeatAll ? "歌單循環" : "順序播放" }
     private var symbol: String { model.repeatOne ? "repeat.1" : model.shuffle ? "shuffle" : model.repeatAll ? "repeat" : "list.bullet" }
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: compact ? 2 : 6) {
             Slider(value: $model.progress, in: 0...1).tint(OrcaTheme.cyan).accessibilityLabel("播放進度")
             HStack { Text(model.elapsed); Spacer(); Text(model.remaining) }
                 .font(.caption2.monospacedDigit()).foregroundStyle(OrcaTheme.muted)
             HStack {
                 Menu {
-                    ForEach(["順序播放", "單曲重複", "清單循環", "隨機播放"], id: \.self) { item in
+                    ForEach(["順序播放", "隨機播放", "歌單循環", "單曲循環"], id: \.self) { item in
                         Button { model.setPlaybackMode(item) } label: {
                             if mode == item { Label(item, systemImage: "checkmark") } else { Text(item) }
                         }
@@ -339,7 +333,7 @@ struct PlaybackTransport: View {
                 Button { model.togglePlayback() } label: {
                     Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 25, weight: .semibold)).foregroundStyle(OrcaTheme.background)
-                        .frame(width: 64, height: 64).background(OrcaTheme.gradient, in: Circle())
+                        .frame(width: compact ? 44 : 64, height: compact ? 44 : 64).background(OrcaTheme.gradient, in: Circle())
                 }.buttonStyle(.plain).accessibilityLabel(model.isPlaying ? "暫停" : "播放")
                 Spacer(minLength: 4)
                 IconButton(symbol: "forward.end.fill", label: "下一首", size: 44) { model.next() }
@@ -368,45 +362,47 @@ struct SleepMenu: View {
     @ObservedObject var model: PlayerModel
     var compact = false
     @ViewState private var custom = false
-    @ViewState private var bySongs = false
-    @ViewState private var amount = 15
     var body: some View {
         Menu {
-            Section("時間倒數（暫停也會繼續倒數）") { ForEach([5, 15, 30, 45, 60, 90, 120], id: \.self) { minutes in Button("\(minutes) 分鐘後暫停") { model.scheduleSleep(minutes: minutes) } } }
-            Section("自然播完歌曲才計數，跳歌不扣除") { ForEach([1, 2, 3, 5, 10, 20], id: \.self) { songs in Button("播完 \(songs) 首後暫停") { model.scheduleSleep(songs: songs) } } }
-            Button("自訂時間／歌曲數…") { custom = true }
-            Button("取消定時") { model.cancelSleep() }
+            Section("計時倒數") {
+                ForEach([5, 10, 20], id: \.self) { minutes in Button("\(minutes) 分鐘") { model.scheduleSleep(minutes: minutes) } }
+            }
+            Section("歌曲倒數") {
+                ForEach([3, 5, 10], id: \.self) { songs in Button("\(songs) 首歌") { model.scheduleSleep(songs: songs) } }
+            }
+            Button("自訂倒數…") { custom = true }
+            Button("取消定時", role: .destructive) { model.cancelSleep() }
+                .disabled(model.sleepDeadline == nil && model.sleepSongsRemaining == nil)
         } label: {
             if compact {
-                Image(systemName: model.sleepDeadline != nil || model.sleepSongsRemaining != nil ? "timer.circle.fill" : "timer")
-                    .frame(width: 44, height: 44).accessibilityLabel("定時停止")
-                    .accessibilityValue(model.sleepSongsRemaining.map { "剩\($0)首" } ?? (model.sleepDeadline == nil ? "未設定" : "已設定時間"))
-            }
-            else if let date = model.sleepDeadline { Label("\(date.formatted(date: .omitted, time: .shortened)) 暫停", systemImage: "moon.zzz") }
-            else if let left = model.sleepSongsRemaining { Label("剩 \(left) 首", systemImage: "moon.zzz") }
-            else { Label("定時停止", systemImage: "moon.zzz") }
-        }.sheet(isPresented: $custom) {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("自訂聆聽限制").font(.title2)
-                Picker("計算方式", selection: $bySongs) { Text("分鐘後暫停").tag(false); Text("播完歌曲後暫停").tag(true) }.pickerStyle(.segmented)
-                Stepper("\(amount) \(bySongs ? "首" : "分鐘")", value: $amount, in: 1...240)
-                HStack { Button("取消") { custom = false }; Spacer(); Button("開始") { if bySongs { model.scheduleSleep(songs: amount) } else { model.scheduleSleep(minutes: amount) }; custom = false } }
-            }.padding(24).frame(minWidth: 280)
-        }
+                Image(systemName: model.sleepDeadline != nil || model.sleepSongsRemaining != nil ? "timer.circle.fill" : "timer").frame(width: 44, height: 44)
+            } else { Label("睡眠模式", systemImage: "timer") }
+        }.accessibilityLabel("睡眠模式：\(model.sleepStatus)")
+            .sheet(isPresented: $custom) { SleepTimerEditor(model: model) }
     }
 }
 struct MusicSettingsView: View {
     @ObservedObject var model: PlayerModel
     @ViewState private var duplicates = false
+    @ViewState private var sleepEditor = false
+    @ViewState private var feedback = false
+    @ViewState private var privacy = false
+    @ViewState private var advanced = false
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
+            Button { model.page = .equalizer } label: { Label("等化器調整", systemImage: "slider.horizontal.3").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }.frame(minHeight: 44)
+            Button { sleepEditor = true } label: { Label("睡眠模式 · \(model.sleepStatus)", systemImage: "timer").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }.frame(minHeight: 44)
+            ShareLink(item: "Music Player｜你的音樂，你的聲音。") { Label("分享給朋友", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }.frame(minHeight: 44)
+            Button { feedback = true } label: { Label("反饋", systemImage: "bubble.left.and.text.bubble.right").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }.frame(minHeight: 44)
+            Button { privacy = true } label: { Label("隱私政策", systemImage: "hand.raised").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }.frame(minHeight: 44)
+            DisclosureGroup("更多設定") {
+                VStack(alignment: .leading, spacing: 18) {
             Panel(padding: 18) { VStack(alignment: .leading, spacing: 14) { Text("播放來源與輸出").font(.headline); Text("音樂來源：本機曲庫"); OutputRouteRow(); Text("藍牙車機／耳機是輸出裝置，請先在系統配對。此App不接收其他手機的藍牙音樂，也不控制其他播放器的EQ。").font(.caption).foregroundStyle(OrcaTheme.muted) } }
-            Panel(padding: 18) { VStack(alignment: .leading, spacing: 14) { Text("聆聽限制").font(.headline); SleepMenu(model: model); Text("分鐘採時間倒數；歌曲數包含目前歌曲，僅自然播完才扣除，單曲重播也扣除。到期暫停、不刪歌；App重開後不恢復舊定時。").font(.caption).foregroundStyle(OrcaTheme.muted) } }
+            Button("進階音場與歌曲綁定") { advanced = true }.frame(minHeight: 44)
             Picker("音效套用方式", selection: Binding(get: { model.useSongProfiles }, set: { model.setSongProfilePolicy($0) })) {
                 Text("全部使用相同音效").tag(false)
                 Text("依歌曲套用").tag(true)
             }.pickerStyle(.segmented)
-            Button("等化器與低音增強") { model.page = .equalizer }
             Button("開發日誌") { model.page = .developmentLog }
             Text("Music Player \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") · build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—")")
                 .font(.caption.monospaced()).foregroundStyle(OrcaTheme.cyan).accessibilityIdentifier("app-version")
@@ -417,7 +413,13 @@ struct MusicSettingsView: View {
                 if candidates.isEmpty { Text("未找到疑似重複歌曲") }
                 ForEach(candidates) { CollectionSongRow(model: model, track: $0) }
             }
+                }
+            }
         }
+        .sheet(isPresented: $sleepEditor) { SleepTimerEditor(model: model) }
+        .sheet(isPresented: $feedback) { FeedbackEditor() }
+        .sheet(isPresented: $privacy) { PrivacyDetails() }
+        .sheet(isPresented: $advanced) { ScrollView { ProfileControls(model: model).padding(20) }.frame(minWidth: 320, minHeight: 400) }
     }
 }
 #if os(iOS)

@@ -141,7 +141,8 @@ enum RatingInteraction {
     }
 }
 extension PlayerModel {
-    func setPlaybackMode(_ name: String) {
+    func setPlaybackMode(_ label: String) {
+        let name = label == "單曲循環" ? "單曲重複" : label == "歌單循環" ? "清單循環" : label
         guard ["順序播放", "單曲重複", "清單循環", "隨機播放"].contains(name) else { return }
         repeatOne = name == "單曲重複"
         repeatAll = name == "清單循環"

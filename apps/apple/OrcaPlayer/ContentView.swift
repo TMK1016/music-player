@@ -9,9 +9,11 @@ struct ContentView: View {
             HStack(spacing: 0) {
                 if wide { sidebar.frame(width: 210) }
                 VStack(spacing: 0) {
-                    header(wide: wide)
+                    if !(model.page == .player && geometry.size.height < 450) { header(wide: wide) }
                     if model.page == .player {
                         MusicPlayerPage(model: model)
+                    } else if model.page == .equalizer {
+                        InlineTuningPanel(model: model).padding(12)
                     } else { ScrollView {
                         Group {
                             switch model.page {
@@ -75,7 +77,7 @@ struct ContentView: View {
                 Image(systemName: "sparkles").foregroundStyle(OrcaTheme.cyan)
                 Text("為每段旅程\n找到你的聲音。")
                     .font(.system(size: 15, weight: .medium)).lineSpacing(5)
-                Text("MUSIC PLAYER / 0.8.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
+                Text("MUSIC PLAYER / 0.9.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
             }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                 .background(LinearGradient(colors: [OrcaTheme.blue.opacity(0.17), OrcaTheme.panel], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 15))
                 .padding(.bottom, 22)
@@ -88,13 +90,16 @@ struct ContentView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     if wide { Eyebrow(text: "YOUR SOUND. YOUR JOURNEY.") }
-                    Text(model.page.rawValue)
+                    Text(model.page == .library ? "你的音樂庫" : model.page.rawValue)
                         .font(.system(size: wide ? 25 : 23, weight: .semibold))
                 }
                 Spacer()
-                if wide { Tag(text: "本機播放", symbol: "waveform") }
+                if model.page == .library {
+                    Button { model.showLibrarySearch.toggle(); if !model.showLibrarySearch { model.search = "" } } label: { Image(systemName: "magnifyingglass").frame(width: 44, height: 44) }.accessibilityLabel("搜尋歌曲")
+                    Button { model.showImporter = true } label: { Image(systemName: "plus").frame(width: 44, height: 44) }.disabled(model.isImporting).accessibilityLabel("匯入音樂")
+                } else if wide { Tag(text: "本機播放", symbol: "waveform") }
             }.padding(.horizontal, wide ? 28 : 20).padding(.top, wide ? 26 : 16).padding(.bottom, 15)
-            if model.page != .player { HStack(spacing: 6) {
+            if model.page != .player && model.page != .library && model.page != .equalizer { HStack(spacing: 6) {
                 Image(systemName: "info.circle").foregroundStyle(OrcaTheme.cyan)
                 Text(model.statusText)
                 Spacer(minLength: 0)

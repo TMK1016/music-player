@@ -25,3 +25,7 @@
 本機UI UX Pro Max（Github/nextlevelbuilder/ui-ux-pro-max-skill/.claude/skills/ui-ux-pro-max/SKILL.md）已讀取，並查詢ux的swipe gesture alternative，採用手勢區域隔離與非拖曳替代入口。SwiftUI gesture state accessible首次無結果，依技能重試accessibility後取得原生語意、標籤與Reduce Motion指引。未將未命中結果當成規則；未安裝全域plugin或執行上游安裝程序。
 
 對照pro-rules：已在程式安排44pt觸控、語意標籤、減少動畫、可捲內容與固定控制。375pt、橫向、大字及實際手勢仍需可執行的原生介面驗收，不能只因程式寫出便勾為已驗證。
+
+## v0.9 新規格覆寫
+
+以docs/zh-TW/三頁細節與單頁調音-v09.md為最新規格。首頁採IMG_9770.jpg；評分左上、模式右上，封面左滑；EQ無垂直捲動，窄短版壓縮曲線／模式標頭、寬短版左右重排。模式列不再展開完整列表，長按排序並持久化；居中命名面板底色opacity 0.5。睡眠與設定見最新文件。本輪技能搜尋modal keyboard focus命中焦點／遮擋規則；SwiftUI adaptive layout未命中，重試accessibility取得原生語意及減少動畫指引。測試清單仍需實際驗證，不因採用技能便勾選通過。

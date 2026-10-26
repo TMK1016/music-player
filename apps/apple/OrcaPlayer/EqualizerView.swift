@@ -137,3 +137,80 @@ struct EqualizerPage: View {
         }
     }
 }
+
+/// A single fitted surface. No vertical scroll view and no page swipe on sliders.
+struct InlineTuningPanel: View {
+    @ObservedObject var model: PlayerModel
+    var useSongPolicy = false
+    var onBack: (() -> Void)?
+    var body: some View {
+        GeometryReader { geometry in
+            let short = geometry.size.height < 280 && geometry.size.width > 500
+            Group {
+                if short {
+                    HStack(spacing: 12) {
+                        VStack(spacing: 4) {
+                            controls
+                            bass
+                            EQCurve(gains: model.eqEnabled ? model.gains : EQBands.flat).frame(maxHeight: .infinity).accessibilityLabel("等化器增益示意，並非量測響應")
+                        }.frame(width: geometry.size.width * 0.38)
+                        VStack(spacing: 4) {
+                            SevenBandControls(model: model).frame(maxHeight: .infinity)
+                            ModeSelectionStrip(model: model, useSongPolicy: useSongPolicy, compact: true)
+                        }
+                    }
+                } else {
+                    VStack(spacing: 4) {
+                        controls
+                        bass
+                        EQCurve(gains: model.eqEnabled ? model.gains : EQBands.flat)
+                            .frame(height: max(32, min(80, geometry.size.height * 0.16))).accessibilityLabel("等化器增益示意，並非量測響應")
+                        SevenBandControls(model: model).frame(maxHeight: .infinity)
+                        ModeSelectionStrip(model: model, useSongPolicy: useSongPolicy, compact: geometry.size.height < 350)
+                    }
+                }
+            }.padding(8).background(OrcaTheme.panel, in: RoundedRectangle(cornerRadius: 18))
+        }.accessibilityIdentifier("inline-tuning-panel")
+    }
+    private var controls: some View {
+        HStack(spacing: 8) {
+            if let onBack {
+                Button(action: onBack) { Image(systemName: "chevron.left").frame(width: 44, height: 44) }.buttonStyle(.plain).accessibilityLabel("返回專輯封面")
+            }
+            Spacer(minLength: 4)
+            Toggle("等化器", isOn: $model.eqEnabled).font(.caption).toggleStyle(.switch).fixedSize()
+        }.frame(height: 44)
+    }
+    private var bass: some View {
+        HStack(spacing: 8) {
+            Text("低音增強").font(.caption).fixedSize()
+            Slider(value: Binding(get: { model.bassBoost }, set: { model.adjustBass(to: $0) }), in: 0...9, step: 1)
+                .accessibilityLabel("低音增強，10段，0至9 dB")
+                .accessibilityValue(String(format: "%.1f dB", model.bassBoost)).disabled(!model.eqEnabled)
+            Text(String(format: "%.1f", model.bassBoost)).font(.caption.monospacedDigit()).frame(width: 28)
+        }.frame(height: 44)
+    }
+}
+struct SevenBandControls: View {
+    @ObservedObject var model: PlayerModel
+    var body: some View {
+        GeometryReader { geometry in
+            let column = geometry.size.width / CGFloat(EQBands.count)
+            let length = max(32, geometry.size.height - 36)
+            HStack(spacing: 0) {
+                ForEach(0..<EQBands.count, id: \.self) { index in
+                    VStack(spacing: 2) {
+                        Text(String(format: "%+.1f", model.gains[index])).font(.system(size: 10, design: .monospaced)).lineLimit(1)
+                        Slider(value: Binding(get: { model.gains[index] }, set: { model.adjustBand(index, to: $0) }), in: -12...12, step: 0.5)
+                            .frame(width: length, height: 28).rotationEffect(.degrees(-90))
+                            .frame(width: column, height: length)
+                            .disabled(!model.eqEnabled)
+                            .accessibilityLabel("\(Int(EQBands.frequencies[index])) Hz 增益")
+                            .accessibilityValue(String(format: "%.1f dB", model.gains[index]))
+                        Text(EQBands.labels[index]).font(.system(size: 10, design: .monospaced)).lineLimit(1)
+                    }.frame(width: column)
+                }
+            }.foregroundStyle(OrcaTheme.cyan)
+        }.accessibilityElement(children: .contain).accessibilityLabel("七段等化器，全部頻段同時顯示")
+    }
+}

@@ -1,3 +1,5 @@
+**v0.9.0 三頁細節與單頁調音**：[本輪規格、驗收與手機交付](docs/zh-TW/三頁細節與單頁調音-v09.md)。
+
 # Music Player
 
 [播放頁原位調音改版](docs/zh-TW/播放頁滑動調音改版.md)／[設計來源](DESIGN.md)：v0.8依使用者參考稿調整，實作與驗收狀態分開記錄。
@@ -33,7 +35,7 @@
 - [Mac v0.4 開發包](deliverables/OrcaPlayer-macOS-0.4-sound-profiles.zip)：歷史開發包，未公證／上架，v0.4 已另透過 Xcode 更新並啟動於連線 iPhone；實車驗證仍待完成。
 
 - [開發日誌與更新流程](docs/zh-TW/開發日誌與更新流程.md)
-- [日誌資料來源](planning/changelog.json)：22 階段、51 項改動，與 App 共用。
+- [日誌資料來源](planning/changelog.json)：23 階段、55 項改動，與 App 共用。
 - [本次需求英文翻譯](docs/en/development-journal-requirements.md)
 - [Mac v0.3 開發日誌版本](deliverables/OrcaPlayer-macOS-0.3-development-log.zip)：歷史開發包，首頁側邊欄包含開發日誌。
 
@@ -74,3 +76,5 @@ Rust 2024 edition 預計負責後續 DSP 與共用邏輯；目前採 SwiftUI＋A
 最新本機測試版：[MusicPlayer-macOS-0.8.0.zip](deliverables/MusicPlayer-macOS-0.8.0.zip)。macOS／iOS編譯及模型檢查通過；已查看macOS封面／EQ原生畫面，iPhone觸控驗收仍待完成。
 
 2026-10-26 手機已透過Xcode更新至0.8.0／build 11，啟動後觀察到signal 9終止，持續運行待釐清；[部署結果與限制](docs/zh-TW/v0.8手機部署.md)。完整觸控與音訊驗收仍待完成。
+
+最新本機測試封裝：[MusicPlayer-macOS-0.9.0.zip](deliverables/MusicPlayer-macOS-0.9.0.zip)。手機已由Xcode更新至0.9.0／build 12並觀察到Running；本輪實際證據與仍待驗收項目見v0.9文件。

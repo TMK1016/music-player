@@ -3,6 +3,114 @@
   "updated_at": "2026-10-26",
   "entries": [
     {
+      "id": "release-0-9",
+      "version": "v0.9.0",
+      "date": "2026-10-26",
+      "title": "三頁細節與固定單頁調音",
+      "summary": "首頁圖示標頭、左滑進調音、十檔低音、模式排序與命名浮框、清單及睡眠設定。",
+      "changes": [
+        {
+          "id": "v09-library-player",
+          "title": "首頁與播放頁細節",
+          "summary": "搜尋／匯入標頭、左上評分及右上模式、左滑進EQ與清單管理。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01",
+            "PLAY-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ExperienceControls.swift",
+              "label": "ExperienceControls.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            }
+          ]
+        },
+        {
+          "id": "v09-fitted-eq",
+          "title": "單頁七段EQ與十檔低音",
+          "summary": "取消上下捲動及完整模式展開，長按排序、50%命名浮框及儲存提示。",
+          "node_ids": [
+            "EQ-01",
+            "PROFILE-01",
+            "UI-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+              "label": "ModeSelectionView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            }
+          ]
+        },
+        {
+          "id": "v09-settings-sleep",
+          "title": "睡眠限界及設定入口",
+          "summary": "預設分鐘5/10/20、歌曲3/5/10，上限120分鐘／100首；分享、匯出反饋與本機隱私說明。",
+          "node_ids": [
+            "PLAY-01",
+            "UI-01",
+            "QA-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ExperienceControls.swift",
+              "label": "ExperienceControls.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/三頁細節與單頁調音-v09.md",
+              "label": "三頁細節與單頁調音-v09.md"
+            }
+          ]
+        },
+        {
+          "id": "v09-device-delivery",
+          "title": "新版手機交付與驗收紀錄",
+          "summary": "核對0.9.0／build 12真機產物、日誌及安裝啟動結果；持續運行與音訊驗收分開記錄。",
+          "node_ids": [
+            "RELEASE-01",
+            "QA-02"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/三頁細節與單頁調音-v09.md",
+              "label": "三頁細節與單頁調音-v09.md"
+            },
+            {
+              "path": "docs/en/player-experience-v09-requirements.md",
+              "label": "英文完整需求對照"
+            },
+            {
+              "path": "docs/design/references/IMG_9770.jpg",
+              "label": "首頁參考圖"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "deploy-0-8-iphone",
       "version": "v0.8.0",
       "date": "2026-10-26",

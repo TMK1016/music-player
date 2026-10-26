@@ -25,7 +25,7 @@ enum PlayerPage: String, CaseIterable, Identifiable {
 }
 
 enum EQPreset: String, CaseIterable, Identifiable {
-    case flat = "原音", bass = "低頻", vocal = "人聲", night = "夜間", pop = "流行", rock = "搖滾", jazz = "爵士", classical = "古典", electronic = "電子", acoustic = "木吉他", podcast = "語音", warm = "溫暖", concert = "演唱會"
+    case flat = "原聲", bass = "低頻", vocal = "人聲", night = "夜間", pop = "流行", rock = "搖滾", jazz = "爵士", classical = "古典", electronic = "電子", acoustic = "木吉他", podcast = "語音", warm = "溫暖", concert = "演唱會"
     var id: String {
         switch self {
         case .flat: "builtin.flat"
@@ -75,6 +75,7 @@ private struct SavedSettings: Codable {
     var bindings: [String: String]? = nil
     var hiddenPresets: Set<String>? = nil
     var useSongProfiles: Bool? = nil
+    var modeOrder: [String]? = nil
 }
 
 @MainActor final class PlayerModel: ObservableObject {
@@ -93,6 +94,7 @@ private struct SavedSettings: Codable {
     static let frequencies = EQBands.labels
     @Published var page: PlayerPage = .library
     @Published var search = ""
+    @Published var showLibrarySearch = false
     @Published var favoritesOnly = false
     @Published var tracks: [AudioTrack] = [.demo]
     @Published var selectedID = AudioTrack.demo.id
@@ -116,9 +118,9 @@ private struct SavedSettings: Codable {
     @Published var presetError: String?
     @Published var presetInput = ""
     @Published var showPresetEditor = false
-    @Published var modesExpanded = false
     @Published private(set) var hasManualEQChanges = false
-    private var manualEQBaseline: [Double]?
+    private var manualEQBaseline: SoundProfile?
+    @Published private(set) var modeOrder: [String] = []
     @Published private(set) var hiddenPresets: Set<String> = []
     @Published var editingPresetID: String?
     @Published var pendingDeleteID: String?
@@ -158,6 +160,8 @@ private struct SavedSettings: Codable {
             let valid = Set(EQPreset.allCases.map(\.id).filter { !hiddenPresets.contains($0) } + customPresets.map(\.id))
             songBindings = (settings.bindings ?? [:]).filter { valid.contains($0.value) }
             useSongProfiles = settings.useSongProfiles ?? true
+            var seenOrder = Set<String>()
+            modeOrder = (settings.modeOrder ?? []).filter { valid.contains($0) && seenOrder.insert($0).inserted }
         }
         self.audio.onCompletion = { [weak self] in self?.handleCompletion() }
         self.audio.onInterruption = { [weak self] message in
@@ -213,7 +217,7 @@ private struct SavedSettings: Codable {
     var statusText: String { isPlaying ? "正在播放 · \(track.formatLabel)" : "本機離線播放器 · 匯入音檔後即可播放與調音" }
     var settingsData: Data? {
         let base = unboundSound ?? sound
-        return try? JSONEncoder().encode(SavedSettings(gains: base.gains, eqEnabled: base.enabled, volume: volume, favorites: favorites, bass: base.bass, ambience: base.ambience, mix: base.mix, customs: customPresets, bindings: songBindings, hiddenPresets: hiddenPresets, useSongProfiles: useSongProfiles))
+        return try? JSONEncoder().encode(SavedSettings(gains: base.gains, eqEnabled: base.enabled, volume: volume, favorites: favorites, bass: base.bass, ambience: base.ambience, mix: base.mix, customs: customPresets, bindings: songBindings, hiddenPresets: hiddenPresets, useSongProfiles: useSongProfiles, modeOrder: modeOrder))
     }
 
     func loadLibrary() async {
@@ -320,8 +324,18 @@ private struct SavedSettings: Codable {
         else { isPlaying = false }
     }
     func scheduleSleep(minutes: Int? = nil, songs: Int? = nil) {
-        sleepDeadline = minutes.map { Date().addingTimeInterval(Double(max(1, $0)) * 60) }
-        sleepSongsRemaining = songs.map { max(1, $0) }
+        if let minutes {
+            sleepDeadline = Date().addingTimeInterval(Double(min(120, max(1, minutes))) * 60)
+            sleepSongsRemaining = nil
+        } else if let songs {
+            sleepDeadline = nil
+            sleepSongsRemaining = min(100, max(1, songs))
+        } else { cancelSleep() }
+    }
+    var sleepStatus: String {
+        if let left = sleepSongsRemaining { return "剩餘\(left)首" }
+        if let deadline = sleepDeadline { return "\(deadline.formatted(date: .omitted, time: .shortened)) 停止" }
+        return "未設定"
     }
     func cancelSleep() { sleepDeadline = nil; sleepSongsRemaining = nil }
     private func stopForSleep() {
@@ -349,8 +363,26 @@ private struct SavedSettings: Codable {
         if favorites.contains(track.id) { favorites.remove(track.id) } else { favorites.insert(track.id) }
     }
     var modeOptions: [ModeOption] {
-        EQPreset.allCases.filter { !hiddenPresets.contains($0.id) }.map { ModeOption(id: $0.id, name: $0.rawValue, isCustom: false) } +
-        customPresets.map { ModeOption(id: $0.id, name: $0.name, isCustom: true) }
+        let options = EQPreset.allCases.filter { !hiddenPresets.contains($0.id) }.map { ModeOption(id: $0.id, name: $0.rawValue, isCustom: false) } + customPresets.map { ModeOption(id: $0.id, name: $0.name, isCustom: true) }
+        let ranks = Dictionary(uniqueKeysWithValues: modeOrder.enumerated().map { ($0.element, $0.offset) })
+        return options.enumerated().sorted { (ranks[$0.element.id] ?? (modeOrder.count + $0.offset)) < (ranks[$1.element.id] ?? (modeOrder.count + $1.offset)) }.map(\.element)
+    }
+    func moveMode(_ id: String, by offset: Int) {
+        var ids = modeOptions.map(\.id)
+        guard let index = ids.firstIndex(of: id), ids.indices.contains(index + offset) else { return }
+        ids.swapAt(index, index + offset); modeOrder = ids; save()
+    }
+    func adjustBass(to value: Double) {
+        guard eqEnabled, value.isFinite else { return }
+        let next = min(9, max(0, value.rounded()))
+        guard next != bassBoost else { return }
+        if manualEQBaseline == nil { manualEQBaseline = sound }
+        bassBoost = next
+        updateManualChanges()
+    }
+    private func updateManualChanges() {
+        hasManualEQChanges = manualEQBaseline.map { sound != $0 } ?? false
+        if !hasManualEQChanges { manualEQBaseline = nil }
     }
     func removeMode(_ id: String) {
         if customPresets.contains(where: { $0.id == id }) { deletePreset(id); return }
@@ -380,10 +412,9 @@ private struct SavedSettings: Codable {
         guard eqEnabled, gains.indices.contains(index), value.isFinite else { return }
         let gain = (min(12, max(-12, value)) * 2).rounded() / 2
         guard gains[index] != gain else { return }
-        if manualEQBaseline == nil { manualEQBaseline = gains }
+        if manualEQBaseline == nil { manualEQBaseline = sound }
         gains[index] = gain
-        hasManualEQChanges = gains != manualEQBaseline
-        if !hasManualEQChanges { manualEQBaseline = nil }
+        updateManualChanges()
     }
     private func clearManualEQChanges() { manualEQBaseline = nil; hasManualEQChanges = false }
     private func setSound(_ value: SoundProfile) {
