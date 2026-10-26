@@ -33,7 +33,7 @@
 - [Mac v0.4 開發包](deliverables/OrcaPlayer-macOS-0.4-sound-profiles.zip)：歷史開發包，未公證／上架，v0.4 已另透過 Xcode 更新並啟動於連線 iPhone；實車驗證仍待完成。
 
 - [開發日誌與更新流程](docs/zh-TW/開發日誌與更新流程.md)
-- [日誌資料來源](planning/changelog.json)：21 階段、50 項改動，與 App 共用。
+- [日誌資料來源](planning/changelog.json)：22 階段、51 項改動，與 App 共用。
 - [本次需求英文翻譯](docs/en/development-journal-requirements.md)
 - [Mac v0.3 開發日誌版本](deliverables/OrcaPlayer-macOS-0.3-development-log.zip)：歷史開發包，首頁側邊欄包含開發日誌。
 
@@ -71,4 +71,6 @@ Rust 2024 edition 預計負責後續 DSP 與共用邏輯；目前採 SwiftUI＋A
 
 專案位置：`projects/music-player/`；上層 Orca 為整合工作區。[檔案分類與更名說明](docs/zh-TW/專案更名與檔案分類.md)。
 
-最新本機測試版：[MusicPlayer-macOS-0.8.0.zip](deliverables/MusicPlayer-macOS-0.8.0.zip)。macOS／iOS編譯及模型檢查通過；已查看macOS封面／EQ原生畫面，iPhone觸控驗收與安裝尚未完成。
+最新本機測試版：[MusicPlayer-macOS-0.8.0.zip](deliverables/MusicPlayer-macOS-0.8.0.zip)。macOS／iOS編譯及模型檢查通過；已查看macOS封面／EQ原生畫面，iPhone觸控驗收仍待完成。
+
+2026-10-26 手機已透過Xcode更新至0.8.0／build 11並重新啟動；[部署結果與限制](docs/zh-TW/v0.8手機部署.md)。完整觸控與音訊驗收仍待完成。

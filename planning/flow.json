@@ -589,7 +589,8 @@
       "input": "MVP build、裝置及測試矩陣",
       "output": "版本化驗收報告",
       "planned_paths": [
-        "artifacts/release-validation/"
+        "artifacts/release-validation/",
+        "docs/zh-TW/v0.8手機部署.md"
       ],
       "acceptance": [
         "60 分鐘連播與離線冷啟動",

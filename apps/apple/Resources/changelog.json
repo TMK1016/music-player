@@ -3,6 +3,31 @@
   "updated_at": "2026-10-26",
   "entries": [
     {
+      "id": "deploy-0-8-iphone",
+      "version": "v0.8.0",
+      "date": "2026-10-26",
+      "title": "新版實體iPhone部署與版本核對",
+      "summary": "記錄本輪Xcode真機部署；安裝、版本及啟動證據以對應文件為準。",
+      "changes": [
+        {
+          "id": "v08-iphone-deploy",
+          "title": "手機更新與部署證據",
+          "summary": "沿用既有App資料與簽章設定，核對0.8.0／build 11；完整音訊與手勢驗收另列。",
+          "node_ids": [
+            "QA-02",
+            "RELEASE-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/v0.8手機部署.md",
+              "label": "v0.8手機部署.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-0-8",
       "version": "v0.8.0",
       "date": "2026-10-26",
