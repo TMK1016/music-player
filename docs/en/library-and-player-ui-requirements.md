@@ -41,3 +41,10 @@ Ratings: a maximum of five stars, used to filter playlists. Preferred mode inclu
 Classification: provide a per-song editing screen where users can change the title and author/artist. Add reusable artist tags so an existing artist can be selected for another song and songs can be grouped. Users can upload an artist avatar and rename the artist.
 
 Unknown-song identification: possible future options are AI-assisted lookup/classification and manual entry. Implement the manual-entry version first.
+
+
+## Confirmed follow-up decisions
+
+Unrated songs are excluded from both Preferred and Unfamiliar modes. Deletion has two choices: remove the song from its current playlist, or delete the audio file. File deletion requires a second confirmation. Count one play when a playback exceeds half the song's total duration; replays also count.
+
+Engineering interpretation: measure actual accumulated playback within each playback session, excluding paused time and skipped seek intervals. Exactly 50% does not qualify. Each session counts at most once, and a new replay can qualify again. File deletion targets the app-managed imported copy, not the external original. Calendar attribution and session recovery remain open decisions.
