@@ -79,11 +79,6 @@ extension PlayerModel {
     func deletePlaylist(_ id: String) {
         var state = collection; state.playlists.removeAll { $0.id == id }; state.playlistOrder.removeAll { $0 == id }; collection = state
     }
-    func recordSearch() {
-        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return }
-        var state = collection; state.searches.removeAll { $0 == query }; state.searches.insert(query, at: 0); state.searches = Array(state.searches.prefix(10)); collection = state
-    }
     func songs(in id: String) -> [AudioTrack] {
         switch id {
         case "all": return tracks
@@ -147,5 +142,11 @@ extension PlayerModel {
         repeatOne = name == "單曲重複"
         repeatAll = name == "清單循環"
         shuffle = name == "隨機播放"
+    }
+}
+
+@MainActor extension PlayerModel {
+    func cyclePlaybackMode() {
+        setPlaybackMode(shuffle ? "歌單循環" : repeatOne ? "隨機播放" : "單曲循環")
     }
 }

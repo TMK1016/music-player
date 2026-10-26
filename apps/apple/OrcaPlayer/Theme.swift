@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum OrcaTheme {
+    static let ink = Color(hex: 0x07111F)
     static let background = Color(hex: 0x080F1B)
     static let sidebar = Color(hex: 0x0B1422)
     static let panel = Color(hex: 0x101D2E)

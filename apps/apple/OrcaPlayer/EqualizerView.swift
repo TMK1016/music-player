@@ -79,8 +79,9 @@ struct EQCurve: View {
     let gains: [Double]
     var body: some View {
         Canvas { context, size in
-            let top: CGFloat = 12
-            let plotHeight = size.height - 29
+            let compact = size.height < 50
+            let top: CGFloat = compact ? 3 : 12
+            let plotHeight = max(1, size.height - (compact ? 6 : 29))
             let startX: CGFloat = 30
             let plotWidth = size.width - startX - 6
             for row in 0..<5 {
@@ -88,8 +89,9 @@ struct EQCurve: View {
                 var path = Path(); path.move(to: CGPoint(x: startX, y: y)); path.addLine(to: CGPoint(x: size.width, y: y))
                 context.stroke(path, with: .color(OrcaTheme.line), style: StrokeStyle(lineWidth: 0.6, dash: row == 2 ? [] : [2, 4]))
             }
-            for (i, text) in ["+12", "0", "−12"].enumerated() {
+            if !compact { for (i, text) in ["+12", "0", "−12"].enumerated() {
                 context.draw(Text(text).font(.system(size: 8, design: .monospaced)).foregroundStyle(OrcaTheme.muted), at: CGPoint(x: 11, y: top + CGFloat(i) / 2 * plotHeight))
+            }
             }
             var line = Path()
             var points: [CGPoint] = []
@@ -105,10 +107,10 @@ struct EQCurve: View {
             }
             context.stroke(line, with: .color(OrcaTheme.cyan), style: StrokeStyle(lineWidth: 2, lineJoin: .round))
             for p in points { context.fill(Path(ellipseIn: CGRect(x: p.x - 2, y: p.y - 2, width: 4, height: 4)), with: .color(OrcaTheme.cyan)) }
-            for (index, text) in [(0, "50 Hz"), (3, "800"), (6, "12.5k Hz")] {
+            if !compact { for (index, text) in [(0, "50 Hz"), (3, "800"), (6, "12.5k Hz")] {
                 let x = startX + CGFloat(index) / CGFloat(max(1, gains.count - 1)) * plotWidth
                 context.draw(Text(text).font(.system(size: 8, design: .monospaced)).foregroundStyle(OrcaTheme.muted), at: CGPoint(x: min(size.width - 30, max(45, x)), y: size.height - 3))
-            }
+            } }
         }
     }
 }
@@ -152,7 +154,7 @@ struct InlineTuningPanel: View {
                         VStack(spacing: 4) {
                             controls
                             bass
-                            EQCurve(gains: model.eqEnabled ? model.gains : EQBands.flat).frame(maxHeight: .infinity).accessibilityLabel("等化器增益示意，並非量測響應")
+                            EQCurve(gains: model.eqEnabled ? model.gains : EQBands.flat).frame(maxHeight: .infinity).accessibilityLabel("等化器增益示意，並非量測響應").contentShape(Rectangle()).gesture(returnGesture)
                         }.frame(width: geometry.size.width * 0.38)
                         VStack(spacing: 4) {
                             SevenBandControls(model: model).frame(maxHeight: .infinity)
@@ -164,13 +166,18 @@ struct InlineTuningPanel: View {
                         controls
                         bass
                         EQCurve(gains: model.eqEnabled ? model.gains : EQBands.flat)
-                            .frame(height: max(32, min(80, geometry.size.height * 0.16))).accessibilityLabel("等化器增益示意，並非量測響應")
+                            .frame(height: max(32, min(80, geometry.size.height * 0.16))).accessibilityLabel("等化器增益示意，並非量測響應").contentShape(Rectangle()).gesture(returnGesture)
                         SevenBandControls(model: model).frame(maxHeight: .infinity)
                         ModeSelectionStrip(model: model, useSongPolicy: useSongPolicy, compact: geometry.size.height < 350)
                     }
                 }
             }.padding(8).background(OrcaTheme.panel, in: RoundedRectangle(cornerRadius: 18))
         }.accessibilityIdentifier("inline-tuning-panel")
+    }
+    private var returnGesture: some Gesture {
+        DragGesture(minimumDistance: 24).onEnded { value in
+            if value.translation.width > 48 && abs(value.translation.width) > abs(value.translation.height) * 1.5 { onBack?() }
+        }
     }
     private var controls: some View {
         HStack(spacing: 8) {
@@ -188,7 +195,7 @@ struct InlineTuningPanel: View {
                 .accessibilityLabel("低音增強，10段，0至9 dB")
                 .accessibilityValue(String(format: "%.1f dB", model.bassBoost)).disabled(!model.eqEnabled)
             Text(String(format: "%.1f", model.bassBoost)).font(.caption.monospacedDigit()).frame(width: 28)
-        }.frame(height: 44)
+        }.padding(.horizontal, 10).frame(height: 44).background(Color.white, in: RoundedRectangle(cornerRadius: 12)).foregroundStyle(OrcaTheme.ink).tint(OrcaTheme.blue)
     }
 }
 struct SevenBandControls: View {

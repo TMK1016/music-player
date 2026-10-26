@@ -3,6 +3,108 @@
   "updated_at": "2026-10-26",
   "entries": [
     {
+      "id": "release-0-10",
+      "version": "v0.10.0",
+      "date": "2026-10-26",
+      "title": "背景播放與互動穩定性優化",
+      "summary": "背景模式與鎖屏控制、進度更新隔離、首頁白底歌曲、拖曳音效標籤、睡眠面板及郵件反饋。",
+      "changes": [
+        {
+          "id": "v010-background",
+          "title": "背景與選單更新修復",
+          "summary": "補齊背景音訊宣告與鎖屏控制；隔離進度時鐘避免整頁高頻刷新。",
+          "node_ids": [
+            "IOS-01",
+            "PLAY-01",
+            "UI-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "apps/apple/Resources/iOS-Info.plist",
+              "label": "iOS-Info.plist"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlaybackUI.swift",
+              "label": "PlaybackUI.swift"
+            },
+            {
+              "path": "docs/zh-TW/背景播放與互動優化-v010.md",
+              "label": "背景播放與互動優化-v010.md"
+            }
+          ]
+        },
+        {
+          "id": "v010-library",
+          "title": "首頁清單與歌曲編輯",
+          "summary": "移除近期搜尋介面，結果即時列於欄下；白底半透明歌曲及歌手標籤。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "docs/zh-TW/背景播放與互動優化-v010.md",
+              "label": "背景播放與互動優化-v010.md"
+            }
+          ]
+        },
+        {
+          "id": "v010-player-eq",
+          "title": "播放操作與音效拖曳排序",
+          "summary": "三模式圖示、長按滑動評分、調音返回手勢、點選音效及插入排序。",
+          "node_ids": [
+            "PLAY-01",
+            "EQ-01",
+            "PROFILE-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+              "label": "ModeSelectionView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            },
+            {
+              "path": "docs/zh-TW/背景播放與互動優化-v010.md",
+              "label": "背景播放與互動優化-v010.md"
+            }
+          ]
+        },
+        {
+          "id": "v010-settings",
+          "title": "睡眠底部面板與郵件反饋",
+          "summary": "分鐘／歌曲輪選、綠色開始與紅色取消；郵件收件者與資料說明。",
+          "node_ids": [
+            "UI-01"
+          ],
+          "target_page": "settings",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ExperienceControls.swift",
+              "label": "ExperienceControls.swift"
+            },
+            {
+              "path": "docs/zh-TW/背景播放與互動優化-v010.md",
+              "label": "背景播放與互動優化-v010.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-0-9",
       "version": "v0.9.0",
       "date": "2026-10-26",

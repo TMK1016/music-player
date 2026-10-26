@@ -1,3 +1,5 @@
+**v0.10.0／build 13 已部署iPhone**（背景／閃爍操作驗收待回饋）：[需求、修復依據與驗收](docs/zh-TW/背景播放與互動優化-v010.md)。
+
 **v0.9.0 三頁細節與單頁調音**：[本輪規格、驗收與手機交付](docs/zh-TW/三頁細節與單頁調音-v09.md)。
 
 # Music Player
@@ -35,7 +37,7 @@
 - [Mac v0.4 開發包](deliverables/OrcaPlayer-macOS-0.4-sound-profiles.zip)：歷史開發包，未公證／上架，v0.4 已另透過 Xcode 更新並啟動於連線 iPhone；實車驗證仍待完成。
 
 - [開發日誌與更新流程](docs/zh-TW/開發日誌與更新流程.md)
-- [日誌資料來源](planning/changelog.json)：23 階段、55 項改動，與 App 共用。
+- [日誌資料來源](planning/changelog.json)：24 階段、59 項改動，與 App 共用。
 - [本次需求英文翻譯](docs/en/development-journal-requirements.md)
 - [Mac v0.3 開發日誌版本](deliverables/OrcaPlayer-macOS-0.3-development-log.zip)：歷史開發包，首頁側邊欄包含開發日誌。
 

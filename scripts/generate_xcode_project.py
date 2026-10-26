@@ -49,7 +49,7 @@ for platform in ["macOS", "iOS"]:
         settings = {
             "PRODUCT_NAME": "OrcaPlayer", "PRODUCT_BUNDLE_IDENTIFIER": "com.orca.player.preview" + (".mac" if platform == "macOS" else ".ios"),
             "SWIFT_VERSION": "6.0", "GENERATE_INFOPLIST_FILE": "YES", "INFOPLIST_KEY_CFBundleDisplayName": "Music Player",
-            "MARKETING_VERSION": "0.9.0", "CURRENT_PROJECT_VERSION": "12", "CODE_SIGN_STYLE": "Automatic",
+            "MARKETING_VERSION": "0.10.0", "CURRENT_PROJECT_VERSION": "13", "CODE_SIGN_STYLE": "Automatic",
             "SWIFT_OPTIMIZATION_LEVEL": "-Onone" if config == "Debug" else "-O",
             "ENABLE_USER_SCRIPT_SANDBOXING": "YES", "ENABLE_HARDENED_RUNTIME": "YES",
             "SDKROOT": "macosx" if platform == "macOS" else "iphoneos",
@@ -58,6 +58,7 @@ for platform in ["macOS", "iOS"]:
         if platform == "macOS":
             settings.update(MACOSX_DEPLOYMENT_TARGET="14.0", INFOPLIST_KEY_LSApplicationCategoryType="public.app-category.music")
         else:
+            settings["INFOPLIST_FILE"] = "Resources/iOS-Info.plist"
             settings.update(IPHONEOS_DEPLOYMENT_TARGET="17.0", TARGETED_DEVICE_FAMILY="1,2", INFOPLIST_KEY_UILaunchScreen_Generation="YES", INFOPLIST_KEY_UIApplicationSceneManifest_Generation="YES", SUPPORTS_MACCATALYST="NO")
             if signing.get("development_team"):
                 settings["DEVELOPMENT_TEAM"] = signing["development_team"]

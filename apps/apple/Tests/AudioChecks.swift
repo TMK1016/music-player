@@ -101,6 +101,27 @@ import Combine
         uiModel.setPlaybackMode("歌單循環"); precondition(uiModel.repeatAll && !uiModel.repeatOne, "User-facing playlist loop label works")
         uiModel.setPlaybackMode("單曲循環"); precondition(uiModel.repeatOne && !uiModel.repeatAll, "User-facing single-song loop label works")
         uiModel.setPlaybackMode("順序播放")
+        let beforeDrag = uiModel.modeOptions.map(\.id)
+        uiModel.moveMode(beforeDrag[0], by: 3)
+        precondition(Array(uiModel.modeOptions.map(\.id).prefix(4)) == [beforeDrag[1], beforeDrag[2], beforeDrag[3], beforeDrag[0]], "Drag inserts without swapping unrelated modes")
+        precondition(PlayerPage.destination(for: "settings") == .settings, "Settings journal opens actual settings")
+        uiModel.setPlaybackMode("歌單循環")
+        uiModel.cyclePlaybackMode(); precondition(uiModel.repeatOne, "Icon cycles loop to repeat-one")
+        uiModel.cyclePlaybackMode(); precondition(uiModel.shuffle, "Icon cycles repeat-one to shuffle")
+        uiModel.cyclePlaybackMode(); precondition(uiModel.repeatAll, "Icon cycles shuffle to loop")
+        uiModel.choose(.demo)
+        var modelChanges = 0
+        var clockChanges = 0
+        let modelToken = uiModel.objectWillChange.sink { modelChanges += 1 }
+        let clockToken = uiModel.playbackClock.objectWillChange.sink { clockChanges += 1 }
+        for tick in 1...5 { uiAudio.currentTime = Double(tick) * 0.2; uiModel.pollPlayback() }
+        precondition(modelChanges == 0 && clockChanges == 5, "Playback ticks update only clock, never menu owner")
+        uiModel.page = .settings; uiModel.page = .library; uiModel.page = .player
+        precondition(uiModel.isPlaying && uiAudio.playing, "Tab navigation preserves audio ownership")
+        modelToken.cancel(); clockToken.cancel()
+        uiModel.togglePlayback()
+        uiModel.setPlaybackMode("順序播放")
+        print("PASS: isolated playback ticks, uninterrupted tab navigation and three-mode cycle")
         print("PASS: ten-position bass/manual prompt, default display, mode-order persistence and sleep bounds")
         precondition(uiModel.songs(in: "liked").isEmpty && uiModel.songs(in: "unfamiliar").isEmpty, "Unrated excluded from both modes")
         precondition(RatingInteraction.value(at: -20, width: 220) == 1 && RatingInteraction.value(at: 500, width: 220) == 5, "Star drag clamps at both edges")
@@ -206,6 +227,7 @@ import Combine
         model.search = "missing song"
         precondition(model.filteredTracks.isEmpty, "Empty result")
         model.search = ""
+        model.setPlaybackMode("順序播放")
         model.choose(model.tracks.last!)
         audio.onCompletion?()
         precondition(!model.isPlaying && model.progress == 1, "Last track stops without repeat")

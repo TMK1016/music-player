@@ -47,69 +47,113 @@ struct SleepTimerEditor: View {
     @Environment(\.dismiss) private var dismiss
     @ViewState private var bySongs = false
     @ViewState private var amount = 10
+    @ViewState private var custom = false
     private var limit: Int { bySongs ? 100 : 120 }
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Picker("倒數方式", selection: $bySongs) {
-                        Text("計時倒數").tag(false)
-                        Text("歌曲倒數").tag(true)
-                    }.pickerStyle(.segmented)
-                    HStack {
-                        ForEach(bySongs ? [3, 5, 10] : [5, 10, 20], id: \.self) { value in
-                            Button("\(value)\(bySongs ? "首" : "分鐘")") { amount = value }
-                                .buttonStyle(.bordered).frame(maxWidth: .infinity, minHeight: 44)
-                        }
-                    }
-                    HStack {
-                        Text(bySongs ? "自訂首數" : "自訂分鐘")
-                        TextField("數量", value: $amount, format: .number).frame(minWidth: 45, maxWidth: 80)
-                            .textFieldStyle(.roundedBorder).accessibilityLabel(bySongs ? "歌曲數，1至100" : "分鐘，1至120")
-                            #if os(iOS)
-                            .keyboardType(.numberPad)
-                            #endif
-                        Stepper("數量", value: $amount, in: 1...limit).labelsHidden()
-                    }
-                    Text("可設定1～\(limit)\(bySongs ? "首" : "分鐘")").font(.caption)
-                }
-                Section {
-                    Text(bySongs ? "包含目前歌曲，僅自然播完才扣除，跳歌不扣除；重播也計數。" : "時間倒數在暫停時仍持續，歸零時停止播放。重開App不恢復倒數。")
-                        .font(.caption).foregroundStyle(OrcaTheme.muted)
-                    Text("目前：\(model.sleepStatus)")
-                    Button("開始倒數") {
-                        if bySongs { model.scheduleSleep(songs: amount) } else { model.scheduleSleep(minutes: amount) }
-                        dismiss()
-                    }.disabled(!(1...limit).contains(amount))
-                    Button("取消目前倒數", role: .destructive) { model.cancelSleep(); dismiss() }
-                        .disabled(model.sleepDeadline == nil && model.sleepSongsRemaining == nil)
-                }
-            }.navigationTitle("睡眠模式")
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("關閉") { dismiss() } } }
+        VStack(spacing: 16) {
+            HStack { Text("睡眠模式").font(.title2.bold()); Spacer(); Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }.accessibilityLabel("關閉睡眠模式") }
+            Picker("倒數方式", selection: $bySongs) { Text("計時倒數").tag(false); Text("歌曲倒數").tag(true) }.pickerStyle(.segmented)
                 .onChange(of: bySongs) { _, value in amount = value ? 3 : 10 }
-        }.frame(minWidth: 300, minHeight: 350)
+            if custom {
+                Picker(bySongs ? "首數" : "分鐘", selection: $amount) {
+                    ForEach(1...limit, id: \.self) { value in Text("\(value) \(bySongs ? "首歌" : "分鐘")").tag(value) }
+                }
+                #if os(iOS)
+                .pickerStyle(.wheel)
+                #else
+                .pickerStyle(.menu)
+                #endif
+                .frame(height: 140).clipped()
+                Button("返回預設選擇") { custom = false }.frame(minHeight: 44)
+            } else {
+                ForEach(bySongs ? [3, 5, 10] : [5, 10, 20], id: \.self) { value in
+                    Button { amount = value } label: {
+                        HStack { Text("\(value) \(bySongs ? "首歌" : "分鐘")"); Spacer(); if amount == value { Image(systemName: "checkmark.circle.fill") } }
+                            .frame(minHeight: 44).padding(.horizontal, 12).background(amount == value ? OrcaTheme.blue.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 12))
+                    }.buttonStyle(.plain).accessibilityAddTraits(amount == value ? [.isSelected] : [])
+                }
+                Button("自訂\(bySongs ? "首數" : "時間")（最多\(limit)\(bySongs ? "首" : "分鐘")）") { custom = true }.frame(minHeight: 44)
+            }
+            Text("目前：\(model.sleepStatus)").font(.caption)
+            Text(bySongs ? "自然播完才扣除；包含目前歌曲與重播，跳歌不扣除。" : "暫停時倒數仍持續；重開App不保留倒數。")
+                .font(.caption).foregroundStyle(OrcaTheme.muted)
+            HStack(spacing: 16) {
+                Button { model.cancelSleep(); dismiss() } label: { Label("取消倒數", systemImage: "xmark").frame(maxWidth: .infinity, minHeight: 48) }
+                    .buttonStyle(.plain).foregroundStyle(.white).background(Color.red.opacity(0.8), in: RoundedRectangle(cornerRadius: 14)).disabled(model.sleepDeadline == nil && model.sleepSongsRemaining == nil)
+                Button { if bySongs { model.scheduleSleep(songs: amount) } else { model.scheduleSleep(minutes: amount) }; dismiss() } label: {
+                    Label("開始倒數", systemImage: "play.fill").frame(maxWidth: .infinity, minHeight: 48)
+                }.buttonStyle(.plain).foregroundStyle(.white).background(Color(red: 0.08, green: 0.48, blue: 0.25), in: RoundedRectangle(cornerRadius: 14)).disabled(!(1...limit).contains(amount))
+            }
+        }.padding(24).frame(minWidth: 300).themedSheet().presentationDetents([.height(560), .large])
     }
 }
 
 struct FeedbackEditor: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @ViewState private var text = ""
-    private var report: String {
+    @ViewState private var subject = "Music Player 意見反饋"
+    @ViewState private var mail = false
+    @ViewState private var error: String?
+    private var environmentSummary: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
-        return "Music Player \(version) 意見反饋\n\(text)"
+        return "System: \(ProcessInfo.processInfo.operatingSystemVersionString)\nMusic Player version: \(version)"
     }
+    private var report: String { text + "\n\n" + environmentSummary }
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
-                Text("描述遇到的情況或想改善的地方。匯出後可選擇傳送對象。").font(.subheadline)
-                TextEditor(text: $text).accessibilityLabel("反饋內容").frame(minHeight: 160)
-                ShareLink(item: report) { Label("匯出反饋", systemImage: "square.and.arrow.up") }
-                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty).frame(minHeight: 44)
-            }.padding(20).navigationTitle("反饋")
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
-        }.frame(minWidth: 300, minHeight: 350)
+                Text("收件人：admin@monstrai.com").foregroundStyle(OrcaTheme.cyan)
+                Divider()
+                TextField("標題", text: $subject).textFieldStyle(.roundedBorder).accessibilityLabel("反饋郵件標題")
+                TextEditor(text: $text).accessibilityLabel("反饋內容").frame(minHeight: 160).scrollContentBackground(.hidden)
+                Text(environmentSummary).font(.caption).foregroundStyle(OrcaTheme.muted)
+                if let error { Text(error).font(.caption).foregroundStyle(.orange) }
+                ShareLink(item: report) { Label("另存或分享反饋", systemImage: "square.and.arrow.up") }
+            }.padding(20).navigationTitle("Music Player")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) { Button { compose() } label: { Image(systemName: "arrow.up.circle.fill").font(.title2) }.accessibilityLabel("撰寫郵件至admin@monstrai.com").disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
+                }
+        }.frame(minWidth: 300, minHeight: 400).themedSheet()
+        #if os(iOS)
+        .sheet(isPresented: $mail) { FeedbackMailComposer(subject: subject, body: report) { result in mail = false; error = result } }
+        #endif
+    }
+    private func compose() {
+        #if os(iOS)
+        if MFMailComposeViewController.canSendMail() { mail = true; return }
+        #endif
+        var url = URLComponents(); url.scheme = "mailto"; url.path = "admin@monstrai.com"
+        url.queryItems = [URLQueryItem(name: "subject", value: subject), URLQueryItem(name: "body", value: report)]
+        guard let link = url.url else { return }
+        openURL(link) { accepted in if !accepted { error = "尚未設定郵件App。請先設定帳號，或另存反饋後寄至admin@monstrai.com。" } }
     }
 }
+#if os(iOS)
+import MessageUI
+struct FeedbackMailComposer: UIViewControllerRepresentable {
+    let subject: String
+    let body: String
+    let completion: (String?) -> Void
+    func makeCoordinator() -> Coordinator { Coordinator(completion: completion) }
+    func makeUIViewController(context: Context) -> MFMailComposeViewController {
+        let controller = MFMailComposeViewController()
+        controller.setToRecipients(["admin@monstrai.com"]); controller.setSubject(subject); controller.setMessageBody(body, isHTML: false)
+        controller.mailComposeDelegate = context.coordinator
+        return controller
+    }
+    func updateUIViewController(_ controller: MFMailComposeViewController, context: Context) {}
+    final class Coordinator: NSObject, MFMailComposeViewControllerDelegate {
+        let completion: (String?) -> Void
+        init(completion: @escaping (String?) -> Void) { self.completion = completion }
+        func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+            completion(error?.localizedDescription ?? (result == .failed ? "郵件無法送出，請稍後重試。" : nil))
+        }
+    }
+}
+#endif
+
 struct PrivacyDetails: View {
     @Environment(\.dismiss) private var dismiss
     var body: some View {
@@ -119,12 +163,12 @@ struct PrivacyDetails: View {
                     Text("隱私政策 · 本機測試版").font(.title2)
                     Text("更新日期：2026年10月26日")
                     Text("音樂與使用資料").font(.headline)
-                    Text("匯入的音樂會複製到App曲庫。歌名、歌手、頭貼、播放清單、收藏、評分、搜尋紀錄、聆聽次數與音效偏好儲存在裝置上，用來提供播放與分類功能。")
+                    Text("匯入的音樂會複製到App曲庫。歌名、歌手、頭貼、播放清單、收藏、評分、聆聽次數與音效偏好儲存在裝置上，用來提供播放與分類功能。")
                     Text("傳送與分享").font(.headline)
-                    Text("目前App沒有內建帳號、廣告或第三方分析SDK，不主動將曲庫、評分或聆聽紀錄傳送給開發者。只有你使用系統分享並選擇目的地後，所選文字才會交由該服務處理。")
+                    Text("目前App沒有內建帳號、廣告或第三方分析SDK，不主動將曲庫、評分或聆聽紀錄傳送給開發者。反饋郵件預設寄至admin@monstrai.com，包含你輸入的內容、作業系統與App版本；你在郵件畫面確認寄出後才會傳送。另存／分享由你選擇的服務處理。")
                     Text("管理資料").font(.headline)
                     Text("你可以在App內移除清單關聯、刪除App曲庫音檔或清除評分。刪除App內音檔不會刪除外部原始檔案；裝置、iCloud及電腦備份由系統與你所選服務管理。")
-                    Text("本政策描述目前測試版的實際功能；若未來加入雲端、帳號或分析服務，會更新說明。可透過反饋頁匯出你的問題。")
+                    Text("本政策描述目前測試版的實際功能；若未來加入雲端、帳號或分析服務，會更新說明。可透過反饋頁寄信至admin@monstrai.com提出資料相關問題。")
                 }.frame(maxWidth: 600, alignment: .leading).padding(20)
             }.navigationTitle("隱私政策")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }

@@ -1,5 +1,8 @@
 import Foundation
 import Combine
+#if os(iOS)
+import MediaPlayer
+#endif
 
 enum PlayerPage: String, CaseIterable, Identifiable {
     case settings = "設定", player = "正在播放", library = "首頁", equalizer = "等化器", developmentLog = "開發日誌"
@@ -15,6 +18,7 @@ enum PlayerPage: String, CaseIterable, Identifiable {
     }
     static func destination(for identifier: String?) -> PlayerPage? {
         switch identifier {
+        case "settings": .settings
         case "player": .player
         case "library": .library
         case "equalizer": .equalizer
@@ -98,12 +102,16 @@ private struct SavedSettings: Codable {
     @Published var favoritesOnly = false
     @Published var tracks: [AudioTrack] = [.demo]
     @Published var selectedID = AudioTrack.demo.id
-    @Published var isPlaying = false
-    @Published private(set) var currentTime = 0.0
+    @Published var isPlaying = false { didSet { updateNowPlaying() } }
+    let playbackClock = PlaybackClock()
+    private(set) var currentTime: Double {
+        get { playbackClock.time }
+        set { if playbackClock.time != newValue { playbackClock.time = newValue } }
+    }
     @Published private(set) var isImporting = false
     @Published var showImporter = false
     @Published var shuffle = false
-    @Published var repeatAll = false
+    @Published var repeatAll = true
     @Published var volume = 0.5 { didSet { syncAudio(); save() } }
     @Published var eqEnabled = true { didSet { syncAudio(); save() } }
     @Published var gains = EQPreset.flat.gains { didSet { syncAudio(); save() } }
@@ -183,6 +191,7 @@ private struct SavedSettings: Codable {
                 collection = decoded
             } catch { collectionWriteBlocked = true; message = "分類資料無法讀取，已保留原檔並停止覆寫。" }
         }
+        installRemoteCommands()
         applySongBinding()
         syncAudio()
         timer = Timer.publish(every: 0.2, on: .main, in: .common).autoconnect().sink { [weak self] _ in
@@ -348,6 +357,7 @@ private struct SavedSettings: Codable {
     func pollPlayback(now: Double = ProcessInfo.processInfo.systemUptime) {
         if isPlaying { accountPlayback(now: now); currentTime = audio.currentTime }
         _ = expireSleepTimer()
+        updateNowPlaying()
     }
     private func accountPlayback(now: Double = ProcessInfo.processInfo.systemUptime, finalPosition: Double? = nil) {
         guard isPlaying else { return }
@@ -370,7 +380,7 @@ private struct SavedSettings: Codable {
     func moveMode(_ id: String, by offset: Int) {
         var ids = modeOptions.map(\.id)
         guard let index = ids.firstIndex(of: id), ids.indices.contains(index + offset) else { return }
-        ids.swapAt(index, index + offset); modeOrder = ids; save()
+        let moved = ids.remove(at: index); ids.insert(moved, at: index + offset); modeOrder = ids; save()
     }
     func adjustBass(to value: Double) {
         guard eqEnabled, value.isFinite else { return }
@@ -474,9 +484,58 @@ private struct SavedSettings: Codable {
         audio.configureEffects(bass: sound.bass, ambience: ambience, mix: sound.mix, enabled: eqEnabled)
     }
     func save() { guard !applying else { return }; if let data = settingsData { onSave?(data) } }
+    private func installRemoteCommands() {
+        #if os(iOS)
+        let center = MPRemoteCommandCenter.shared()
+        center.playCommand.addTarget { @Sendable [weak self] _ in
+            Task { @MainActor [weak self] in guard let self else { return }; if !self.isPlaying { self.togglePlayback() } }
+            return .success
+        }
+        center.pauseCommand.addTarget { @Sendable [weak self] _ in
+            Task { @MainActor [weak self] in guard let self else { return }; if self.isPlaying { self.togglePlayback() } }
+            return .success
+        }
+        center.togglePlayPauseCommand.addTarget { @Sendable [weak self] _ in
+            Task { @MainActor [weak self] in self?.togglePlayback() }; return .success
+        }
+        center.nextTrackCommand.addTarget { @Sendable [weak self] _ in
+            Task { @MainActor [weak self] in self?.next() }; return .success
+        }
+        center.previousTrackCommand.addTarget { @Sendable [weak self] _ in
+            Task { @MainActor [weak self] in self?.previous() }; return .success
+        }
+        center.changePlaybackPositionCommand.addTarget { @Sendable [weak self] event in
+            guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+            let position = event.positionTime
+            Task { @MainActor [weak self] in self?.seek(to: position) }; return .success
+        }
+        #endif
+    }
+    private var nowPlayingSecond = -1
+    private var nowPlayingID = ""
+    private var nowPlayingRate = -1.0
+    private func updateNowPlaying() {
+        #if os(iOS)
+        guard hasPlaybackSession else { return }
+        let second = Int(currentTime), rate = isPlaying ? 1.0 : 0.0
+        guard second != nowPlayingSecond || selectedID != nowPlayingID || rate != nowPlayingRate else { return }
+        nowPlayingSecond = second; nowPlayingID = selectedID; nowPlayingRate = rate
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+            MPMediaItemPropertyTitle: title(track), MPMediaItemPropertyArtist: artist(track),
+            MPMediaItemPropertyPlaybackDuration: track.duration,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
+            MPNowPlayingInfoPropertyPlaybackRate: rate
+        ]
+        #endif
+    }
     static func time(_ seconds: Double) -> String {
         let value = seconds.isFinite ? max(0, Int(min(seconds, Double(Int32.max)))) : 0
         return String(format: "%d:%02d", value / 60, value % 60)
     }
 }
 
+
+/// Frequent render-clock ticks must never invalidate menu and sheet owners.
+@MainActor final class PlaybackClock: ObservableObject {
+    @Published var time = 0.0
+}

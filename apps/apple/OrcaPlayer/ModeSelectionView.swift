@@ -1,11 +1,12 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ModeSelectionStrip: View {
     @ObservedObject var model: PlayerModel
     var useSongPolicy = false
     var compact = false
     @ViewState private var focusedMode: String?
-    @ViewState private var browsingModes = false
+    @ViewState private var draggedMode: String?
     var body: some View {
         VStack(spacing: 2) {
             if !compact {
@@ -26,17 +27,7 @@ struct ModeSelectionStrip: View {
             }
         }
     }
-    @ViewBuilder private var scrollingRow: some View {
-        if #available(iOS 18.0, macOS 15.0, *) {
-            modeRow.onScrollPhaseChange { _, phase in
-                if phase == .interacting { browsingModes = true }
-                if phase == .idle, browsingModes {
-                    browsingModes = false
-                    if let id = focusedMode { select(id) }
-                }
-            }
-        } else { modeRow }
-    }
+    private var scrollingRow: some View { modeRow }
     private var modeRow: some View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -50,6 +41,8 @@ struct ModeSelectionStrip: View {
                                         .foregroundStyle(model.presetName == option.name ? OrcaTheme.cyan : OrcaTheme.text)
                                         .background(model.presetName == option.name ? OrcaTheme.blue.opacity(0.25) : OrcaTheme.background, in: RoundedRectangle(cornerRadius: 10))
                                 }.buttonStyle(.plain).id(option.id)
+                                    .onDrag { draggedMode = option.id; return NSItemProvider(object: option.id as NSString) }
+                                    .onDrop(of: [.text], delegate: ModeReorderDrop(model: model, target: option.id, dragged: $draggedMode))
                                     .contextMenu { ModeActions(model: model, option: option) }
                                     .accessibilityHint("左右滑動瀏覽；長按可調整順序、命名或移除")
                                     .accessibilityAddTraits(model.presetName == option.name ? [.isSelected] : [])
@@ -67,7 +60,7 @@ struct ModeSelectionStrip: View {
     }
     private var newModeButton: some View {
         Button { model.editPreset() } label: {
-            Label(model.hasManualEQChanges ? "儲存模式" : "自訂", systemImage: "plus")
+            Label(model.hasManualEQChanges ? "新增模式" : "自訂", systemImage: "plus")
                 .font(.caption.weight(.semibold)).frame(minWidth: 64, minHeight: 44)
         }.buttonStyle(.plain).foregroundStyle(OrcaTheme.cyan)
             .disabled(model.customPresets.count >= 20)
@@ -122,9 +115,23 @@ private struct PresetNameDialog: View {
                 Button("儲存") { model.savePresetName() }.buttonStyle(.borderedProminent).frame(minHeight: 44)
             }
         }.padding(20).frame(maxWidth: 340)
-            .background(OrcaTheme.panel.opacity(0.5), in: RoundedRectangle(cornerRadius: 20))
+            .background(OrcaTheme.panel, in: RoundedRectangle(cornerRadius: 20))
             .overlay(RoundedRectangle(cornerRadius: 20).stroke(OrcaTheme.cyan.opacity(0.5)))
             .foregroundStyle(OrcaTheme.text).accessibilityAddTraits(.isModal)
             .onAppear { focused = true }
     }
+}
+
+private struct ModeReorderDrop: DropDelegate {
+    let model: PlayerModel
+    let target: String
+    @Binding var dragged: String?
+    func dropEntered(info: DropInfo) {
+        guard let id = dragged, id != target else { return }
+        let ids = model.modeOptions.map(\.id)
+        guard let from = ids.firstIndex(of: id), let to = ids.firstIndex(of: target) else { return }
+        model.moveMode(id, by: to - from)
+    }
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+    func performDrop(info: DropInfo) -> Bool { dragged = nil; return true }
 }

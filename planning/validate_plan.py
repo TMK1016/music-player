@@ -46,7 +46,7 @@ native_copy = root.parent / "apps/apple/Resources/changelog.json"
 assert native_copy.exists() and json.loads(native_copy.read_text()) == journal, "Run scripts/generate_xcode_project.py to sync native journal"
 release_ids, change_ids = set(), set()
 workspace = root.parents[2]
-destinations = {None, "player", "library", "equalizer", "vehicle", "developmentLog"}
+destinations = {None, "settings", "player", "library", "equalizer", "vehicle", "developmentLog"}
 for release in journal["entries"]:
     assert release["id"] not in release_ids
     release_ids.add(release["id"])

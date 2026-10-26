@@ -84,7 +84,7 @@ enum EqualizerSettings {
         engine.attach(bassUnit)
         engine.attach(reverb)
         AudioNotificationBridge.observe(.AVAudioEngineConfigurationChange, object: engine) { [weak self] in
-            guard let self, self.file != nil else { return }
+            guard let self, self.file != nil, !self.engine.isRunning else { return }
             let position = self.currentTime
             self.generation += 1
             self.player.stop()
@@ -122,6 +122,12 @@ enum EqualizerSettings {
         guard FileManager.default.fileExists(atPath: url.path) else { throw PlaybackError.missingFile }
         let candidate = try AVAudioFile(forReading: url)
         guard candidate.length > 0, candidate.length <= Int64(UInt32.max), (1...2).contains(candidate.processingFormat.channelCount), candidate.processingFormat.sampleRate > 0 else { throw PlaybackError.invalidAudio }
+        #if os(iOS)
+        // Activate before connecting the graph so its hardware format is current.
+        let session = AVAudioSession.sharedInstance()
+        if session.category != .playback { try session.setCategory(.playback, mode: .default) }
+        try session.setActive(true)
+        #endif
         file = candidate
         try reconnect()
         configure(gains: gains, enabled: enabled, volume: volume)
@@ -143,7 +149,7 @@ enum EqualizerSettings {
         guard file != nil else { throw PlaybackError.noTrack }
         #if os(iOS)
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playback, mode: .default)
+        if session.category != .playback { try session.setCategory(.playback, mode: .default) }
         try session.setActive(true)
         #endif
         if needsReconnect { try reconnect() }
