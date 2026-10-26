@@ -1,0 +1,166 @@
+{
+  "version": "v0.6.0",
+  "selected_solution": "A",
+  "solutions": [
+    {
+      "id": "A",
+      "title": "合成頻率響應估算餘裕",
+      "status": "已實作",
+      "detail": "計算整組 EQ 與低架濾波在各頻率的疊加增益，取最大正增益加 3 dB 餘裕；殘響非零混合仍保留額外 6 dB。先修正衰減過量，不改變音樂動態。",
+      "tradeoff": "屬模型估算，不是樣本峰值或 true-peak 保證；仍可能比原音小聲，沒有精確響度補償。"
+    },
+    {
+      "id": "B",
+      "title": "EQ 前後響度補償",
+      "status": "待後續選擇",
+      "detail": "量測或分析音訊響度差，加入穩定、平滑的補償，讓聽感更接近。",
+      "tradeoff": "需要處理靜音、曲目切換、低頻佔比與補償上限；過快調整可能抽動，不應追逐每個音符。"
+    },
+    {
+      "id": "C",
+      "title": "輸出峰值限制器",
+      "status": "待後續選擇",
+      "detail": "處理超出門檻的瞬間峰值，與適量補償搭配。",
+      "tradeoff": "需驗證攻擊／釋放、前視延遲、峰值與失真；介入過多會改變動態，不能稱完全透明。"
+    },
+    {
+      "id": "D",
+      "title": "歌曲響度正規化",
+      "status": "待後續選擇",
+      "detail": "離線分析曲目響度，平衡不同歌曲的播放音量。",
+      "tradeoff": "解決歌曲之間的差異，不能單獨取代 EQ 前後補償或輸出峰值保護。"
+    }
+  ],
+  "examples": [
+    {
+      "id": "flat",
+      "name": "原音",
+      "gains": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "bass": 0,
+      "ambience": "關閉",
+      "mix": 0
+    },
+    {
+      "id": "separated",
+      "name": "50／800／12.5k 各 +3 dB",
+      "gains": [
+        3,
+        0,
+        0,
+        3,
+        0,
+        0,
+        3
+      ],
+      "bass": 0,
+      "ambience": "關閉",
+      "mix": 0
+    },
+    {
+      "id": "all-three",
+      "name": "七段各 +3 dB",
+      "gains": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "bass": 0,
+      "ambience": "關閉",
+      "mix": 0
+    },
+    {
+      "id": "bass",
+      "name": "低頻預設",
+      "gains": [
+        3.5,
+        2,
+        0,
+        -1,
+        0,
+        1,
+        1
+      ],
+      "bass": 0,
+      "ambience": "關閉",
+      "mix": 0
+    },
+    {
+      "id": "overlap",
+      "name": "低頻預設＋低音 +6 dB",
+      "gains": [
+        3.5,
+        2,
+        0,
+        -1,
+        0,
+        1,
+        1
+      ],
+      "bass": 6,
+      "ambience": "關閉",
+      "mix": 0
+    },
+    {
+      "id": "concert",
+      "name": "演唱會／18% 殘響",
+      "gains": [
+        0.5,
+        0,
+        -1,
+        0,
+        1,
+        0.5,
+        0
+      ],
+      "bass": 0,
+      "ambience": "演唱會",
+      "mix": 18
+    },
+    {
+      "id": "zero-mix",
+      "name": "演唱會／0% 殘響",
+      "gains": [
+        0.5,
+        0,
+        -1,
+        0,
+        1,
+        0.5,
+        0
+      ],
+      "bass": 0,
+      "ambience": "演唱會",
+      "mix": 0
+    }
+  ],
+  "sources": [
+    {
+      "title": "W3C Audio EQ Cookbook",
+      "url": "https://www.w3.org/TR/audio-eq-cookbook/"
+    },
+    {
+      "title": "Roon 餘裕與削波管理",
+      "url": "https://help.roonlabs.com/portal/en/kb/articles/dsp-engine-headroom-management"
+    },
+    {
+      "title": "FabFilter Auto Gain（估算補償）",
+      "url": "https://www.fabfilter.com/help/pro-q/using/output"
+    },
+    {
+      "title": "Pioneer 車用 7 段頻率配置",
+      "url": "https://pioneer-car.eu/asset/user_manuals/UPLOAD_ID_12913/7c041202cb86fe43de682d7ece4e4922d0285916"
+    }
+  ]
+}

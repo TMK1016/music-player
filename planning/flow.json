@@ -1,0 +1,684 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-25",
+  "title": "Music Player 開發流程",
+  "mode": "development-with-manual-evidence",
+  "platform_assumption": "Mac M2／Xcode 開發已確認；最終車用播放端待確認；UI 可於 macOS 操作並支援 iOS 編譯",
+  "stages": [
+    "需求與能力",
+    "架構與驗證",
+    "核心與資料",
+    "離線 MVP",
+    "來源與系統",
+    "車用與進階",
+    "驗收與發佈"
+  ],
+  "nodes": [
+    {
+      "id": "GATE-01",
+      "title": "確認播放平台",
+      "stage": 0,
+      "status": "等待確認",
+      "depends_on": [],
+      "task": "確認第一版播放端及最低 OS；Mac 是已確認的開發環境。",
+      "input": "使用者的裝置與使用情境",
+      "output": "凍結平台決策 D-01",
+      "planned_paths": [
+        "docs/zh-TW/決策紀錄.md"
+      ],
+      "acceptance": [
+        "使用者確認播放裝置",
+        "列明 Mac、iPhone、CarPlay 的交付範圍"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "GATE-02",
+      "title": "盤點車內通道",
+      "stage": 0,
+      "status": "部分實作",
+      "depends_on": [],
+      "task": "調查車機、分音、擴大機、接線與音訊介面。",
+      "input": "車款／年份、車機型號、接線與外接 DSP",
+      "output": "可存取通道與物理映射表",
+      "planned_paths": [
+        "docs/zh-TW/hardware-profile.md"
+      ],
+      "acceptance": [
+        "分辨單體數與獨立通道數",
+        "標出被動／主動分音與未知項目"
+      ],
+      "evidence": [
+        "docs/zh-TW/音效模式與車輛調音.md",
+        "docs/zh-TW/音效模式驗收.md"
+      ],
+      "implemented_paths": [
+        "docs/zh-TW/音效模式與車輛調音.md",
+        "apps/apple/OrcaPlayer/SoundProfiles.swift"
+      ],
+      "implementation_scope": "使用者確認 2017 Ford Fiesta B299-7v、藍牙、沒有外接 DSP、前分音後同軸。車機型號、分音接線與內部處理仍未知；目前 App 只輸出立體聲。"
+    },
+    {
+      "id": "GATE-03",
+      "title": "建立音源能力表",
+      "stage": 0,
+      "status": "規劃中",
+      "depends_on": [],
+      "task": "確認本機、iCloud Drive、授權來源與 YouTube 的存取能力。",
+      "input": "來源政策與使用者音檔類型",
+      "output": "來源能力與授權證據表",
+      "planned_paths": [
+        "docs/zh-TW/source-capabilities.md"
+      ],
+      "acceptance": [
+        "每來源列出可下載／解碼／DSP／離線能力",
+        "YouTube 收藏與下載明確分離"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "ARCH-01",
+      "title": "凍結核心邊界",
+      "stage": 1,
+      "status": "部分實作",
+      "depends_on": [
+        "GATE-01",
+        "GATE-03"
+      ],
+      "task": "定義原生殼、Rust 核心、FFI 與資料庫寫入擁有者。",
+      "input": "平台與來源決策",
+      "output": "架構 ADR、工具鏈及介面契約",
+      "planned_paths": [
+        "docs/zh-TW/architecture-adr.md",
+        "crates/apple-bridge/"
+      ],
+      "acceptance": [
+        "版本與最低支援版本有紀錄",
+        "同一硬體輸出只有一個擁有者"
+      ],
+      "evidence": [
+        "docs/zh-TW/本機音訊實作與驗收.md"
+      ],
+      "implementation_scope": "已建立 AudioPlayback 原生參考後端；正式 Rust FFI、工具鏈及最終播放平台尚未凍結。",
+      "implemented_paths": [
+        "apps/apple/OrcaPlayer/AudioPlayback.swift"
+      ]
+    },
+    {
+      "id": "SPIKE-01",
+      "title": "原生＋Rust 真機出聲",
+      "stage": 1,
+      "status": "部分實作",
+      "depends_on": [
+        "ARCH-01"
+      ],
+      "task": "用一首本機音檔驗證 PCM、Rust DSP、旁通到目標裝置。",
+      "input": "自有測試音檔與原生解碼",
+      "output": "可重現的最小播放原型",
+      "planned_paths": [
+        "apps/ios/Audio/",
+        "apps/macos/Audio/",
+        "crates/apple-bridge/"
+      ],
+      "acceptance": [
+        "依確認平台選擇一個原生殼",
+        "旁通與處理路徑均出聲",
+        "回呼無阻塞／配置，FFI 不越界"
+      ],
+      "evidence": [
+        "docs/zh-TW/本機音訊實作與驗收.md"
+      ],
+      "implementation_scope": "Mac 原生播放與 EQ 已接入；尚未接 Rust，不視為混合架構 spike 完成。",
+      "implemented_paths": [
+        "apps/apple/OrcaPlayer/AudioPlayback.swift",
+        "apps/apple/Resources/Orca-Soundcheck.wav"
+      ]
+    },
+    {
+      "id": "CORE-01",
+      "title": "即時 DSP 核心",
+      "stage": 2,
+      "status": "規劃中",
+      "depends_on": [
+        "SPIKE-01"
+      ],
+      "task": "固定緩衝、前級、biquad EQ、參數平滑、旁通與限幅。",
+      "input": "PCM 區塊與有效設定",
+      "output": "處理後 PCM／錯誤碼",
+      "planned_paths": [
+        "crates/audio-dsp/"
+      ],
+      "acceptance": [
+        "極值參數保持有限且穩定",
+        "切換不產生明顯爆音",
+        "回呼不做 I/O 或鎖"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "QA-01",
+      "title": "DSP 與效能基線",
+      "stage": 2,
+      "status": "部分實作",
+      "depends_on": [
+        "CORE-01"
+      ],
+      "task": "用脈衝、掃頻、靜音及極值測試建立數值與時序證據。",
+      "input": "DSP 核心、授權測試訊號",
+      "output": "頻響、穩定性、回呼耗時報告",
+      "planned_paths": [
+        "tests/audio-fixtures/",
+        "artifacts/dsp-baseline/"
+      ],
+      "acceptance": [
+        "濾波響應與參考結果吻合於約定容差",
+        "回呼預算有餘裕",
+        "記錄裝置／OS／路由／buffer"
+      ],
+      "evidence": [
+        "docs/zh-TW/本機音訊實作與驗收.md",
+        "docs/zh-TW/EQ音量處理技術.md",
+        "docs/zh-TW/七段等化器與模式管理.md"
+      ],
+      "implementation_scope": "已驗證檔案／狀態與原生 EQ 離線 PCM；尚無 Rust、回呼耗時、60 分鐘連播或實車證據。",
+      "implemented_paths": [
+        "apps/apple/Tests/AudioChecks.swift",
+        "apps/apple/Tests/NativeEQChecks.swift",
+        "scripts/check_audio.py"
+      ]
+    },
+    {
+      "id": "LIB-01",
+      "title": "音樂庫與歌單",
+      "stage": 2,
+      "status": "部分實作",
+      "depends_on": [
+        "ARCH-01"
+      ],
+      "task": "本機選檔、標籤、去重、持久化與歌單引用。",
+      "input": "使用者授權音檔",
+      "output": "Track／Playlist 與離線副本",
+      "planned_paths": [
+        "crates/player-domain/",
+        "apps/ios/Library/",
+        "apps/macos/Library/"
+      ],
+      "acceptance": [
+        "重啟後歌單保留",
+        "不支援格式有清楚錯誤",
+        "複製／資料庫失敗可恢復"
+      ],
+      "evidence": [
+        "docs/zh-TW/本機音訊實作與驗收.md"
+      ],
+      "implementation_scope": "已實作複製、去重、原子索引與收藏；命名歌單、標籤／封面與大量曲庫待完成。",
+      "implemented_paths": [
+        "apps/apple/OrcaPlayer/LibraryStore.swift",
+        "apps/apple/OrcaPlayer/LibraryView.swift"
+      ]
+    },
+    {
+      "id": "PLAY-01",
+      "title": "離線播放控制",
+      "stage": 3,
+      "status": "部分實作",
+      "depends_on": [
+        "SPIKE-01",
+        "LIB-01"
+      ],
+      "task": "播放、暫停、切歌、定位、佇列與進度恢復。",
+      "input": "音樂庫與播放佇列",
+      "output": "可使用的本機播放器",
+      "planned_paths": [
+        "apps/ios/Player/",
+        "apps/macos/Player/"
+      ],
+      "acceptance": [
+        "斷網且重啟後可播放已匯入歌曲",
+        "定位／切歌穩定",
+        "候選格式逐一測試"
+      ],
+      "evidence": [
+        "docs/zh-TW/本機音訊實作與驗收.md"
+      ],
+      "implementation_scope": "本機播放、暫停、定位、切歌與自然結尾已接入；格式矩陣、長時連播與路由驗證未完成。",
+      "implemented_paths": [
+        "apps/apple/OrcaPlayer/AudioPlayback.swift",
+        "apps/apple/OrcaPlayer/PlayerModel.swift"
+      ]
+    },
+    {
+      "id": "EQ-01",
+      "title": "參數 EQ 介面",
+      "stage": 3,
+      "status": "部分實作",
+      "depends_on": [
+        "CORE-01",
+        "QA-01",
+        "PLAY-01"
+      ],
+      "task": "頻率、增益、Q、前級、旁通與預設；段數待範圍確認。",
+      "input": "DSP 參數與 UI 操作",
+      "output": "可調整且有保護的 EQ",
+      "planned_paths": [
+        "apps/ios/Equalizer/",
+        "apps/macos/Equalizer/"
+      ],
+      "acceptance": [
+        "UI 與 DSP 參數一致",
+        "異常參數不進入回呼",
+        "等音量 A/B 與削波檢查"
+      ],
+      "evidence": [
+        "docs/zh-TW/本機音訊實作與驗收.md",
+        "docs/zh-TW/音效模式與車輛調音.md",
+        "docs/zh-TW/音效模式驗收.md",
+        "docs/zh-TW/EQ音量處理技術.md",
+        "docs/zh-TW/七段等化器與模式管理.md",
+        "docs/zh-TW/模式內嵌展開與儲存提示.md"
+      ],
+      "implementation_scope": "v0.6：7 段固定中心（50～12.5k Hz）、約 1⅓ 倍頻程、合成響應餘裕與 13 預設；130 個 Apple PCM 探測點通過。未加入響度補償、限制器、true-peak 保護、完整平滑或 Rust。",
+      "implemented_paths": [
+        "apps/apple/OrcaPlayer/EqualizerView.swift",
+        "apps/apple/OrcaPlayer/AudioPlayback.swift",
+        "apps/apple/OrcaPlayer/ProfileControls.swift",
+        "apps/apple/OrcaPlayer/EQHeadroom.swift",
+        "apps/apple/OrcaPlayer/EQBands.swift",
+        "apps/apple/OrcaPlayer/ModeSelectionView.swift"
+      ]
+    },
+    {
+      "id": "PROFILE-01",
+      "title": "車輛與座位設定",
+      "stage": 3,
+      "status": "部分實作",
+      "depends_on": [
+        "GATE-02",
+        "EQ-01"
+      ],
+      "task": "以路由、通道角色、座位與量測版本儲存設定。",
+      "input": "硬體能力表與 EQ 設定",
+      "output": "版本化調音檔",
+      "planned_paths": [
+        "crates/player-domain/src/profile.rs"
+      ],
+      "acceptance": [
+        "不相容路由拒絕套用或退回立體聲",
+        "可還原設定",
+        "不以 16 顆喇叭直接假定 16 路"
+      ],
+      "evidence": [
+        "docs/zh-TW/音效模式與車輛調音.md",
+        "docs/zh-TW/音效模式驗收.md",
+        "docs/zh-TW/車輛設定簡化.md",
+        "docs/zh-TW/七段等化器與模式管理.md",
+        "docs/zh-TW/模式內嵌展開與儲存提示.md"
+      ],
+      "implemented_paths": [
+        "apps/apple/OrcaPlayer/SoundProfiles.swift",
+        "apps/apple/OrcaPlayer/PlayerModel.swift",
+        "apps/apple/OrcaPlayer/VehicleCalibration.swift"
+      ],
+      "implementation_scope": "v3 七段自訂音效與歌曲綁定，v1／v2 對數頻率轉換及原始偏好備份；模式列表可移除／還原內建，最多 20 自訂。車輛仍為立體聲配置預覽，不含距離或獨立路由。"
+    },
+    {
+      "id": "CLOUD-01",
+      "title": "iCloud Drive 離線匯入",
+      "stage": 4,
+      "status": "規劃中",
+      "depends_on": [
+        "GATE-03",
+        "LIB-01"
+      ],
+      "task": "系統選檔、scope、檔案協調、雲端下載與 App 管理副本。",
+      "input": "使用者選取的 iCloud Drive 音檔",
+      "output": "已驗證可離線 Track",
+      "planned_paths": [
+        "apps/ios/Sources/ICloudImport/",
+        "apps/macos/Sources/ICloudImport/"
+      ],
+      "acceptance": [
+        "冷啟動斷網仍可播放保留副本",
+        "scope 成對釋放",
+        "雲端未下載不標可離線"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "SOURCE-01",
+      "title": "來源分享與能力判定",
+      "stage": 4,
+      "status": "規劃中",
+      "depends_on": [
+        "GATE-03",
+        "LIB-01"
+      ],
+      "task": "貼連結或分享匯入；判定可下載與僅收藏的來源。",
+      "input": "連結、檔案或分享輸入",
+      "output": "DownloadRequest 或 ExternalBookmark",
+      "planned_paths": [
+        "apps/ios/Sources/",
+        "crates/player-domain/src/source.rs"
+      ],
+      "acceptance": [
+        "收藏連結不偽裝成音檔",
+        "受限來源沒有假下載按鈕",
+        "核准來源有條款與權利證據"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "DOWNLOAD-01",
+      "title": "下載→入庫→歌單",
+      "stage": 4,
+      "status": "規劃中",
+      "depends_on": [
+        "SOURCE-01"
+      ],
+      "task": "授權來源下載佇列、取消重試、驗證、原子入庫與歌單更新。",
+      "input": "已通過來源能力檢查的請求",
+      "output": "完成音檔、Track、歌單項目",
+      "planned_paths": [
+        "apps/ios/Downloads/",
+        "apps/macos/Downloads/"
+      ],
+      "acceptance": [
+        "中斷／磁碟滿／重複／取消可恢復",
+        "未完成檔不進入歌單",
+        "無下載／執行遠端程式碼"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "IOS-01",
+      "title": "背景與媒體控制",
+      "stage": 4,
+      "status": "部分實作",
+      "depends_on": [
+        "GATE-01",
+        "PLAY-01"
+      ],
+      "task": "iPhone 選定時整合 session、鎖屏、遙控、中斷與導航 ducking。",
+      "input": "iOS 播放器與有效路由",
+      "output": "真機背景播放",
+      "planned_paths": [
+        "apps/ios/SystemAudio/"
+      ],
+      "acceptance": [
+        "鎖屏連播與來電恢復有證據",
+        "拔線／藍牙切換不突發大音量",
+        "媒體服務重設可恢復"
+      ],
+      "evidence": [
+        "docs/zh-TW/iPhone安裝紀錄.md"
+      ],
+      "deployment_note": "2026-10-24：v0.6.0／7 已更新並顯示正在實體 iPhone 執行；七段模式與 v3 設定已接入。手機橫向手勢、完整播放／中斷及 Fiesta 實車驗收仍待確認。",
+      "implemented_paths": [
+        "apps/apple/OrcaPlayer.xcodeproj/project.pbxproj",
+        "apps/apple/OrcaPlayer/AudioPlayback.swift"
+      ],
+      "implementation_scope": "共用原生 iOS target 已編譯、簽章、安裝與啟動；完整手機功能、背景播放及實車驗證待完成。"
+    },
+    {
+      "id": "CAR-01",
+      "title": "CarPlay 原生整合",
+      "stage": 5,
+      "status": "條件式",
+      "depends_on": [
+        "IOS-01",
+        "PROFILE-01"
+      ],
+      "task": "申請音訊 entitlement 並使用 Apple 範本完成選歌與播放。",
+      "input": "Apple 資格、iOS 播放器",
+      "output": "CarPlay 音樂介面",
+      "planned_paths": [
+        "apps/ios/CarPlay/"
+      ],
+      "acceptance": [
+        "獲得 entitlement",
+        "模擬器與實車均驗證",
+        "不顯示不成立的逐喇叭控制"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "FX-01",
+      "title": "可選音場效果",
+      "stage": 5,
+      "status": "部分實作",
+      "depends_on": [
+        "EQ-01",
+        "PROFILE-01"
+      ],
+      "task": "以可旁通立體聲擴展先驗證，不宣稱實體多聲道或 Dolby。",
+      "input": "穩定 DSP 與設定",
+      "output": "可關閉的效果預設",
+      "planned_paths": [
+        "crates/audio-dsp/src/effects/"
+      ],
+      "acceptance": [
+        "等音量比較",
+        "單聲道相容與峰值驗證",
+        "關閉時不殘留效果"
+      ],
+      "evidence": [
+        "docs/zh-TW/音效模式與車輛調音.md",
+        "docs/zh-TW/音效模式驗收.md"
+      ],
+      "implemented_paths": [
+        "apps/apple/OrcaPlayer/AudioPlayback.swift",
+        "apps/apple/OrcaPlayer/ProfileControls.swift",
+        "apps/apple/Tests/NativeEQChecks.swift"
+      ],
+      "implementation_scope": "Apple 原生立體聲殘響與混合控制，PCM 尾音／旁通已驗證；不是 Dolby、多聲道、空間解碼或 Rust。等響度實車聽測與完整單聲道評估未完成。"
+    },
+    {
+      "id": "MULTI-01",
+      "title": "獨立多通道 DSP",
+      "stage": 5,
+      "status": "條件式",
+      "depends_on": [
+        "GATE-02",
+        "QA-01",
+        "PROFILE-01"
+      ],
+      "task": "目前 Fiesta 藍牙配置無逐單體映射；只有確認獨立輸出與放大通道後才加入路由、分頻、逐路延遲及 EQ。原創 L/R 試音僅辨識立體聲，不能當成逐喇叭驗收。",
+      "input": "已驗證硬體、單體規格與接線",
+      "output": "逐路 DSP 原型／相容表",
+      "planned_paths": [
+        "crates/audio-dsp/src/multichannel/",
+        "docs/zh-TW/hardware-compatibility.md"
+      ],
+      "acceptance": [
+        "實體通道逐路送測試訊號驗證",
+        "單體有合適分頻與保護",
+        "不相容硬體隱藏該模式"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "CAL-01",
+      "title": "量測與調音驗證",
+      "stage": 5,
+      "status": "條件式",
+      "depends_on": [
+        "MULTI-01"
+      ],
+      "task": "使用者於 v0.4.1 要求移除座位距離與延遲參考，現行產品不提供量測或延遲校正。未來專業校正仍為硬體條件式研究，需再次確認產品需求。",
+      "input": "校正量測設備、測試環境",
+      "output": "有量測版本的車用設定與 A/B 記錄",
+      "planned_paths": [
+        "docs/zh-TW/calibration/",
+        "artifacts/calibration/"
+      ],
+      "acceptance": [
+        "記錄麥克風位置與校正",
+        "可重現前後比較",
+        "不從喇叭數猜測最佳參數"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "FLOW-01",
+      "title": "節點與真實證據串接",
+      "stage": 6,
+      "status": "部分實作",
+      "depends_on": [
+        "PLAY-01",
+        "QA-01"
+      ],
+      "task": "將測試與非即時執行事件連回穩定 node ID；區分首錯與連動失敗。",
+      "input": "測試報告、節點 ID、版本及路由摘要",
+      "output": "可追蹤故障與修復證據",
+      "planned_paths": [
+        "planning/",
+        "apps/ios/Diagnostics/",
+        "crates/player-domain/src/diagnostics.rs"
+      ],
+      "acceptance": [
+        "不在回呼直接寫日誌",
+        "事件能回連程式與測試",
+        "不把失敗節點直接當根因"
+      ],
+      "evidence": [
+        "docs/zh-TW/開發日誌與更新流程.md",
+        "docs/zh-TW/EQ音量處理技術.md",
+        "docs/zh-TW/流程圖縮放與節點註解.md",
+        "docs/zh-TW/專案更名與檔案分類.md",
+        "docs/product/PRD-music-player.md",
+        "docs/product/PM流程與驗收.md"
+      ],
+      "implementation_scope": "已建立共用開發日誌、改動到節點／實作位置的定位與反查；仍為人工維護，尚未串接自動執行／測試事件。",
+      "implemented_paths": [
+        "planning/changelog.json",
+        "planning/inspector-template.html",
+        "planning/build_inspector.py",
+        "planning/validate_plan.py",
+        "apps/apple/OrcaPlayer/DevelopmentLogView.swift",
+        "planning/eq-technical-panel.html",
+        "planning/eq-technical.json"
+      ]
+    },
+    {
+      "id": "QA-02",
+      "title": "真機與實車驗收",
+      "stage": 6,
+      "status": "規劃中",
+      "depends_on": [
+        "EQ-01",
+        "PROFILE-01",
+        "CLOUD-01",
+        "DOWNLOAD-01",
+        "FLOW-01"
+      ],
+      "task": "按已選平台驗證長時播放、斷網、路由、耗電及安裝。",
+      "input": "MVP build、裝置及測試矩陣",
+      "output": "版本化驗收報告",
+      "planned_paths": [
+        "artifacts/release-validation/"
+      ],
+      "acceptance": [
+        "60 分鐘連播與離線冷啟動",
+        "已納入版本的可選功能另附證據",
+        "沒有實車證據不宣稱實車通過"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "RELEASE-01",
+      "title": "可重現打包與封測",
+      "stage": 6,
+      "status": "規劃中",
+      "depends_on": [
+        "QA-02"
+      ],
+      "task": "依平台建立簽章與封測管線；Mac 直接發佈需公證。",
+      "input": "通過驗收的 build 與開發者資格",
+      "output": "Mac 下載包或 iOS TestFlight 版本",
+      "planned_paths": [
+        "scripts/release/",
+        "docs/zh-TW/release-checklist.md"
+      ],
+      "acceptance": [
+        "乾淨裝置安裝成功",
+        "iOS 與 macOS 發佈流程分離",
+        "權限／授權／依賴清冊完整"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "STORE-01",
+      "title": "App Store 發佈",
+      "stage": 6,
+      "status": "規劃中",
+      "depends_on": [
+        "RELEASE-01"
+      ],
+      "task": "準備隱私揭露、商店資料、權利證明、審核帳號或示範內容。",
+      "input": "封測回饋、來源授權與發佈資料",
+      "output": "送審版本與維護計畫",
+      "planned_paths": [
+        "docs/zh-TW/store-submission/"
+      ],
+      "acceptance": [
+        "政策於送審時重新查核",
+        "第三方內容授權可提供",
+        "不以技術完成保證審核成功"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "YT-01",
+      "title": "YouTube 特別授權研究",
+      "stage": 4,
+      "status": "待授權",
+      "depends_on": [
+        "GATE-03"
+      ],
+      "task": "原始願望保留；先確認官方合作是否能合法取得離線檔案與 DSP 權限。",
+      "input": "來源書面授權與技術能力資料",
+      "output": "可行性決策；否則維持連結收藏",
+      "planned_paths": [
+        "docs/zh-TW/youtube-feasibility.md"
+      ],
+      "acceptance": [
+        "內容權利與平台授權均確認",
+        "無授權時不實作第三方音軌擷取",
+        "此分支不阻塞本機 MVP"
+      ],
+      "evidence": []
+    },
+    {
+      "id": "UI-01",
+      "title": "科技藍原生介面",
+      "stage": 1,
+      "status": "介面完成",
+      "depends_on": [],
+      "task": "依使用者要求先實作原生科技藍播放、音樂庫、EQ 與車輛設定介面；本節點可獨立審閱，不宣稱音訊核心完成。",
+      "input": "Mac M2／Xcode 開發、車用播放情境、科技藍配色與介面優先要求",
+      "output": "可操作的 macOS 介面原型與可編譯的 iOS target；尚不出聲",
+      "planned_paths": [
+        "crates/apple-bridge/"
+      ],
+      "implemented_paths": [
+        "apps/apple/OrcaPlayer.xcodeproj/project.pbxproj",
+        "apps/apple/OrcaPlayer/ContentView.swift",
+        "apps/apple/OrcaPlayer/EqualizerView.swift",
+        "apps/apple/OrcaPlayer/PlayerModel.swift"
+      ],
+      "acceptance": [
+        "macOS 與 generic iOS Simulator 編譯通過",
+        "Mac 原生畫面與 EQ／搜尋互動驗證",
+        "設定保存及異常資料恢復檢查通過",
+        "音訊、匯入、下載與車機連線未接入狀態有明確標示"
+      ],
+      "evidence": [
+        "docs/zh-TW/介面實作與驗收.md",
+        "docs/zh-TW/七段等化器與模式管理.md",
+        "docs/zh-TW/模式內嵌展開與儲存提示.md"
+      ],
+      "implementation_scope": "v0.6 七段無橫移調整區、單列模式與完整選擇面板；360 點寬預覽驗證。橫向手勢自動展開已接入，手機手勢實測待確認。"
+    }
+  ],
+  "progress_summary": "25 節點 · v0.6 七段完整適配／單列模式／v3 相容 · 響度補償待後續"
+}

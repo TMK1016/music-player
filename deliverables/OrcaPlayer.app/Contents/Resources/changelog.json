@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-10-24",
+  "entries": [
+    {
+      "id": "release-0-3",
+      "version": "v0.3.0",
+      "date": "2026-10-24",
+      "title": "開發日誌與改動定位",
+      "summary": "把歷次成果串到流程節點、實作位置與功能頁；日誌為人工維護的版本紀錄。",
+      "changes": [
+        {
+          "id": "journal-sidebar",
+          "title": "首頁側邊欄開發日誌",
+          "summary": "流程圖與 App 使用同一份日誌；可逐筆查看本次與過往改動。",
+          "node_ids": [
+            "FLOW-01",
+            "UI-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "planning/changelog.json",
+              "label": "changelog.json"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/DevelopmentLogView.swift",
+              "label": "DevelopmentLogView.swift"
+            }
+          ]
+        },
+        {
+          "id": "journal-navigation",
+          "title": "改動 → 節點 → 實作位置",
+          "summary": "點選改動會定位相關節點、列出檔案與證據；網址保留選取狀態，節點也能反查歷次改動。",
+          "node_ids": [
+            "FLOW-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "planning/inspector-template.html",
+              "label": "inspector-template.html"
+            },
+            {
+              "path": "planning/build_inspector.py",
+              "label": "build_inspector.py"
+            }
+          ]
+        },
+        {
+          "id": "journal-maintenance",
+          "title": "每次更新同步維護",
+          "summary": "將新增日誌、節點範圍、實作與驗收位置列為交付要求，並檢查不存在的節點／檔案／未同步資料。",
+          "node_ids": [
+            "FLOW-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "planning/validate_plan.py",
+              "label": "validate_plan.py"
+            },
+            {
+              "path": "../../TMK準則.md",
+              "label": "TMK準則.md"
+            },
+            {
+              "path": "../../AGENTS.md",
+              "label": "AGENTS.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-2",
+      "version": "v0.2.0",
+      "date": "2026-10-24",
+      "title": "本機播放與原生等化器",
+      "summary": "從介面原型進入能匯入、離線播放與調整 EQ 的本機版本；Rust、iPhone 真機與實車仍待驗證。",
+      "changes": [
+        {
+          "id": "local-import",
+          "title": "本機匯入與離線音樂庫",
+          "summary": "複製原始音檔、SHA-256 去重、原子索引與損毀保護；不搬走使用者檔案。",
+          "node_ids": [
+            "LIB-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryStore.swift",
+              "label": "LibraryStore.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryView.swift",
+              "label": "LibraryView.swift"
+            }
+          ]
+        },
+        {
+          "id": "local-playback",
+          "title": "實際播放與定位",
+          "summary": "接入 Apple 音訊引擎，支援暫停、恢復、進度、切歌、隨機與整份循環。",
+          "node_ids": [
+            "PLAY-01",
+            "SPIKE-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            }
+          ]
+        },
+        {
+          "id": "native-eq",
+          "title": "真正作用於音訊的 10 段 EQ",
+          "summary": "原生固定頻段 EQ、前級補償、預設與旁通；並非 Rust、逐喇叭 DSP 或量測響應。",
+          "node_ids": [
+            "EQ-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            }
+          ]
+        },
+        {
+          "id": "native-audio-checks",
+          "title": "匯入、播放狀態與 PCM 驗證",
+          "summary": "完成離線副本、去重、尾曲與循環狀態檢查；原生離線 PCM 的 1kHz +6dB 設定測得 +6.00dB。",
+          "node_ids": [
+            "QA-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            },
+            {
+              "path": "apps/apple/Tests/NativeEQChecks.swift",
+              "label": "NativeEQChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/本機音訊實作與驗收.md",
+              "label": "本機音訊實作與驗收.md"
+            }
+          ]
+        },
+        {
+          "id": "native-backend-boundary",
+          "title": "隔離原生音訊後端",
+          "summary": "以 AudioPlayback 協定保留之後接入 Rust 的邊界；Rust 核心不標示完成。",
+          "node_ids": [
+            "ARCH-01",
+            "SPIKE-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "docs/zh-TW/決策紀錄.md",
+              "label": "決策紀錄.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "release-0-1",
+      "version": "v0.1.0",
+      "date": "2026-10-24",
+      "title": "科技藍原生介面",
+      "summary": "歷史介面階段：當時使用示範資料，尚未接入實際音訊；目前播放能力見 v0.2。",
+      "changes": [
+        {
+          "id": "ui-player",
+          "title": "播放首頁與專注模式",
+          "summary": "建立深藍介面、原創程序式封面、迷你播放器與放大控制。",
+          "node_ids": [
+            "UI-01",
+            "PLAY-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/Theme.swift",
+              "label": "Theme.swift"
+            }
+          ]
+        },
+        {
+          "id": "ui-library",
+          "title": "音樂庫、搜尋與收藏介面",
+          "summary": "建立曲目清單、搜尋、收藏篩選與空結果狀態。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryView.swift",
+              "label": "LibraryView.swift"
+            }
+          ]
+        },
+        {
+          "id": "ui-equalizer",
+          "title": "等化器操作介面",
+          "summary": "建立 10 段滑桿、4 組預設、旁通與歸零的介面。",
+          "node_ids": [
+            "UI-01",
+            "EQ-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            }
+          ]
+        },
+        {
+          "id": "ui-vehicle",
+          "title": "車輛與座位配置預覽",
+          "summary": "依前座分音／後座同軸描述建立配置圖；未宣稱已偵測或校正車輛。",
+          "node_ids": [
+            "UI-01",
+            "PROFILE-01"
+          ],
+          "target_page": "vehicle",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/VehicleView.swift",
+              "label": "VehicleView.swift"
+            },
+            {
+              "path": "docs/zh-TW/介面實作與驗收.md",
+              "label": "介面實作與驗收.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "planning-initial",
+      "version": "規劃 v0.1",
+      "date": "2026-10-24",
+      "title": "需求、準則與開發路徑",
+      "summary": "整理工作區、完整英文需求、技術限制與可追蹤任務。",
+      "changes": [
+        {
+          "id": "workspace-principles",
+          "title": "工作區分類與 TMK 準則",
+          "summary": "保存語言、查證、Rust 偏好與分類要求，供後續更新遵循。",
+          "node_ids": [
+            "GATE-01",
+            "ARCH-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "../../TMK準則.md",
+              "label": "TMK準則.md"
+            },
+            {
+              "path": "docs/en/original-requirements.md",
+              "label": "original-requirements.md"
+            }
+          ]
+        },
+        {
+          "id": "initial-flow",
+          "title": "開發依賴與功能邊界",
+          "summary": "建立離線、來源、車用、Rust 與驗收節點，區分規劃與已實作。",
+          "node_ids": [
+            "ARCH-01",
+            "GATE-02",
+            "GATE-03"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "planning/flow.json",
+              "label": "flow.json"
+            },
+            {
+              "path": "docs/zh-TW/需求與開發路徑.md",
+              "label": "需求與開發路徑.md"
+            },
+            {
+              "path": "docs/zh-TW/來源與查證.md",
+              "label": "來源與查證.md"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Music Player · Flow Inspector</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1015;--panel:#121a23;--card:#18232f;--text:#e6edf4;--muted:#a5b5c5;--line:#304355;--accent:#6bc9ff;--pending:#f0c372;--conditional:#c8a8f6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.65 -apple-system,BlinkMacSystemFont,"PingFang TC",sans-serif}button,input{font:inherit}a{color:var(--accent)}button{cursor:pointer}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}header{padding:22px 26px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:20px;flex-wrap:wrap}h1{margin:0;font-size:22px}p{margin:8px 0}.eyebrow{font-size:12px;letter-spacing:.12em;color:var(--accent)}.subtitle,.muted{color:var(--muted)}.badge{display:inline-block;border:1px solid var(--line);padding:3px 10px;border-radius:16px;font-size:12px}.warning{color:var(--pending)}.layout{display:grid;grid-template-columns:200px minmax(0,1fr) 340px;min-height:calc(100vh - 110px)}nav{background:var(--panel);padding:22px 16px;border-right:1px solid var(--line)}nav h2{font-size:13px;color:var(--muted);margin:0 0 12px}nav a{display:block;margin:10px 0;text-decoration:none}.navactive{padding:8px 10px;border:1px solid var(--accent);border-radius:6px}main{min-width:0;padding:22px}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}input{background:var(--panel);color:var(--text);border:1px solid var(--line);padding:8px 12px;border-radius:6px;max-width:100%;width:280px}.toolbar button{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:8px 12px}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:12px 0}.dot{display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:50%;background:var(--accent)}.dot.pending{background:var(--pending)}.dot.conditional{background:var(--conditional)}.board-scroll{overflow:auto;border:1px solid var(--line);border-radius:9px;background:#0d141c;max-height:860px}.board{position:relative;display:grid;grid-template-columns:repeat(7,230px);gap:40px;padding:26px;min-width:1902px;min-height:820px}.stage{position:relative;z-index:1}.stage h2{font-size:13px;font-weight:500;color:var(--muted);margin:0 0 26px}.node{display:block;text-align:left;width:100%;margin:0 0 24px;padding:14px;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:7px;min-height:112px;transition:opacity .15s,border-color .15s}.node .id{display:block;font-size:11px;letter-spacing:.08em;color:var(--accent)}.node strong{display:block;font-size:14px;margin:5px 0;font-weight:600}.node small{display:block;color:var(--muted);font-size:12px}.node.selected{border:2px solid var(--accent);padding:13px;box-shadow:0 0 0 3px #6bc9ff1a}.node.related{border-color:#6bc9ff88}.node.dim{opacity:.32}.node.searchmiss{opacity:.14}.status{color:var(--muted)}.status.pending{color:var(--pending)}.status.conditional{color:var(--conditional)}svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}.edge{fill:none;stroke:var(--line);stroke-width:1.3;opacity:.55}.edge.active{stroke:var(--accent);stroke-width:2;opacity:1}.inspector{border-left:1px solid var(--line);background:var(--panel);padding:24px;overflow-wrap:anywhere}.inspector h2{font-size:20px;margin:8px 0 16px}.inspector h3{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:26px 0 8px}.inspector ul{padding-left:20px;margin:6px 0}.inspector li{margin-bottom:8px}.dep{background:var(--card);color:var(--accent);border:1px solid var(--line);border-radius:4px;padding:3px 6px;margin:3px;font-size:12px}.path{display:block;font:12px/1.7 ui-monospace,SFMono-Regular,monospace;color:#c1d5e5;padding:7px 0;border-bottom:1px solid var(--line)}.count{font-variant-numeric:tabular-nums}.footnote{font-size:12px;color:var(--muted);margin-top:14px}.section-title{font-size:16px;margin:0 0 10px}hr{border:0;border-top:1px solid var(--line);margin:20px 0}@media(max-width:1200px){.layout{grid-template-columns:150px minmax(0,1fr) 290px}main{padding:16px}.inspector{padding:18px}nav{padding:18px 12px}}@media(max-width:850px){.layout{grid-template-columns:minmax(0,1fr)}nav{display:flex;flex-wrap:wrap;gap:12px;border-right:0;border-bottom:1px solid var(--line);align-items:center}nav h2,nav .navnote{display:none}nav a{margin:0}.inspector{border-left:0;border-top:1px solid var(--line)}header{padding:18px}main{padding:16px}.board-scroll{max-height:570px}}
+.board-scroll{resize:vertical;height:650px;min-height:280px;max-height:90vh}.annotation-card{border:1px solid var(--line);border-radius:8px;padding:10px;margin:10px 0}.annotation-card textarea{display:block;width:100%;resize:vertical;background:var(--bg);color:var(--text);border:1px solid var(--line);padding:10px;font:inherit;margin:8px 0}.annotation-badge{color:var(--accent)!important}textarea:focus-visible{outline:2px solid var(--accent)}
+</style>
+<style>
+.layout{grid-template-columns:270px minmax(0,1fr) 340px}nav{min-width:0}.journal-sidebar{margin-top:26px}.journal-sidebar h2{color:var(--text);font-size:14px}.journal-release{border-top:1px solid var(--line);padding:12px 0}.journal-release summary{cursor:pointer;font-size:12px;line-height:1.8;color:var(--text)}.journal-release summary small{display:block;color:var(--muted);padding-left:14px}.journal-change{display:block;width:100%;border:0;border-radius:5px;background:transparent;color:var(--muted);text-align:left;padding:9px 10px;margin:4px 0;font-size:12px}.journal-change:hover{background:var(--card);color:var(--text)}.journal-change.is-active{background:#6bc9ff1a;color:var(--accent)}.journal-detail{margin-bottom:22px;padding:20px;border-left:3px solid var(--accent);background:var(--panel);overflow-wrap:anywhere}.journal-detail[hidden]{display:none}.journal-detail h2{font-size:19px;margin:8px 0}.journal-detail .actions{display:flex;gap:8px;flex-wrap:wrap}.journal-detail a{font-size:12px}.journal-detail ul{padding-left:18px}.journal-detail li{margin:6px 0}#navigation-status{min-height:20px;font-size:12px;color:var(--accent)}.node-history{display:block;width:100%;margin:7px 0;text-align:left;line-height:1.6}.node-history small{display:block;color:var(--muted)}@media(max-width:1200px){.layout{grid-template-columns:220px minmax(0,1fr) 290px}}@media(max-width:850px){.layout{grid-template-columns:minmax(0,1fr)}.journal-sidebar{flex-basis:100%;margin-top:8px;max-height:330px;overflow:auto}.journal-sidebar h2{display:block}.journal-release{padding:8px 0}.journal-detail{padding:14px}}
+</style>
+</head>
+<body>
+<header><div><div class="eyebrow">ORCA / PROJECT 001</div><h1>音樂播放器 · Flow Inspector</h1><div class="subtitle">從離線播放到車用 DSP，每個節點都有任務與驗收。</div></div><span class="badge warning">手動證據記錄 · 未連接執行期</span></header>
+<div class="layout">
+<nav aria-label="專案文件與開發日誌"><h2>專案導航</h2><a class="navactive" href="flow-inspector.html" aria-current="page">開發流程</a><a href="../docs/zh-TW/需求與開發路徑.md">需求與路徑 ↗</a><a href="../docs/zh-TW/決策紀錄.md">待確認決策 ↗</a><a href="../docs/en/original-requirements.md">英文需求 ↗</a><a href="../docs/zh-TW/來源與查證.md">官方來源 ↗</a><a href="flow.json">流程資料 ↗</a><a href="#section=eq-technical">技術細節 · EQ 音量</a><section class="journal-sidebar" aria-label="開發日誌"><h2>開發日誌</h2><div id="journal-list"></div></section><div class="navnote"><hr><p class="muted">實作與預計路徑分開列示。<br>日誌為人工維護，並非即時監控。</p></div></nav>
+<main>__EQ_TECHNICAL_PANEL__<h2 class="section-title">開發依賴圖</h2><div class="toolbar"><label for="search" class="muted">尋找節點</label><input id="search" type="search" placeholder="ID、任務或名稱" autocomplete="off"><button id="clear" type="button">清除選取</button><span id="summary" class="muted count"></span></div><p class="muted">點選節點查看右側任務；藍線顯示直接依賴，淡藍框顯示相關上下游。寬圖可橫向捲動。</p><div class="legend"><span><i class="dot pending"></i>等待確認／待授權</span><span><i class="dot"></i>規劃中</span><span><i class="dot conditional"></i>條件式功能</span></div><div class="board-scroll" aria-label="可橫向捲動的開發依賴圖" role="region" tabindex="0"><div id="board" class="board"><svg id="edges" class="edges" aria-hidden="true"></svg></div></div><p class="footnote">共用音訊核心優先驗證。多通道、CarPlay 與 YouTube 特別授權各有前提，不阻塞本機播放器 MVP。狀態不會自動隨測試改變。</p></main>
+<aside id="inspector" class="inspector" aria-live="polite" aria-label="節點詳情"></aside>
+</div>
+<script id="eq-technical-data" type="application/json">__EQ_TECHNICAL_JSON__</script>
+<script id="plan-data" type="application/json">__PLAN_JSON__</script>
+<script id="journal-data" type="application/json">__CHANGELOG_JSON__</script>
+<script>
+'use strict';
+const plan=JSON.parse(document.getElementById('plan-data').textContent);
+const journal=JSON.parse(document.getElementById('journal-data').textContent);
+const board=document.getElementById('board'), edges=document.getElementById('edges'), inspector=document.getElementById('inspector');
+const byId=new Map(plan.nodes.map(n=>[n.id,n]));
+const buttons=new Map(), changeButtons=new Map();let selected=null, activeChange=null;
+const journalPanel=document.createElement('section');journalPanel.id='journal-detail';journalPanel.className='journal-detail';journalPanel.hidden=true;
+const navigationStatus=document.createElement('p');navigationStatus.id='navigation-status';navigationStatus.setAttribute('role','status');
+document.querySelector('main').prepend(navigationStatus);document.querySelector('main').prepend(journalPanel);
+function elem(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e}
+function statusClass(status){return status==='等待確認'||status==='待授權'?'pending':status==='條件式'?'conditional':''}
+for(let i=0;i<plan.stages.length;i++){
+ const column=elem('section',undefined,'stage');column.append(elem('h2',String(i).padStart(2,'0')+' / '+plan.stages[i]));
+ for(const n of plan.nodes.filter(n=>n.stage===i)){
+  const b=elem('button',undefined,'node');b.type='button';b.dataset.node=n.id;b.setAttribute('aria-pressed','false');
+  b.append(elem('span',n.id,'id'),elem('strong',n.title),elem('small',n.status,'status '+statusClass(n.status)));
+  b.addEventListener('click',()=>select(n.id));buttons.set(n.id,b);column.append(b);
+ }board.append(column);
+}
+document.getElementById('summary').textContent=plan.progress_summary || (plan.nodes.length+' 節點');
+function reachable(id,up,seen=new Set()){
+ const next=up?byId.get(id).depends_on:plan.nodes.filter(n=>n.depends_on.includes(id)).map(n=>n.id);
+ for(const v of next){if(!seen.has(v)){seen.add(v);reachable(v,up,seen)}}return seen;
+}
+function dependencyButtons(ids){const box=elem('div');if(!ids.length){box.append(elem('p','無','muted'));return box}
+ for(const id of ids){const b=elem('button',id,'dep');b.type='button';b.addEventListener('click',()=>select(id));box.append(b)}return box;
+}
+function detailSection(title,content){const box=elem('section');box.append(elem('h3',title),content);inspector.append(box)}
+function select(id,options={}){
+ navigationStatus.textContent=id?'已選取：'+id:'';
+ if(activeChange && !activeChange.change.node_ids.includes(id)){activeChange=null;renderJournalPanel()}
+ selected=id;const related=id?new Set([id,...reachable(id,true),...reachable(id,false)]):null;
+ for(const [key,b] of buttons){b.classList.toggle('selected',id===key);b.classList.toggle('related',!!related&&related.has(key)&&id!==key);b.classList.toggle('dim',!!related&&!related.has(key));b.setAttribute('aria-pressed',String(id===key))}
+ inspector.replaceChildren();
+ if(!id){inspector.append(elem('div','NODE INSPECTOR','eyebrow'),elem('h2','選取一個節點'),elem('p','從流程圖或側邊欄日誌選取改動，查看實作位置與驗收。','muted'),elem('p','本機音訊已部分驗證；即時故障監控尚未接入。','warning'));draw();if(options.updateHash!==false)writeHash();return}
+ if(id==='EQ-01'){const link=elem('a','開啟 EQ 技術細節 ↗');link.href='#section=eq-technical';inspector.append(link)}
+ const n=byId.get(id);inspector.append(elem('div',n.id,'eyebrow'),elem('h2',n.title),elem('span',n.status,'badge '+statusClass(n.status)),elem('p',n.task));
+ if(n.implementation_scope)detailSection('本輪範圍與未完成部分',elem('p',n.implementation_scope));
+ detailSection('輸入',elem('p',n.input));detailSection('輸出／交付物',elem('p',n.output));
+ detailSection('前置依賴',dependencyButtons(n.depends_on));detailSection('直接下游',dependencyButtons(plan.nodes.filter(x=>x.depends_on.includes(id)).map(x=>x.id)));
+ const paths=elem('div');for(const path of n.planned_paths)paths.append(elem('code',path,'path'));detailSection('預計實作／文件路徑（不是已完成）',paths);
+ if(n.implemented_paths){const actual=elem('div');for(const path of n.implemented_paths)actual.append(fileLink(path,path));detailSection('已存在的實作路徑',actual)}
+ const checks=elem('ul');for(const c of n.acceptance)checks.append(elem('li',c));detailSection('驗收條件',checks);
+ const evidence=elem('div');if(n.evidence.length){for(const path of n.evidence)evidence.append(fileLink(path,path))}else evidence.append(elem('p','尚無；需要實作與實測後登錄。','muted'));detailSection('執行／測試證據',evidence);
+ const history=elem('div');for(const release of journal.entries)for(const change of release.changes)if(change.node_ids.includes(id)){
+  const b=elem('button',undefined,'dep node-history');b.type='button';b.append(elem('span',change.title),elem('small',release.version+' · '+release.date));b.addEventListener('click',()=>selectChange(release.id,change.id,id));history.append(b);
+ }if(history.childElementCount)detailSection('此節點的改動歷程',history);
+ draw();
+ if(options.reveal)revealNode(id);
+ if(options.updateHash!==false)writeHash();
+}
+function fileLink(path,label){const a=elem('a',label,'path');a.href='../'+path;a.target='_blank';a.rel='noopener';return a}
+function revealNode(id){
+ const container=document.querySelector('.board-scroll'),b=buttons.get(id);if(!b)return;
+ const r=b.getBoundingClientRect(),c=container.getBoundingClientRect();container.scrollTo({left:container.scrollLeft+r.left-c.left-(container.clientWidth-r.width)/2,top:container.scrollTop+r.top-c.top-20,behavior:'smooth'});
+}
+function renderJournalPanel(){
+ journalPanel.replaceChildren();journalPanel.hidden=!activeChange;
+ for(const [id,b] of changeButtons){const active=!!activeChange&&id===activeChange.change.id;b.classList.toggle('is-active',active);b.setAttribute('aria-pressed',String(active))}
+ if(!activeChange)return;const {release,change}=activeChange;
+ journalPanel.append(elem('div',release.version+' · '+release.date+' / '+release.title,'eyebrow'),elem('h2',change.title),elem('p',change.summary));
+ const actions=elem('div',undefined,'actions');for(const id of change.node_ids){const b=elem('button',id+' · '+byId.get(id).title,'dep');b.type='button';b.addEventListener('click',()=>select(id,{reveal:true}));actions.append(b)}journalPanel.append(actions);
+ journalPanel.append(elem('p','對應實作／文件位置','muted'));const list=elem('ul');for(const location of change.locations){const li=elem('li');li.append(fileLink(location.path,location.label+' ↗'),elem('small',location.path,'muted'));list.append(li)}journalPanel.append(list);
+}
+function selectChange(releaseId,changeId,nodeId,options={}){
+ const release=journal.entries.find(r=>r.id===releaseId),change=release?.changes.find(c=>c.id===changeId);if(!change)return;
+ activeChange={release,change};renderJournalPanel();
+ const details=document.getElementById('journal-'+releaseId);if(details)details.open=true;
+ document.getElementById('search').value='';for(const b of buttons.values())b.classList.remove('searchmiss');
+ const id=change.node_ids.includes(nodeId)?nodeId:change.node_ids[0];select(id,{reveal:true,updateHash:options.updateHash});
+ navigationStatus.textContent='已定位：'+change.title+' → '+id;
+}
+function writeHash(){const params=new URLSearchParams();if(selected)params.set('node',selected);if(activeChange){params.set('release',activeChange.release.id);params.set('change',activeChange.change.id)}const hash=params.toString();if(location.hash.slice(1)!==hash)location.hash=hash}
+function restoreHash(){
+ if(new URLSearchParams(location.hash.slice(1)).get('section')==='eq-technical'){
+  const panel=document.getElementById('eq-technical');panel.open=true;panel.scrollIntoView({block:'start'});navigationStatus.textContent='技術細節：EQ 音訊與音量處理';return;
+ }
+ const params=new URLSearchParams(location.hash.slice(1)),nodeId=params.get('node'),releaseId=params.get('release'),changeId=params.get('change');
+ const release=journal.entries.find(r=>r.id===releaseId),change=release?.changes.find(c=>c.id===changeId);
+ if(change){selectChange(releaseId,changeId,nodeId,{updateHash:false});return}
+ activeChange=null;renderJournalPanel();if(nodeId&&byId.has(nodeId)){select(nodeId,{reveal:true,updateHash:false});navigationStatus.textContent='已定位：'+nodeId}
+ else{select(null,{updateHash:false});navigationStatus.textContent=location.hash?'此定位已失效，請從節點或日誌重新選取。':''}
+}
+for(const [index,release] of journal.entries.entries()){
+ const details=elem('details',undefined,'journal-release');details.id='journal-'+release.id;details.open=index===0;
+ const summary=elem('summary');summary.append(elem('span',release.version+' · '+release.title),elem('small',release.date+' / '+release.changes.length+' 項改動'));details.append(summary);
+ for(const change of release.changes){const b=elem('button',change.title,'journal-change');b.type='button';b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>selectChange(release.id,change.id));details.append(b);changeButtons.set(change.id,b)}document.getElementById('journal-list').append(details);
+}
+function draw(){
+ edges.replaceChildren();const base=board.getBoundingClientRect();edges.setAttribute('viewBox',`0 0 ${board.offsetWidth} ${board.offsetHeight}`);
+ for(const n of plan.nodes)for(const dep of n.depends_on){const a=buttons.get(dep).getBoundingClientRect(),b=buttons.get(n.id).getBoundingClientRect();
+ const z=board.getBoundingClientRect().width/board.offsetWidth;const x1=(a.right-base.left)/z,y1=(a.top-base.top+a.height/2)/z,x2=(b.left-base.left)/z,y2=(b.top-base.top+b.height/2)/z,dx=Math.max(25,(x2-x1)/2);
+ const p=document.createElementNS('http://www.w3.org/2000/svg','path');const sameColumn=byId.get(dep).stage===n.stage;
+ p.setAttribute('d',sameColumn?`M${x1},${y1} C${x1+30},${y1} ${x1+30},${y2} ${x1},${y2}`:`M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`);p.setAttribute('class','edge'+(selected&&(selected===dep||selected===n.id)?' active':''));edges.append(p);
+ }
+}
+document.getElementById('search').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();for(const n of plan.nodes)buttons.get(n.id).classList.toggle('searchmiss',!!q&&!`${n.id} ${n.title} ${n.task}`.toLowerCase().includes(q))});
+document.getElementById('clear').addEventListener('click',()=>{activeChange=null;renderJournalPanel();navigationStatus.textContent='';document.getElementById('search').value='';for(const b of buttons.values())b.classList.remove('searchmiss');select(null)});
+window.addEventListener('hashchange',restoreHash);window.addEventListener('resize',draw);
+if(location.hash)restoreHash();else select('GATE-01',{updateHash:false});requestAnimationFrame(draw);
+</script>
+<script>__ANNOTATIONS_JS__</script>
+<script id="pm-data" type="application/json">__PM_JSON__</script>
+<script>__PM_PANEL_JS__</script>
+</body>
+</html>

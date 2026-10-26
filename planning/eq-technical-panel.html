@@ -1,0 +1,44 @@
+<style>
+.eq-tech{margin:0 0 24px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:20px}.eq-tech summary{cursor:pointer;font-size:19px;font-weight:600;color:var(--accent)}.eq-tech h3{font-size:16px;margin:24px 0 10px}.eq-tech .tech-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}.eq-tech .tech-stat{background:var(--card);padding:14px;border-radius:7px}.eq-tech .tech-stat strong{display:block;font-size:24px;font-variant-numeric:tabular-nums}.eq-tech button,.eq-tech select{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:10px;white-space:normal}.eq-tech button[aria-pressed=true]{border-color:var(--accent);color:var(--accent)}.eq-tech .tech-path{display:flex;gap:6px;flex-wrap:wrap}.eq-tech .tech-path button{flex:1;min-width:95px}.eq-tech .tech-detail{padding:14px;background:var(--bg);border-radius:6px;min-height:80px;margin-top:10px}.eq-tech svg{width:100%;height:auto;display:block;margin-top:12px}.eq-tech .tech-links{display:flex;gap:14px;flex-wrap:wrap}.eq-tech table{width:100%;border-collapse:collapse;font-size:12px}.eq-tech td,.eq-tech th{text-align:left;border-bottom:1px solid var(--line);padding:9px}.eq-tech select{max-width:100%;margin:10px 0}.eq-tech .tech-note{font-size:12px;color:var(--muted)}
+</style>
+<details id="eq-technical" class="eq-tech">
+<summary>技術細節 · EQ 如何處理音訊與音量</summary>
+<p class="muted">v0.6.0 · 7 段 EQ，保留第一階段餘裕優化。此區說明專案實作，不是音訊即時監控。</p>
+<h3>1／先理解頻率、增益與餘裕</h3>
+<p>Hz 決定調整哪段頻率；dB 決定增減量；頻寬決定影響範圍。EQ 濾波器互相重疊：應在同一頻率把各濾波器的 dB 響應相加，再尋找最高點，不應直接把所有滑桿的正值相加。</p>
+<p>峰值是瞬間最高電平，響度是整段音樂的聽感大小。預留餘裕可以降低削波風險，但不等於音量補償；浮點運算也不能消除最終輸出的上限。</p>
+<h3>2／點選音訊路徑，查看每一步</h3>
+<div id="tech-path" class="tech-path"></div><div id="tech-stage" class="tech-detail" aria-live="polite"></div>
+<h3>3／比較可行方案 · 一次驗證一種</h3>
+<div id="tech-solutions" class="tech-grid"></div><div id="tech-solution-detail" class="tech-detail" aria-live="polite"></div>
+<h3>4／切換範例，比較舊版與第一階段</h3>
+<label for="tech-example">調音範例（7 段／44.1 kHz）</label><br><select id="tech-example"></select>
+<div class="tech-grid"><div class="tech-stat">累加法整體增益<strong id="tech-old"></strong></div><div class="tech-stat">合成法整體增益<strong id="tech-new"></strong></div><div class="tech-stat">合成響應最高增益<strong id="tech-peak"></strong></div></div>
+<p id="tech-formula" class="tech-note"></p>
+<svg id="tech-chart" viewBox="0 0 700 290" role="img" aria-label="EQ 頻率響應與新舊補償的估算比較"></svg>
+<p class="tech-note"><span style="color:#8c9eb0">灰色：補償前 EQ 響應</span> ／ <span style="color:#e5b468">橘色：舊版補償後</span> ／ <span style="color:#6bc9ff">藍色：新版補償後</span><br>橫軸為對數頻率 Hz；縱軸為相對輸入的增益 dB。同一組 7 段參數比較兩種餘裕算法，不是 10 段與 7 段的音色等價比較。這是與正式 Swift 共用算法輸出的估算曲線，不是音樂波形或實車頻響，不包含殘響尾音的頻率響應。</p>
+<h3>5／第一階段的處理細節與限制</h3>
+<table><tbody><tr><th>舊版</th><td>−（3 dB ＋ 所有正 EQ 增益總和 ＋ 低音增強 ＋ 空間預留量）</td></tr><tr><th>新版</th><td>−（3 dB ＋ 合成頻率響應的最大正增益 ＋ 有效空間預留量）</td></tr><tr><th>合成方式</th><td>7 段約 1⅓ 倍頻程參數濾波 ＋ 90 Hz 低架濾波，使用 RBJ／W3C biquad 模型；包含鄰近頻段與低音增強的重疊。</td></tr><tr><th>頻率掃描</th><td>769 個對數點，加各中心頻率、90 Hz 與 DC；隨音檔取樣率重新估算，排除實際被旁通的高頻段。</td></tr><tr><th>殘響</th><td>啟用且混合量大於 0 時保留 6 dB；這仍是保守固定值，並非殘響峰值量測。</td></tr><tr><th>旁通</th><td>保留同一份前級衰減以比較濾波差異，並非回到未補償的原始電平。</td></tr><tr><th>尚未加入</th><td>自動響度補償、峰值限制器、true-peak 保護與歌曲正規化。任意音樂的瞬態與重建峰值仍可能超出估算，不保證完全不削波或等響。</td></tr></tbody></table>
+<h3>6／證據與實作位置</h3>
+<p>Apple 原生離線 PCM：130 個響應探測點，涵蓋 16／44.1／48 kHz、相鄰提升、極端增益、正負交錯與低音增強。最大模型誤差 0.033 dB；最大低估 0.016 dB。這只涵蓋測試樣本，不是所有音訊的峰值保證。</p>
+<div class="tech-links"><a href="../docs/zh-TW/EQ音量處理技術.md" target="_blank" rel="noopener">設計與驗收紀錄 ↗</a><a href="../apps/apple/OrcaPlayer/EQHeadroom.swift" target="_blank" rel="noopener">共用估算算法 ↗</a><a href="../apps/apple/Tests/NativeEQChecks.swift" target="_blank" rel="noopener">原生音訊驗證 ↗</a></div><div id="tech-sources" class="tech-links"></div>
+</details>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+ const data=JSON.parse(document.getElementById('eq-technical-data').textContent), $=id=>document.getElementById(id);
+ const stages=[['離線音檔','系統解碼為單／雙聲道 PCM。原始音檔不被 EQ 改寫。'],['前級餘裕','依合成響應預先衰減全頻音訊，避免以滑桿總和過度壓低。globalGain 設在 Apple EQ 單元。'],['7 段 EQ','固定中心頻率、約 1⅓ 倍頻程頻寬、±12 dB。實際處理使用 AVAudioUnitEQ，響應估算使用經原生 PCM 交叉檢查的模型。'],['低音增強','90 Hz 低架濾波，0～+9 dB。與低頻 EQ 重疊的效果一起計算，不是兩個獨立上限直接相加。'],['空間殘響','使用 AVAudioUnitReverb 模擬空間；非真正多聲道。混合為 0 不再額外預留空間增益。'],['音量與輸出','App 音量控制後送到系統／藍牙。沒有 true-peak 限制器；車機的內部增益與分音不由 App 控制。']];
+ stages.forEach(([title,text],i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i+1)+' '+title;b.setAttribute('aria-pressed','false');b.onclick=()=>{[...$('tech-path').children].forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('tech-stage').textContent=text};$('tech-path').append(b)});$('tech-path').children[1].click();
+ data.solutions.forEach(solution=>{const b=document.createElement('button');b.type='button';b.textContent=solution.id+' · '+solution.title+'｜'+solution.status;b.setAttribute('aria-pressed','false');b.onclick=()=>{[...$('tech-solutions').children].forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('tech-solution-detail').textContent=solution.detail+' 取捨：'+solution.tradeoff};$('tech-solutions').append(b)});$('tech-solutions').firstChild.click();
+ data.examples.forEach(example=>{const o=document.createElement('option');o.value=example.id;o.textContent=example.name;$('tech-example').append(o)});
+ const db=n=>(n>0?'+':'')+n.toFixed(2)+' dB';
+ function render(){const e=data.examples.find(x=>x.id===$('tech-example').value);$('tech-old').textContent=db(e.old_gain);$('tech-new').textContent=db(e.new_gain);$('tech-peak').textContent=db(e.peak);$('tech-formula').textContent='新版：−（3.00 ＋ '+e.peak.toFixed(2)+' ＋ '+(e.ambience!=='關閉'&&e.mix>0?'6.00':'0.00')+'）dB。相較舊版減少 '+(e.new_gain-e.old_gain).toFixed(2)+' dB 的整體衰減；不代表感知響度增加相同數值。';
+  const svg=$('tech-chart');svg.replaceChildren();const NS='http://www.w3.org/2000/svg';const add=(tag,attrs,text)=>{const n=document.createElementNS(NS,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text!==undefined)n.textContent=text;svg.append(n);return n};
+  const low=Math.min(-12,Math.floor((e.old_gain-6)/6)*6),high=Math.max(12,Math.ceil((e.peak+3)/6)*6),x=f=>52+Math.log(f/20)/Math.log(1000)*630,y=d=>18+(high-d)/(high-low)*230;
+  for(let d=Math.ceil(low/6)*6;d<=high;d+=6){add('line',{x1:52,y1:y(d),x2:682,y2:y(d),stroke:d===0?'#6a849c':'#304355'});add('text',{x:5,y:y(d)+4,fill:'#a5b5c5','font-size':11},d+' dB')}
+  [32,125,500,2000,8000,20000].forEach(f=>add('text',{x:x(f),y:278,fill:'#a5b5c5','font-size':11,'text-anchor':'middle'},f>=1000?f/1000+'k':f));
+  [[0,'#8c9eb0'],[e.old_gain,'#e5b468'],[e.new_gain,'#6bc9ff']].forEach(([gain,color])=>add('path',{d:e.curve.map(([f,d],i)=>(i?'L':'M')+x(f).toFixed(2)+','+y(d+gain).toFixed(2)).join(' '),fill:'none',stroke:color,'stroke-width':2}));
+ }
+ $('tech-example').value='all-three';$('tech-example').addEventListener('change',render);render();
+ data.sources.forEach(source=>{const a=document.createElement('a');a.href=source.url;a.textContent=source.title+' ↗';a.target='_blank';a.rel='noopener';$('tech-sources').append(a)});
+});
+</script>

@@ -1,0 +1,17 @@
+.DS_Store
+**/.DS_Store
+**/.build/
+**/.build-*/
+**/target/
+**/DerivedData/
+**/node_modules/
+**/xcuserdata/
+**/Signing.local.json
+.env
+.env.*
+!.env.example
+**/*.p12
+**/*.mobileprovision
+media/
+downloads/
+artifacts/

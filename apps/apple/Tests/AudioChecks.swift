@@ -1,0 +1,206 @@
+import Foundation
+import AVFoundation
+
+@MainActor final class FakeAudioPlayer: AudioPlayback {
+    var currentTime = 0.0
+    var onCompletion: (() -> Void)?
+    var onInterruption: ((String) -> Void)?
+    var loadedURL: URL?
+    var playing = false
+    var appliedGains: [Double] = []
+    var eqEnabled = true
+    var appliedBass = 0.0
+    var appliedAmbience: Ambience = .off
+    func load(_ url: URL) throws {
+        guard FileManager.default.fileExists(atPath: url.path) else { throw PlaybackError.missingFile }
+        loadedURL = url; currentTime = 0
+    }
+    func play() throws { playing = true }
+    func pause() { playing = false }
+    func seek(to seconds: Double) { currentTime = seconds }
+    func stop() { playing = false; currentTime = 0 }
+    func configureEffects(bass: Double, ambience: Ambience, mix: Double, enabled: Bool) { appliedBass = bass; appliedAmbience = ambience }
+    func configure(gains: [Double], enabled: Bool, volume: Double) { appliedGains = gains; eqEnabled = enabled }
+}
+
+@main struct AudioChecks {
+    @MainActor static func main() async throws {
+        let work = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true).appendingPathComponent("test-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: work) }
+        let fixture = URL(fileURLWithPath: CommandLine.arguments[2])
+        let source = work.appendingPathComponent("海岸測試.wav")
+        let duplicate = work.appendingPathComponent("same-content.wav")
+        try FileManager.default.copyItem(at: fixture, to: source)
+        try FileManager.default.copyItem(at: fixture, to: duplicate)
+        let corrupt = work.appendingPathComponent("corrupt.wav")
+        try Data("not an audio file".utf8).write(to: corrupt)
+        let root = work.appendingPathComponent("Library", isDirectory: true)
+        let store = LibraryStore(root: root)
+        let result = try await store.importFiles([source, duplicate, corrupt])
+        precondition(result.added == 1 && result.duplicates == 1 && result.failures.count == 1, "Import/dedup/error accounting")
+        precondition(result.tracks[0].title == "海岸測試" && result.tracks[0].channels == 2 && result.tracks[0].duration == 18, "Metadata matches decoded file")
+        precondition(FileManager.default.fileExists(atPath: source.path), "Source is preserved")
+        let reloaded = try await LibraryStore(root: root).load()
+        precondition(reloaded == result.tracks, "Manifest round trip")
+        // The library must remain playable without its original external file.
+        try FileManager.default.removeItem(at: source)
+        let copiedURL = root.appendingPathComponent(result.tracks[0].filename!)
+        let copiedFile = try AVAudioFile(forReading: copiedURL)
+        precondition(copiedFile.length == 18 * 44100, "Offline copy survives source removal")
+        let damagedRoot = work.appendingPathComponent("Damaged")
+        try FileManager.default.createDirectory(at: damagedRoot, withIntermediateDirectories: true)
+        let damaged = Data("broken index".utf8)
+        try damaged.write(to: damagedRoot.appendingPathComponent("library.json"))
+        do { _ = try await LibraryStore(root: damagedRoot).importFiles([fixture]); preconditionFailure("Must refuse corrupt index") }
+        catch {
+            let preserved = try Data(contentsOf: damagedRoot.appendingPathComponent("library.json"))
+            precondition(preserved == damaged, "Corrupt index is not overwritten")
+        }
+
+        let audio = FakeAudioPlayer()
+        var saved: Data?
+        let model = PlayerModel(onSave: { saved = $0 }, audio: audio, libraryRoot: root, demoURL: fixture)
+        precondition(!model.hasManualEQChanges, "Loading does not request a new mode")
+        model.adjustBand(0, to: 3)
+        precondition(model.hasManualEQChanges && !model.showPresetEditor, "Manual adjustment offers saving without interrupting")
+        model.editPreset(); model.showPresetEditor = false
+        precondition(model.hasManualEQChanges, "Cancel preserves unsaved adjustment")
+        model.adjustBand(0, to: 0)
+        precondition(!model.hasManualEQChanges, "Returning sliders to baseline dismisses prompt")
+        model.adjustBand(0, to: 2)
+        model.apply(.flat)
+        precondition(!model.hasManualEQChanges, "Selecting a mode clears manual prompt")
+        model.adjustBand(1, to: 2)
+        model.editPreset(); model.presetInput = "Inline save check"
+        precondition(model.savePresetName() && !model.hasManualEQChanges, "Saving current adjustment clears prompt")
+        model.deletePreset(model.customPresets.last!.id)
+        model.resetEQ()
+        await model.loadLibrary()
+        precondition(model.tracks.count == 2, "Library merges bundled demo and imports")
+        model.choose(model.tracks[1])
+        precondition(model.isPlaying && audio.playing && audio.loadedURL == copiedURL, "Choosing a track calls audio backend")
+        model.progress = 0.5
+        precondition(audio.currentTime == 9 && model.currentTime == 9, "Seek reaches backend")
+        model.togglePlayback()
+        precondition(!model.isPlaying && !audio.playing && model.currentTime == 9, "Pause preserves position")
+        model.togglePlayback()
+        precondition(model.isPlaying && audio.playing, "Resume")
+        model.apply(.vocal)
+        precondition(audio.appliedGains == EQPreset.vocal.gains, "EQ controls reach backend")
+        model.eqEnabled = false
+        precondition(!audio.eqEnabled, "Bypass reaches backend")
+        model.toggleFavorite(model.track)
+        model.volume = 0.43
+        let restored = PlayerModel(savedData: saved, audio: FakeAudioPlayer(), libraryRoot: root, demoURL: fixture)
+        await restored.loadLibrary()
+        precondition(restored.favorites == model.favorites && restored.gains == model.gains && restored.volume == 0.43, "Settings and imported favorites persist")
+        model.search = "海岸"
+        precondition(model.filteredTracks.count == 1, "Search includes imported titles")
+        model.search = "missing song"
+        precondition(model.filteredTracks.isEmpty, "Empty result")
+        model.search = ""
+        model.choose(model.tracks.last!)
+        audio.onCompletion?()
+        precondition(!model.isPlaying && model.progress == 1, "Last track stops without repeat")
+        model.repeatAll = true
+        model.togglePlayback()
+        audio.onCompletion?()
+        precondition(model.track.id == AudioTrack.demo.id && model.isPlaying, "Repeat wraps at natural completion")
+        audio.onInterruption?("test interruption")
+        precondition(!model.isPlaying && model.message == "test interruption", "Interruptions update UI")
+        model.resetEQ()
+        precondition(model.gains == EQPreset.flat.gains, "EQ reset")
+        let allThree = Array(repeating: 3.0, count: EQBands.count)
+        let combinedGain = EQHeadroom.gain(gains: allThree)
+        precondition(combinedGain > -15 && combinedGain < -6, "Combined response avoids sum-of-gains attenuation while retaining overlap allowance")
+        precondition(EQHeadroom.gain(gains: [], bass: .nan, sampleRate: .nan).isFinite, "Malformed headroom inputs stay finite")
+        precondition(EQHeadroom.gain(gains: allThree, sampleRate: 16000) > -15, "Unavailable upper bands do not add headroom")
+        precondition(EQHeadroom.gain(gains: allThree, ambience: .hall, mix: 0) == combinedGain, "Zero wet mix does not reserve reverb headroom")
+        print("PASS: combined-response headroom, input sanitization, low-rate and zero-mix handling")
+        let invalid = Data(#"{"version":1,"gains":[99,-99,0,0,0,0,0,0,0,0],"eqEnabled":false,"volume":3,"favorites":[]}"#.utf8)
+        let sanitized = PlayerModel(savedData: invalid, audio: FakeAudioPlayer(), libraryRoot: root)
+        precondition(sanitized.gains == EQBands.migrate([99,-99,0,0,0,0,0,0,0,0]) && sanitized.gains.count == 7 && sanitized.volume == 1, "Legacy parameters are bounded before migration")
+        precondition(EQBands.migrate(Array(repeating: 3, count: 10)) == Array(repeating: 3, count: 7), "Flat old control contour remains flat")
+        let oldFrequencies = EQBands.legacyFrequencies.map { log2($0 / 32) }
+        let migrated = EQBands.migrate(oldFrequencies)
+        for (index, frequency) in EQBands.frequencies.enumerated() {
+            precondition(abs(migrated[index] - log2(frequency / 32)) < 0.00001, "Migration interpolates on log-frequency axis")
+        }
+        let legacySettings: [String: Any] = ["version":2,"gains":Array(repeating: 2.0,count:10),"eqEnabled":true,"volume":0.37,"favorites":["favorite"],"customs":[["id":"custom.legacy","name":"舊模式","sound":["gains":Array(repeating:3.0,count:10),"enabled":true,"bass":2.0,"ambience":"關閉","mix":15.0]]],"bindings":[AudioTrack.demo.id:"custom.legacy"]]
+        let legacyModel = PlayerModel(savedData: try JSONSerialization.data(withJSONObject: legacySettings), audio: FakeAudioPlayer())
+        precondition(legacyModel.gains == Array(repeating:3,count:7) && legacyModel.customPresets[0].id == "custom.legacy" && legacyModel.customPresets[0].name == "舊模式" && legacyModel.songBindings[AudioTrack.demo.id] == "custom.legacy" && legacyModel.volume == 0.37 && legacyModel.favorites.contains("favorite"), "v2 custom mode and binding migrate without identity loss")
+        let encoded = try JSONSerialization.jsonObject(with: legacyModel.settingsData!) as! [String: Any]
+        precondition(encoded["version"] as? Int == 3, "Migrated settings write schema v3")
+        legacyModel.removeMode(EQPreset.rock.id)
+        precondition(!legacyModel.modeOptions.contains { $0.id == EQPreset.rock.id }, "Factory removal updates the shared mode list")
+        let hiddenRestored = PlayerModel(savedData: legacyModel.settingsData, audio: FakeAudioPlayer())
+        precondition(hiddenRestored.hiddenPresets.contains(EQPreset.rock.id), "Factory visibility persists")
+        hiddenRestored.bindSong(to: EQPreset.vocal.id)
+        hiddenRestored.removeMode(EQPreset.vocal.id)
+        precondition(hiddenRestored.songBindings[hiddenRestored.selectedID] == nil, "Removing factory mode also clears song bindings")
+        hiddenRestored.restoreBuiltinModes()
+        precondition(hiddenRestored.modeOptions.contains { $0.id == EQPreset.rock.id }, "Removed factory modes can be restored")
+        precondition(EQPreset.allCases.allSatisfy { $0.gains.count == 7 }, "Every builtin preset uses seven bands")
+        print("PASS: seven-band presets, logarithmic v1/v2 migration, custom identity/binding retention, v3 persistence and shared mode list removal/restore")
+        model.choose(model.tracks[0], autoplay: false)
+        model.resetEQ(); model.bassBoost = 5; model.ambience = .hall; model.ambienceMix = 23
+        precondition(audio.appliedBass == 5 && audio.appliedAmbience == .hall, "Effects reach backend")
+        model.presetInput = "通勤"; precondition(model.savePresetName())
+        let commute = model.customPresets[0].id
+        model.resetEQ(); model.applyPreset(id: commute)
+        precondition(model.bassBoost == 5 && model.ambience == .hall && model.ambienceMix == 23, "Custom preset captures all effects")
+        model.editPreset(commute); model.presetInput = "早上通勤"; precondition(model.savePresetName())
+        precondition(model.customPresets[0].id == commute, "Rename preserves binding identity")
+        model.bassBoost = 4; model.updatePreset(commute)
+        model.resetEQ(); model.applyPreset(id: commute)
+        precondition(model.bassBoost == 4, "Overwrite stores current sound")
+        model.resetEQ(); model.apply(.jazz)
+        let global = model.sound
+        model.bindSong(to: commute)
+        precondition(model.bassBoost == 4, "Binding immediately applies")
+        model.choose(model.tracks[1], autoplay: false)
+        precondition(model.sound == global, "Unbound next track restores global sound")
+        model.choose(model.tracks[0], autoplay: false)
+        precondition(model.bassBoost == 4, "Returning to bound track applies automatically")
+        let roundTrip = PlayerModel(savedData: model.settingsData, audio: FakeAudioPlayer(), libraryRoot: root)
+        precondition(roundTrip.customPresets[0].name == "早上通勤" && roundTrip.bassBoost == 4 && roundTrip.songBindings[model.tracks[0].id] == commute, "v3 preset and binding restore")
+        model.editPreset(); model.presetInput = "早上通勤"; precondition(!model.savePresetName(), "Reject duplicate names")
+        model.presetInput = " "; precondition(!model.savePresetName(), "Reject blank names")
+        for index in 1..<20 { model.editPreset(); model.presetInput = "模式 \(index)"; precondition(model.savePresetName()) }
+        model.editPreset(); model.presetInput = "第21組"; precondition(!model.savePresetName() && model.customPresets.count == 20, "Enforce 20 custom modes")
+        model.deletePreset(commute)
+        precondition(model.customPresets.count == 19 && model.songBindings.isEmpty && model.sound == global, "Delete cleans bindings and restores general sound")
+        model.choose(model.tracks[1], autoplay: false)
+        model.bindSong(to: EQPreset.concert.id)
+        precondition(model.ambience == .concert, "Factory presets also bind")
+        model.bindSong(to: "")
+        precondition(model.sound == global, "Unbind restores general sound")
+        precondition(sanitized.customPresets.isEmpty && sanitized.bassBoost == 0, "v1 settings migrate with defaults")
+        let legacyVehicle = Data(#"{"name":"舊車輛","connection":"藍牙","front":"二音路分音","rear":"同軸","seat":"駕駛座","subwoofer":false,"seatDistances":{"駕駛座":{"前左 · 高音":80}}}"#.utf8)
+        let migratedVehicle = try JSONDecoder().decode(VehicleSettings.self, from: legacyVehicle)
+        precondition(migratedVehicle.name == "舊車輛" && migratedVehicle.speakers.count == 6, "Legacy distance data does not break retained configuration")
+        let migratedObject = try JSONSerialization.jsonObject(with: JSONEncoder().encode(migratedVehicle)) as! [String: Any]
+        precondition(migratedObject["seatDistances"] == nil, "Removed distance data is no longer persisted")
+        model.vehicle.name = "測試車"; model.vehicle.front = .component3
+        let vehicleRestored = PlayerModel(savedData: model.settingsData, audio: FakeAudioPlayer())
+        precondition(vehicleRestored.vehicle.name == "測試車" && vehicleRestored.vehicle.front == .component3, "Vehicle configuration persists")
+        let checkModel = PlayerModel(audio: audio, libraryRoot: root, demoURL: fixture, channelTestURLs: ["Left": fixture, "Right": fixture, "Center": fixture])
+        checkModel.choose(.demo); audio.currentTime = 7
+        checkModel.startChannelTest("Left")
+        precondition(checkModel.activeChannelTest == "Left" && !checkModel.isPlaying && audio.playing && !audio.eqEnabled && audio.appliedAmbience == .off, "Channel test pauses music and bypasses effects")
+        checkModel.bassBoost = 8
+        precondition(audio.appliedBass == 0, "EQ changes cannot affect identification test")
+        audio.onCompletion?()
+        precondition(checkModel.activeChannelTest == nil && !checkModel.isPlaying && checkModel.currentTime == 7 && audio.appliedBass == 8, "Test completion restores settings without auto-resume or advancing song")
+        checkModel.togglePlayback()
+        precondition(audio.currentTime == 7 && checkModel.isPlaying, "Explicit resume retains music position")
+        checkModel.startChannelTest("Right"); checkModel.choose(.demo, autoplay: false)
+        precondition(checkModel.activeChannelTest == nil && !audio.playing, "Selecting song cancels test")
+        print("PASS: identification-test isolation, natural completion, explicit resume and cancellation")
+        print("PASS: 13 factory modes, real-effect command wiring, custom create/rename/overwrite/delete, 20-mode cap, duplicate/blank validation, song binding and general-mode restoration, v1/v2 migration/v3 persistence, vehicle persistence and legacy-distance migration")
+        print("PASS: transactional import, deduplication, invalid audio, offline copy, manifest recovery, playback commands, seek, EOF/repeat, interruption, settings and EQ wiring")
+
+        if !CommandLine.arguments.contains("--model-only") { print(try NativeEQChecks.run()) }
+    }
+}
