@@ -2,7 +2,50 @@ import Foundation
 import Combine
 
 @MainActor enum LibraryIndexChecks {
+    static func checkV8Ordering() throws {
+        let titles = ["三", "二", "一", "一", "", "A10", "A2"]
+        let tracks = titles.enumerated().map { AudioTrack(id: "id.\($0.offset)", title: $0.element, artist: "Artist", collection: "Synthetic", duration: 18, artwork: 0, filename: "fixture.wav", sampleRate: 44100, channels: 2, fileType: "WAV") }
+        var state = MusicCollection()
+        state.songOrder = tracks.reversed().map(\.id)
+        for (i, track) in tracks.enumerated() {
+            var info = SongDetails(); info.rating = i == 0 ? nil : min(i, 5)
+            info.addedAt = Date(timeIntervalSince1970: Double(i / 2))
+            state.songs[track.id] = info
+        }
+        let originalOrder = state.songOrder
+        func ids(_ state: MusicCollection) -> [String] {
+            let index = LibraryIndex.build(tracks: tracks, collection: state, favorites: [])
+            return index.sortedSongIDs
+        }
+        state.selectSongSort(.stroke)
+        let stroke = ids(state)
+        precondition(stroke.first == "id.4" && stroke.firstIndex(of: "id.6")! < stroke.firstIndex(of: "id.5")!, "Empty first and numeric mixed titles")
+        precondition(stroke.firstIndex(of: "id.2")! < stroke.firstIndex(of: "id.1")! && stroke.firstIndex(of: "id.1")! < stroke.firstIndex(of: "id.0")!, "Traditional stroke order: 一 二 三")
+        precondition(stroke.firstIndex(of: "id.2")! < stroke.firstIndex(of: "id.3")!, "Identical titles use stable ID tie-break")
+        state.selectSongSort(.stroke); precondition(ids(state) == stroke.reversed(), "Second selection reverses entire order")
+        state.selectSongSort(.rating); precondition(ids(state).last == "id.0", "Rating defaults highest first, unrated zero last")
+        let high = ids(state)
+        state.selectSongSort(.rating); precondition(ids(state).first == "id.0" && ids(state) == high.reversed(), "Ascending starts unrated and reverses ties consistently")
+        state.selectSongSort(.recent); precondition(ids(state).first == "id.6", "Recent defaults newest first")
+        let recent = ids(state)
+        state.selectSongSort(.recent); precondition(ids(state) == recent.reversed(), "Recent reverses")
+        state.selectSongSort(.stroke); precondition(ids(state) == stroke, "Switching resets default direction")
+        precondition(state.songOrder == originalOrder, "Sorting never overwrites legacy custom order")
+        let restored = try JSONDecoder().decode(MusicCollection.self, from: JSONEncoder().encode(state))
+        precondition(restored == state && ids(restored) == stroke, "New fields round-trip without data loss")
+        var legacyObject = try JSONSerialization.jsonObject(with: JSONEncoder().encode(state)) as! [String: Any]
+        legacyObject.removeValue(forKey: "songSortAscending"); legacyObject["songSort"] = "歌名"
+        let legacy = try JSONDecoder().decode(MusicCollection.self, from: JSONSerialization.data(withJSONObject: legacyObject))
+        precondition(legacy.effectiveSongSort == "筆畫數" && ids(legacy) == stroke && legacy.songOrder == originalOrder, "Old title mode migrates without losing order/data")
+        let fresh = MusicCollection()
+        precondition(fresh.effectiveSongSort == "筆畫數" && fresh.isSongSortAscending, "New library defaults to stroke ascending")
+        let navigation = HomeLibraryState()
+        precondition(navigation.showsRankings, "Playlists shows rankings")
+        for section in ["歌手列表", "全部歌曲"] { navigation.section = section; precondition(!navigation.showsRankings) }
+        print("PASS: V8 stroke/rating/date, reversal/reset, stable ties, legacy migration, persistence and ranking scope")
+    }
     static func run(work: URL, fixture: URL) async throws {
+        try checkV8Ordering()
         let root = work.appendingPathComponent("indexed-library")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: fixture, to: root.appendingPathComponent("fixture.wav"))
@@ -26,10 +69,10 @@ import Combine
             for _ in 0..<100 { precondition(model.libraryIndex.groupOrders["歌曲數目"]?.count == 200); precondition(model.playCount("song.0", monthly: true) == 4) }
             let hotMS = (ProcessInfo.processInfo.systemUptime - hotStart) * 1000
             timing.append(["tracks": Double(count), "cold_build_ms": buildMS, "hot_100_reads_ms": hotMS])
-            model.homeState.section = "全部歌曲"; model.homeState.limit = 50
-            precondition(model.sortedSongs.prefix(model.homeState.limit).count == 50 && model.sortedSongs.count == count, "Display batch never truncates full queue")
+            model.homeState.section = "全部歌曲"
+            precondition(model.sortedSongs.count == count && !model.homeState.showsRankings, "All Songs exposes the complete library without rankings")
             model.page = .settings; model.page = .library
-            precondition(model.homeState.section == "全部歌曲" && model.homeState.limit == 50 && model.cachedLibraryIndex != nil, "Page switch retains home state and index")
+            precondition(model.homeState.section == "全部歌曲" && !model.homeState.showsRankings && model.cachedLibraryIndex != nil, "Page switch retains home state and index")
         }
         let first = model.tracks[0]
         model.play(first, queue: model.sortedSongs)
@@ -74,6 +117,6 @@ import Combine
         let json = try JSONSerialization.data(withJSONObject: timing, options: [.prettyPrinted, .sortedKeys])
         try json.write(to: work.deletingLastPathComponent().appendingPathComponent("v7-index-timing.json"))
         print("V7 INDEX TIMING " + String(data: json, encoding: .utf8)!)
-        print("PASS: V7 1230/5000/10000 track indexes, cache invalidation, full queue vs 50-row display, navigation/audio isolation, background warm, sort/reorder and coalesced persistence")
+        print("PASS: V7 1230/5000/10000 track indexes, cache invalidation, unlimited full library, navigation/audio isolation, background warm, sort/reorder and coalesced persistence")
     }
 }

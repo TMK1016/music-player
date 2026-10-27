@@ -39,6 +39,7 @@ struct MusicCollection: Codable, Equatable, Sendable {
     var artistSort: String?
     var songOrder: [String]?
     var songSort: String?
+    var songSortAscending: Bool?
 }
 
 extension PlayerModel {
@@ -102,12 +103,15 @@ extension PlayerModel {
     var orderedSongs: [AudioTrack] { let index = libraryIndex; return index.orderedIDs.compactMap { index.tracks[$0] } }
     var sortedSongs: [AudioTrack] {
         let index = libraryIndex
-        return (index.songOrders[collection.songSort ?? "自訂順序"] ?? index.orderedIDs).compactMap { index.tracks[$0] }
+        return index.sortedSongIDs.compactMap { index.tracks[$0] }
+    }
+    func selectSongSort(_ mode: SongSortMode) {
+        var state = collection; state.selectSongSort(mode); collection = state
     }
     func moveSong(_ id: String, to target: String) {
         var ids = sortedSongs.map(\.id)
         guard let from = ids.firstIndex(of: id), let to = ids.firstIndex(of: target), from != to else { return }
-        ids.remove(at: from); ids.insert(id, at: to); var state = collection; state.songOrder = ids; state.songSort = "自訂順序"; collection = state
+        ids.remove(at: from); ids.insert(id, at: to); var state = collection; state.songOrder = ids; state.songSort = "自訂順序"; state.songSortAscending = true; collection = state
     }
     func coverData(_ track: AudioTrack) -> Data? {
         if let cover = collection.songs[track.id]?.cover { return cover }

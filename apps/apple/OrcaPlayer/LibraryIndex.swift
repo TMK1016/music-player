@@ -20,6 +20,7 @@ struct LibraryIndex: Sendable {
     var groups: [String: ArtistGroup] = [:]
     var groupOrders: [String: [String]] = [:]
     var orderedIDs: [String] = []
+    var sortedSongIDs: [String] = []
     var songOrders: [String: [String]] = [:]
     var playlistIDs: [String: [String]] = [:]
     var monthlyCounts: [String: Int] = [:]
@@ -61,12 +62,28 @@ struct LibraryIndex: Sendable {
         value.orderedIDs = ((collection.songOrder ?? []) + input.map(\.id)).filter { value.tracks[$0] != nil && seen.insert($0).inserted }
         value.playlistIDs["all"] = value.orderedIDs
         value.songOrders["自訂順序"] = value.orderedIDs
-        switch collection.songSort {
-        case "歌名": value.songOrders["歌名"] = value.orderedIDs.sorted { value.titles[$0, default: ""].localizedStandardCompare(value.titles[$1, default: ""]) == .orderedAscending }
-        case "歌手": value.songOrders["歌手"] = value.orderedIDs.sorted { value.artistNames[$0, default: ""].localizedStandardCompare(value.artistNames[$1, default: ""]) == .orderedAscending }
-        case "最近新增": value.songOrders["最近新增"] = value.orderedIDs.sorted { (collection.songs[$0]?.addedAt ?? .distantPast) > (collection.songs[$1]?.addedAt ?? .distantPast) }
-        default: break
+        let mode = collection.effectiveSongSort
+        func titleBefore(_ a: String, _ b: String) -> Bool {
+            let result = value.titles[a, default: ""].compare(value.titles[b, default: ""], options: [.numeric], locale: Locale(identifier: "zh_Hant_TW@collation=stroke"))
+            return result == .orderedSame ? a < b : result == .orderedAscending
         }
+        let ascending = value.orderedIDs.sorted { a, b in
+            if mode == "自訂順序" { return false }
+            if mode == "喜好程度" {
+                let x = collection.songs[a]?.rating ?? 0, y = collection.songs[b]?.rating ?? 0
+                if x != y { return x < y }
+            } else if mode == "最近新增" {
+                let x = collection.songs[a]?.addedAt ?? .distantPast, y = collection.songs[b]?.addedAt ?? .distantPast
+                if x != y { return x < y }
+            } else if mode == "歌手" {
+                let x = value.artistNames[a, default: ""], y = value.artistNames[b, default: ""]
+                let result = x.localizedStandardCompare(y)
+                if result != .orderedSame { return result == .orderedAscending }
+            }
+            return titleBefore(a, b)
+        }
+        value.sortedSongIDs = collection.isSongSortAscending ? ascending : ascending.reversed()
+        value.songOrders[mode] = value.sortedSongIDs
         for playlist in collection.playlists { value.playlistIDs[playlist.id] = playlist.trackIDs.filter { value.tracks[$0] != nil } }
         for event in collection.plays {
             value.totalCounts[event.trackID, default: 0] += 1
@@ -96,7 +113,7 @@ struct LibraryIndex: Sendable {
     @Published var expandedPlaylist: String?
     @Published var expandedArtist: String?
     @Published var monthly = true
-    @Published var limit = 50
+    var showsRankings: Bool { section == "播放清單" }
     @Published var scrollPositions: [String: String] = [:]
 }
 
@@ -104,4 +121,28 @@ enum PlayerDiagnostics {
     static let logger = Logger(subsystem: "com.orca.player", category: "performance")
     static let signposter = OSSignposter(subsystem: "com.orca.player", category: .pointsOfInterest)
     static func event(_ event: String) { signposter.emitEvent("Interaction", "\(event, privacy: .public)"); logger.debug("\(event, privacy: .public)") }
+}
+
+/// Persisted labels remain compatible with collection-v1; only these choices appear in V8.
+enum SongSortMode: String, CaseIterable {
+    case stroke = "筆畫數", rating = "喜好程度", recent = "最近新增"
+    var defaultAscending: Bool { self == .stroke }
+}
+
+extension MusicCollection {
+    var effectiveSongSort: String {
+        switch songSort {
+        case "歌名": return SongSortMode.stroke.rawValue
+        case "自訂順序", "歌手": return songSort!
+        case let value? where SongSortMode(rawValue: value) != nil: return value
+        default: return (songOrder ?? []).isEmpty ? SongSortMode.stroke.rawValue : "自訂順序"
+        }
+    }
+    var isSongSortAscending: Bool {
+        songSortAscending ?? (SongSortMode(rawValue: effectiveSongSort)?.defaultAscending ?? true)
+    }
+    mutating func selectSongSort(_ mode: SongSortMode) {
+        let ascending = effectiveSongSort == mode.rawValue ? !isSongSortAscending : mode.defaultAscending
+        songSort = mode.rawValue; songSortAscending = ascending
+    }
 }

@@ -3,6 +3,44 @@
   "updated_at": "2026-10-28",
   "entries": [
     {
+      "id": "v8-stage1",
+      "version": "V8-1",
+      "date": "2026-10-28",
+      "title": "排行榜範圍與全庫反向排序",
+      "summary": "已實作指定三項功能，模型回歸通過；原生與真機驗收進行中。",
+      "changes": [
+        {
+          "id": "v8-library-order",
+          "title": "全庫顯示與三種排序",
+          "summary": "取消50首續載，筆畫／喜好／新增可反轉並保存；保留舊順序及完整佇列。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01",
+            "QA-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "HomeLibrary.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryIndex.swift",
+              "label": "LibraryIndex.swift"
+            },
+            {
+              "path": "apps/apple/Tests/LibraryIndexChecks.swift",
+              "label": "LibraryIndexChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/V8實作與架構驗收.md",
+              "label": "V8實作與架構驗收.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "plan-v8",
       "version": "V8-planned",
       "date": "2026-10-28",

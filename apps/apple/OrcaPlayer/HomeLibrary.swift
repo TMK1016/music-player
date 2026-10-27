@@ -36,10 +36,12 @@ struct MusicHomeView: View {
                 allSongRows
 
             }
+            if navigation.showsRankings {
             Divider()
             Text("排行榜").font(.title3.weight(.semibold))
             Picker("排行榜範圍", selection: Binding(get: { monthly }, set: { monthly = $0 })) { Text("當月").tag(true); Text("累計").tag(false) }.pickerStyle(.segmented).labelsHidden()
             rankingRows
+            }
         }.padding(20).scrollTargetLayout() }
         .scrollPosition(id: Binding(get: { navigation.scrollPositions[section] }, set: { value in
             guard let value else { return }
@@ -112,17 +114,17 @@ struct MusicHomeView: View {
             HStack {
                 Text("\(songs.count) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
                 Spacer()
-                Button { sortingSongs = true } label: { Label(model.collection.songSort ?? "自訂順序", systemImage: "arrow.up.arrow.down").font(.subheadline).frame(minHeight: 44) }.buttonStyle(.plain)
+                Button { sortingSongs = true } label: { Label(model.collection.effectiveSongSort, systemImage: model.collection.isSongSortAscending ? "arrow.up" : "arrow.down").font(.subheadline).frame(minHeight: 44) }.buttonStyle(.plain)
                     .accessibilityLabel("全部歌曲排序")
                     .popover(isPresented: $sortingSongs, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-                        VStack(spacing: 4) { ForEach(["自訂順序", "歌名", "歌手", "最近新增"], id: \.self) { option in
-                            Button { model.collection.songSort = option; sortingSongs = false } label: {
-                                HStack { Text(option); Spacer(); if (model.collection.songSort ?? "自訂順序") == option { Image(systemName: "checkmark") } }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                        VStack(spacing: 4) { ForEach(SongSortMode.allCases, id: \.self) { option in
+                            Button { model.selectSongSort(option); sortingSongs = false } label: {
+                                HStack { Text(option.rawValue); Spacer(); if model.collection.effectiveSongSort == option.rawValue { Image(systemName: model.collection.isSongSortAscending ? "arrow.up" : "arrow.down") } }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
                             }.buttonStyle(.plain)
                         } }.padding(12).frame(width: 180).foregroundStyle(.white).presentationCompactAdaptation(.popover).presentationBackground(OrcaTheme.sheet)
                     }
             }
-            ForEach(Array(songs.prefix(navigation.limit))) { song in
+            ForEach(songs) { song in
                 CollectionSongRow(model: model, track: song, queue: songs).id("all-song:" + song.id)
                     .contextMenu {
                         Button("往上移") { moveSong(song.id, by: -1) }.disabled(songs.first?.id == song.id)
@@ -131,9 +133,7 @@ struct MusicHomeView: View {
                     .onDrag { draggedSong = song.id; return NSItemProvider(object: song.id as NSString) }
                     .onDrop(of: [.text], delegate: LibraryReorderDrop(target: song.id, dragged: $draggedSong) { source, target in model.moveSong(source, to: target) })
             }
-            if navigation.limit < songs.count {
-                Button("載入更多50首 · 已顯示\(min(navigation.limit, songs.count))／\(songs.count)") { navigation.limit += 50 }.frame(maxWidth: .infinity, minHeight: 44)
-            }
+
         }.scrollTargetLayout()
     }
     private func moveSong(_ id: String, by offset: Int) {
