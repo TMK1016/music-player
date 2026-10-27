@@ -166,8 +166,8 @@ struct InlineTuningPanel: View {
                         controls
                         bass
                         EQCurve(gains: model.eqEnabled ? model.gains : EQBands.flat)
-                            .frame(height: max(32, min(80, geometry.size.height * 0.16))).accessibilityLabel("等化器增益示意，並非量測響應").contentShape(Rectangle()).gesture(returnGesture)
-                        SevenBandControls(model: model).frame(maxHeight: .infinity)
+                            .frame(maxHeight: .infinity).accessibilityLabel("等化器增益示意，並非量測響應").contentShape(Rectangle()).gesture(returnGesture)
+                        SevenBandControls(model: model).frame(height: max(78, min(140, geometry.size.height * 0.24)))
                         ModeSelectionStrip(model: model, useSongPolicy: useSongPolicy, compact: geometry.size.height < 350)
                     }
                 }

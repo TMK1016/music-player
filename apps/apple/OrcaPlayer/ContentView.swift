@@ -9,7 +9,7 @@ struct ContentView: View {
             HStack(spacing: 0) {
                 if wide { sidebar.frame(width: 210) }
                 VStack(spacing: 0) {
-                    if !(model.page == .player && geometry.size.height < 450) { header(wide: wide) }
+                    if model.page != .player { header(wide: wide) }
                     if model.page == .player {
                         MusicPlayerPage(model: model)
                     } else if model.page == .equalizer {
@@ -77,7 +77,7 @@ struct ContentView: View {
                 Image(systemName: "sparkles").foregroundStyle(OrcaTheme.cyan)
                 Text("為每段旅程\n找到你的聲音。")
                     .font(.system(size: 15, weight: .medium)).lineSpacing(5)
-                Text("MUSIC PLAYER / 0.10.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
+                Text("MUSIC PLAYER / 0.11.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
             }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                 .background(LinearGradient(colors: [OrcaTheme.blue.opacity(0.17), OrcaTheme.panel], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 15))
                 .padding(.bottom, 22)

@@ -5,55 +5,50 @@ struct ModeSelectionStrip: View {
     @ObservedObject var model: PlayerModel
     var useSongPolicy = false
     var compact = false
-    @ViewState private var focusedMode: String?
     @ViewState private var draggedMode: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         VStack(spacing: 2) {
             if !compact {
-                HStack {
-                    Text("模式選擇").font(.subheadline.weight(.semibold))
-                    Spacer(minLength: 4)
-                    newModeButton
-                }.frame(height: 44)
+                HStack { Text("模式選擇").font(.subheadline.weight(.semibold)); Spacer(minLength: 4); newModeButton }.frame(height: 44)
             }
             HStack(spacing: 6) {
-                ScrollViewReader { reader in
-                    scrollingRow
-                        .onChange(of: model.customPresets.count) { old, new in
-                            if new > old, let id = model.customPresets.last?.id { reader.scrollTo(id, anchor: .trailing) }
-                        }
-                }
+                GeometryReader { geometry in
+                    ScrollViewReader { reader in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(model.modeOptions) { option in
+                                    Button {
+                                        select(option.id)
+                                        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { reader.scrollTo(option.id, anchor: .center) }
+                                    } label: {
+                                        Text(option.name).font(.subheadline.weight(.medium)).lineLimit(1)
+                                            .frame(width: 100, height: 44)
+                                            .foregroundStyle(model.presetName == option.name ? OrcaTheme.cyan : OrcaTheme.text)
+                                            .background(model.presetName == option.name ? OrcaTheme.blue.opacity(0.25) : OrcaTheme.background, in: RoundedRectangle(cornerRadius: 10))
+                                    }.buttonStyle(.plain).id(option.id)
+                                        .onDrag { draggedMode = option.id; return NSItemProvider(object: option.id as NSString) }
+                                        .onDrop(of: [.text], delegate: ModeReorderDrop(model: model, target: option.id, dragged: $draggedMode))
+                                        .contextMenu { ModeActions(model: model, option: option) }
+                                        .accessibilityLabel(option.name)
+                                        .accessibilityHint("左右滑動瀏覽，點擊套用；長按拖曳排序")
+                                        .accessibilityAddTraits(model.presetName == option.name ? [.isSelected] : [])
+                                }
+                                if !model.hiddenPresets.isEmpty { Button("還原內建") { model.restoreBuiltinModes() }.frame(minHeight: 44) }
+                            }.scrollTargetLayout()
+                        }.contentMargins(.horizontal, max(0, (geometry.size.width - 100) / 2), for: .scrollContent)
+                            .scrollTargetBehavior(.viewAligned)
+                            .onAppear { if let id = selectedID { reader.scrollTo(id, anchor: .center) } }
+                            .onChange(of: model.presetName) { _, _ in
+                                if let id = selectedID { withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { reader.scrollTo(id, anchor: .center) } }
+                            }
+                    }
+                }.frame(height: 44)
                 if compact { newModeButton }
             }
         }
     }
-    private var scrollingRow: some View { modeRow }
-    private var modeRow: some View {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(model.modeOptions) { option in
-                                Button {
-                                    focusedMode = option.id
-                                    select(option.id)
-                                } label: {
-                                    Text(option.name).font(.subheadline.weight(.medium)).lineLimit(1)
-                                        .padding(.horizontal, 14).frame(minHeight: 44)
-                                        .foregroundStyle(model.presetName == option.name ? OrcaTheme.cyan : OrcaTheme.text)
-                                        .background(model.presetName == option.name ? OrcaTheme.blue.opacity(0.25) : OrcaTheme.background, in: RoundedRectangle(cornerRadius: 10))
-                                }.buttonStyle(.plain).id(option.id)
-                                    .onDrag { draggedMode = option.id; return NSItemProvider(object: option.id as NSString) }
-                                    .onDrop(of: [.text], delegate: ModeReorderDrop(model: model, target: option.id, dragged: $draggedMode))
-                                    .contextMenu { ModeActions(model: model, option: option) }
-                                    .accessibilityHint("左右滑動瀏覽；長按可調整順序、命名或移除")
-                                    .accessibilityAddTraits(model.presetName == option.name ? [.isSelected] : [])
-                            }
-                            if !model.hiddenPresets.isEmpty { Button("還原內建") { model.restoreBuiltinModes() }.frame(minHeight: 44) }
-                        }.scrollTargetLayout()
-                    }.scrollTargetBehavior(.viewAligned)
-                        .scrollPosition(id: $focusedMode, anchor: .center)
-                        .accessibilityLabel("音效模式，左右滑動選擇")
-                        .onAppear { focusedMode = model.modeOptions.first(where: { $0.name == model.presetName })?.id }
-    }
+    private var selectedID: String? { model.modeOptions.first { $0.name == model.presetName }?.id }
     private func select(_ id: String) {
         if useSongPolicy && model.useSongProfiles { model.bindSong(to: id) }
         else { model.applyPreset(id: id) }
@@ -64,7 +59,7 @@ struct ModeSelectionStrip: View {
                 .font(.caption.weight(.semibold)).frame(minWidth: 64, minHeight: 44)
         }.buttonStyle(.plain).foregroundStyle(OrcaTheme.cyan)
             .disabled(model.customPresets.count >= 20)
-            .accessibilityLabel(model.customPresets.count >= 20 ? "自訂模式已達20組，長按舊模式可管理" : model.hasManualEQChanges ? "儲存新模式" : "新增自訂模式")
+            .accessibilityLabel(model.customPresets.count >= 20 ? "自訂模式已達20組，長按舊模式可管理" : model.hasManualEQChanges ? "新增模式" : "新增自訂模式")
     }
 }
 struct ModeActions: View {

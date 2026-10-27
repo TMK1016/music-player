@@ -20,6 +20,10 @@ struct ListeningEvent: Codable, Equatable {
     var trackID: String
     var date: Date
 }
+struct PlaylistAppearance: Codable, Equatable {
+    var name: String?
+    var artwork: Data?
+}
 struct MusicCollection: Codable, Equatable {
     var version = 1
     var songs: [String: SongDetails] = [:]
@@ -28,6 +32,10 @@ struct MusicCollection: Codable, Equatable {
     var searches: [String] = []
     var plays: [ListeningEvent] = []
     var playlistOrder: [String] = []
+    var playlistAppearance: [String: PlaylistAppearance]?
+    var hiddenPlaylists: Set<String>?
+    var artistOrder: [String]?
+    var artistSort: String?
 }
 
 extension PlayerModel {
@@ -77,13 +85,13 @@ extension PlayerModel {
         collection.playlists[index].trackIDs.removeAll { $0 == trackID }
     }
     func deletePlaylist(_ id: String) {
-        var state = collection; state.playlists.removeAll { $0.id == id }; state.playlistOrder.removeAll { $0 == id }; collection = state
+        var state = collection; state.playlists.removeAll { $0.id == id }; state.playlistOrder.removeAll { $0 == id }; state.playlistAppearance?.removeValue(forKey: id); state.hiddenPlaylists?.remove(id); collection = state
     }
     func songs(in id: String) -> [AudioTrack] {
         switch id {
         case "all": return tracks
         case "favorites": return tracks.filter { favorites.contains($0.id) }
-        case "recent": return tracks.sorted { (collection.songs[$0.id]?.addedAt ?? .distantPast) > (collection.songs[$1.id]?.addedAt ?? .distantPast) }
+        case "recent": return tracks.filter { !$0.isDemo && (collection.songs[$0.id]?.addedAt ?? .distantPast) >= Date().addingTimeInterval(-7 * 86400) }.sorted { (collection.songs[$0.id]?.addedAt ?? .distantPast) > (collection.songs[$1.id]?.addedAt ?? .distantPast) }
         case "liked": return tracks.filter { rating($0.id) >= 3 }
         case "unfamiliar": return tracks.filter { (1...3).contains(rating($0.id)) }
         default:
@@ -148,5 +156,97 @@ extension PlayerModel {
 @MainActor extension PlayerModel {
     func cyclePlaybackMode() {
         setPlaybackMode(shuffle ? "歌單循環" : repeatOne ? "隨機播放" : "單曲循環")
+    }
+}
+
+@MainActor extension PlayerModel {
+    static let systemPlaylistIDs = ["favorites", "recent", "stars5", "stars4", "stars3", "stars2", "stars1", "liked", "unfamiliar"]
+    func isSystemPlaylist(_ id: String) -> Bool { Self.systemPlaylistIDs.contains(id) }
+    func playlistTitle(_ id: String) -> String {
+        if let name = collection.playlistAppearance?[id]?.name, !name.isEmpty { return name }
+        switch id {
+        case "favorites": return "我的最愛"
+        case "recent": return "最近新增"
+        case "liked": return "喜好歌曲"
+        case "unfamiliar": return "陌生歌曲"
+        default:
+            if id.hasPrefix("stars"), let count = Int(id.suffix(1)), (1...5).contains(count) { return String(repeating: "★", count: count) }
+            return collection.playlists.first { $0.id == id }?.name ?? "播放清單"
+        }
+    }
+    var visiblePlaylistIDs: [String] {
+        let available = Self.systemPlaylistIDs.filter { !songs(in: $0).isEmpty } + collection.playlists.map(\.id)
+        let ordered = collection.playlistOrder.filter { available.contains($0) } + available.filter { !collection.playlistOrder.contains($0) }
+        var seen = Set<String>()
+        return ordered.filter { !(collection.hiddenPlaylists ?? []).contains($0) && seen.insert($0).inserted }
+    }
+    func hidePlaylist(_ id: String, hidden: Bool) {
+        var state = collection; var values = state.hiddenPlaylists ?? []
+        if hidden { values.insert(id) } else { values.remove(id) }
+        state.hiddenPlaylists = values; collection = state
+    }
+    func movePlaylist(_ id: String, to target: String) {
+        var ids = visiblePlaylistIDs
+        guard let from = ids.firstIndex(of: id), let to = ids.firstIndex(of: target), from != to else { return }
+        ids.remove(at: from); ids.insert(id, at: to)
+        var state = collection
+        state.playlistOrder = ids + state.playlistOrder.filter { !ids.contains($0) }
+        collection = state
+    }
+    func updatePlaylist(_ id: String, name: String, artwork: Data?) -> Bool {
+        let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, title.count <= 60, artwork == nil || artwork!.count <= 5_000_000 else { return false }
+        let ids = Self.systemPlaylistIDs + collection.playlists.map(\.id)
+        guard ids.contains(id), !ids.contains(where: { $0 != id && playlistTitle($0).localizedCaseInsensitiveCompare(title) == .orderedSame }) else { return false }
+        var state = collection; var appearances = state.playlistAppearance ?? [:]
+        appearances[id] = PlaylistAppearance(name: title, artwork: artwork ?? appearances[id]?.artwork)
+        state.playlistAppearance = appearances
+        if let i = state.playlists.firstIndex(where: { $0.id == id }) { state.playlists[i].name = title }
+        collection = state; return true
+    }
+    func containsSong(_ trackID: String, inPlaylist id: String) -> Bool { songs(in: id).contains { $0.id == trackID } }
+    func togglePlaylistMembership(_ trackID: String, _ id: String) {
+        guard tracks.contains(where: { $0.id == trackID }) else { return }
+        if id == "favorites", let song = tracks.first(where: { $0.id == trackID }) { toggleFavorite(song); return }
+        guard !isSystemPlaylist(id) else { return }
+        if containsSong(trackID, inPlaylist: id) { removeFromPlaylist(trackID, id) }
+        else { addToPlaylist(trackID, id) }
+    }
+    func artistKey(_ name: String) -> String { collection.artists.first { $0.name == name }?.id ?? "native:" + name }
+    func moveArtist(_ id: String, to target: String, in ids: [String]) {
+        var order = ids
+        guard let from = order.firstIndex(of: id), let to = order.firstIndex(of: target), from != to else { return }
+        order.remove(at: from); order.insert(id, at: to)
+        var state = collection; state.artistOrder = order; collection = state
+    }
+    @discardableResult func editableArtist(named name: String) -> MusicArtist {
+        if let artist = collection.artists.first(where: { $0.name == name }) { return artist }
+        let artist = MusicArtist(name: name)
+        var state = collection; state.artists.append(artist)
+        for song in tracks where self.artist(song) == name {
+            var info = details(song.id); info.artistID = artist.id; state.songs[song.id] = info
+        }
+        state.artistOrder = (state.artistOrder ?? []).map { $0 == "native:" + name ? artist.id : $0 }
+        collection = state; return artist
+    }
+    var playingListTitle: String {
+        guard let id = playbackListID, isSystemPlaylist(id) || collection.playlists.contains(where: { $0.id == id }) else { return playbackContextName }
+        return playlistTitle(id)
+    }
+    var estimatedSleepEnd: Date? {
+        if let sleepDeadline { return sleepDeadline }
+        guard let count = sleepSongsRemaining else { return nil }
+        return estimatedEnd(afterSongs: count)
+    }
+    func estimatedEnd(afterSongs count: Int) -> Date {
+        let count = min(100, max(1, count))
+        let remaining = max(0, track.duration - currentTime)
+        if repeatOne { return Date().addingTimeInterval(remaining + Double(count - 1) * track.duration) }
+        let queue = playbackQueue.compactMap { id in tracks.first { $0.id == id } }
+        guard !queue.isEmpty else { return Date().addingTimeInterval(remaining + Double(count - 1) * track.duration) }
+        if shuffle { return Date().addingTimeInterval(remaining + Double(count - 1) * queue.map(\.duration).reduce(0, +) / Double(queue.count)) }
+        let start = queue.firstIndex { $0.id == selectedID } ?? 0
+        let seconds = (1..<count).reduce(remaining) { total, offset in total + queue[(start + offset) % queue.count].duration }
+        return Date().addingTimeInterval(seconds)
     }
 }

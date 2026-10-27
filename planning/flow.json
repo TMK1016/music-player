@@ -215,7 +215,8 @@
         "docs/zh-TW/本機音訊實作與驗收.md",
         "docs/product/UIUX-首頁與播放體驗.md",
         "docs/zh-TW/三頁曲庫與定時實作.md",
-        "docs/zh-TW/背景播放與互動優化-v010.md"
+        "docs/zh-TW/背景播放與互動優化-v010.md",
+        "docs/zh-TW/v4清單與抽屜播放頁-v011.md"
       ],
       "implementation_scope": "已實作複製、去重、原子索引與收藏；命名歌單、標籤／封面與大量曲庫待完成。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。",
       "implemented_paths": [
@@ -251,7 +252,8 @@
         "docs/zh-TW/v0.7.1音訊回呼崩潰修復.md",
         "docs/zh-TW/播放頁滑動調音改版.md",
         "docs/zh-TW/三頁細節與單頁調音-v09.md",
-        "docs/zh-TW/背景播放與互動優化-v010.md"
+        "docs/zh-TW/背景播放與互動優化-v010.md",
+        "docs/zh-TW/v4清單與抽屜播放頁-v011.md"
       ],
       "implementation_scope": "本機播放、暫停、定位、切歌與自然結尾已接入；格式矩陣、長時連播與路由驗證未完成。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；v0.7真機後續發現音訊actor崩潰，v0.7.1依堆疊修復並新增背景通知回歸，不以早期Running替代完整驗收。；v0.8依兩張參考圖加入封面右滑原位EQ、固定transport及五星評分；UI實機檢查與模型檢查分開記錄。",
       "implemented_paths": [
@@ -290,7 +292,8 @@
         "docs/zh-TW/模式內嵌展開與儲存提示.md",
         "docs/zh-TW/播放頁滑動調音改版.md",
         "docs/zh-TW/三頁細節與單頁調音-v09.md",
-        "docs/zh-TW/背景播放與互動優化-v010.md"
+        "docs/zh-TW/背景播放與互動優化-v010.md",
+        "docs/zh-TW/v4清單與抽屜播放頁-v011.md"
       ],
       "implementation_scope": "v0.6：7 段固定中心（50～12.5k Hz）、約 1⅓ 倍頻程、合成響應餘裕與 13 預設；130 個 Apple PCM 探測點通過。未加入響度補償、限制器、true-peak 保護、完整平滑或 Rust。；v0.8依兩張參考圖加入封面右滑原位EQ、固定transport及五星評分；UI實機檢查與模型檢查分開記錄。",
       "implemented_paths": [
@@ -331,7 +334,8 @@
         "docs/product/UIUX-首頁與播放體驗.md",
         "docs/zh-TW/移除車輛設定.md",
         "docs/zh-TW/三頁細節與單頁調音-v09.md",
-        "docs/zh-TW/背景播放與互動優化-v010.md"
+        "docs/zh-TW/背景播放與互動優化-v010.md",
+        "docs/zh-TW/v4清單與抽屜播放頁-v011.md"
       ],
       "implemented_paths": [
         "apps/apple/OrcaPlayer/SoundProfiles.swift",
@@ -704,10 +708,11 @@
         "docs/zh-TW/移除車輛設定.md",
         "docs/zh-TW/播放頁滑動調音改版.md",
         "docs/zh-TW/三頁細節與單頁調音-v09.md",
-        "docs/zh-TW/背景播放與互動優化-v010.md"
+        "docs/zh-TW/背景播放與互動優化-v010.md",
+        "docs/zh-TW/v4清單與抽屜播放頁-v011.md"
       ],
       "implementation_scope": "v0.6 七段無橫移調整區、單列模式與完整選擇面板；360 點寬預覽驗證。橫向手勢自動展開已接入，手機手勢實測待確認。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；2026-10-26車輛設定及試音已撤除，歷史記錄保留，不再是App能力。；v0.8依兩張參考圖加入封面右滑原位EQ、固定transport及五星評分；UI實機檢查與模型檢查分開記錄。"
     }
   ],
-  "progress_summary": "25 節點 · v0.10 背景音訊與選單刷新隔離／互動優化 · 真機驗證分項紀錄"
+  "progress_summary": "25 節點 · v0.11 動態清單／抽屜工具／單頁調音與倒數 · 真機驗收分項紀錄"
 }

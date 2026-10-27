@@ -4,8 +4,8 @@ extension View {
     func themedSheet() -> some View {
         self.presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
             .presentationCornerRadius(30)
-            .presentationBackground(.regularMaterial)
-            .background(LinearGradient(colors: [OrcaTheme.blue.opacity(0.18), OrcaTheme.background], startPoint: .topLeading, endPoint: .bottomTrailing))
+            .presentationBackground(OrcaTheme.sheet)
+            .background(OrcaTheme.sheet.ignoresSafeArea())
     }
 }
 
@@ -50,5 +50,33 @@ struct PlaybackSeekBar: View {
                 model.seek(to: min(model.track.duration, max(0, clock.time + (direction == .increment ? 5 : -5))))
             }
             .onChange(of: model.selectedID) { _, _ in dragging = false }
+    }
+}
+
+struct PlaybackModeButton: View {
+    @ObservedObject var model: PlayerModel
+    private var title: String { model.repeatOne ? "單曲循環" : model.shuffle ? "隨機播放" : "歌單循環" }
+    var body: some View {
+        Button { model.cyclePlaybackMode() } label: {
+            Image(systemName: model.repeatOne ? "repeat.1" : model.shuffle ? "shuffle" : "repeat").frame(width: 44, height: 44)
+        }.buttonStyle(.plain).accessibilityLabel("切換播放模式").accessibilityValue(title)
+    }
+}
+struct SleepCountdownStatus: View {
+    @ObservedObject var model: PlayerModel
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            VStack(spacing: 6) {
+                if let deadline = model.sleepDeadline {
+                    Text("倒數 \(PlayerModel.time(max(0, deadline.timeIntervalSince(context.date))))").monospacedDigit()
+                    Text("預計結束 \(deadline.formatted(date: .omitted, time: .shortened))")
+                } else if let songs = model.sleepSongsRemaining {
+                    Text("剩餘 \(songs) 首")
+                    if let date = model.estimatedSleepEnd {
+                        Text("\(model.isPlaying ? "預計" : "恢復播放後約於") \(date.formatted(date: .omitted, time: .shortened)) 結束").font(.caption)
+                    }
+                }
+            }.font(.subheadline).foregroundStyle(OrcaTheme.text)
+        }
     }
 }

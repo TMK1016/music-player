@@ -1,7 +1,135 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-26",
+  "updated_at": "2026-10-27",
   "entries": [
+    {
+      "id": "release-0-11",
+      "version": "v0.11.0",
+      "date": "2026-10-27",
+      "title": "v4 清單管理與抽屜播放頁",
+      "summary": "動態系統清單、全列操作與綠勾、歌手長按編輯、六項抽屜及單頁調音。",
+      "changes": [
+        {
+          "id": "v011-playlist-management",
+          "title": "清單顯示、排序與照片編輯",
+          "summary": "近7天與評分觸發、隱藏還原、全列展開及目前歌曲綠勾；刪除清單保留音檔。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "HomeLibrary.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryManagement.swift",
+              "label": "LibraryManagement.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "MusicCollection.swift"
+            },
+            {
+              "path": "docs/zh-TW/v4清單與抽屜播放頁-v011.md",
+              "label": "v4清單與抽屜播放頁-v011.md"
+            }
+          ]
+        },
+        {
+          "id": "v011-artists-rankings",
+          "title": "歌手編輯與白底榜單",
+          "summary": "長按歌手管理照片名稱與排序；月／累計分段及卡片外排名次數。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "HomeLibrary.swift"
+            },
+            {
+              "path": "docs/zh-TW/v4清單與抽屜播放頁-v011.md",
+              "label": "v4清單與抽屜播放頁-v011.md"
+            }
+          ]
+        },
+        {
+          "id": "v011-player-drawer",
+          "title": "播放來源與六項功能抽屜",
+          "summary": "置頂清單名、收合六工具、播放模式及喇叭輸出選擇。",
+          "node_ids": [
+            "PLAY-01",
+            "UI-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            },
+            {
+              "path": "docs/zh-TW/v4清單與抽屜播放頁-v011.md",
+              "label": "v4清單與抽屜播放頁-v011.md"
+            }
+          ]
+        },
+        {
+          "id": "v011-eq-centering",
+          "title": "調音留白與音效標籤置中",
+          "summary": "第二頁隱藏評分、縮短七段、放大曲線；點選才套用並置中。",
+          "node_ids": [
+            "EQ-01",
+            "PROFILE-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+              "label": "ModeSelectionView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            },
+            {
+              "path": "docs/zh-TW/v4清單與抽屜播放頁-v011.md",
+              "label": "v4清單與抽屜播放頁-v011.md"
+            }
+          ]
+        },
+        {
+          "id": "v011-sleep-surface",
+          "title": "睡眠整列點擊與倒數時間",
+          "summary": "中性背景一致、顯示倒數／估計結束，未設定不顯示附註。",
+          "node_ids": [
+            "UI-01"
+          ],
+          "target_page": "settings",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ExperienceControls.swift",
+              "label": "ExperienceControls.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlaybackUI.swift",
+              "label": "PlaybackUI.swift"
+            },
+            {
+              "path": "docs/zh-TW/v4清單與抽屜播放頁-v011.md",
+              "label": "v4清單與抽屜播放頁-v011.md"
+            }
+          ]
+        }
+      ]
+    },
     {
       "id": "release-0-10",
       "version": "v0.10.0",

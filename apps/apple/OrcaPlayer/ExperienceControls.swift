@@ -11,11 +11,15 @@ struct TrackPlaylistEditor: View {
         NavigationStack {
             List {
                 Section("所屬播放清單") {
-                    ForEach(model.collection.playlists) { list in
-                        Toggle(list.name, isOn: Binding(get: { list.trackIDs.contains(trackID) }, set: { selected in
-                            if selected { model.addToPlaylist(trackID, list.id) } else { model.removeFromPlaylist(trackID, list.id) }
-                        }))
-                        .contextMenu { Button("刪除整份清單（保留音檔）", role: .destructive) { deleting = list.id } }
+                    ForEach(model.visiblePlaylistIDs, id: \.self) { id in
+                        HStack {
+                            Button {
+                                if !model.isSystemPlaylist(id) || id == "favorites" { model.togglePlaylistMembership(trackID, id) }
+                            } label: {
+                                HStack { Text(model.playlistTitle(id)); Spacer(); Image(systemName: model.containsSong(trackID, inPlaylist: id) ? "checkmark.circle.fill" : "circle").foregroundStyle(model.containsSong(trackID, inPlaylist: id) ? .green : OrcaTheme.muted) }
+                                    .frame(maxWidth: .infinity, minHeight: 48).contentShape(Rectangle())
+                            }.buttonStyle(.plain).disabled(model.isSystemPlaylist(id) && id != "favorites")
+                        }
                     }
                     if model.collection.playlists.isEmpty { Text("建立一份清單，加入目前歌曲。") }
                 }
@@ -24,7 +28,7 @@ struct TrackPlaylistEditor: View {
                     if let error { Text(error).foregroundStyle(.orange).font(.caption) }
                     Button("建立並加入目前歌曲") { create() }
                 }
-                Section { Text("關閉清單開關只會移除歌曲關聯，音樂檔案會保留。長按清單可刪除整份清單。").font(.caption) }
+                Section { Text("點擊清單可加入／移除目前歌曲，音檔會保留。評分與最近新增清單僅顯示自動分類狀態。").font(.caption) }
             }.navigationTitle("播放清單")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
         }.frame(minWidth: 300, minHeight: 350)
@@ -54,6 +58,8 @@ struct SleepTimerEditor: View {
             HStack { Text("睡眠模式").font(.title2.bold()); Spacer(); Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }.accessibilityLabel("關閉睡眠模式") }
             Picker("倒數方式", selection: $bySongs) { Text("計時倒數").tag(false); Text("歌曲倒數").tag(true) }.pickerStyle(.segmented)
                 .onChange(of: bySongs) { _, value in amount = value ? 3 : 10 }
+            ScrollView {
+                VStack(spacing: 12) {
             if custom {
                 Picker(bySongs ? "首數" : "分鐘", selection: $amount) {
                     ForEach(1...limit, id: \.self) { value in Text("\(value) \(bySongs ? "首歌" : "分鐘")").tag(value) }
@@ -69,14 +75,20 @@ struct SleepTimerEditor: View {
                 ForEach(bySongs ? [3, 5, 10] : [5, 10, 20], id: \.self) { value in
                     Button { amount = value } label: {
                         HStack { Text("\(value) \(bySongs ? "首歌" : "分鐘")"); Spacer(); if amount == value { Image(systemName: "checkmark.circle.fill") } }
-                            .frame(minHeight: 44).padding(.horizontal, 12).background(amount == value ? OrcaTheme.blue.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 12))
+                            .frame(maxWidth: .infinity, minHeight: 44).padding(.horizontal, 12).contentShape(Rectangle()).background(amount == value ? OrcaTheme.blue.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 12))
                     }.buttonStyle(.plain).accessibilityAddTraits(amount == value ? [.isSelected] : [])
                 }
                 Button("自訂\(bySongs ? "首數" : "時間")（最多\(limit)\(bySongs ? "首" : "分鐘")）") { custom = true }.frame(minHeight: 44)
             }
-            Text("目前：\(model.sleepStatus)").font(.caption)
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let end = bySongs ? model.estimatedEnd(afterSongs: amount) : context.date.addingTimeInterval(Double(amount) * 60)
+                Text("預計結束 \(end.formatted(date: .omitted, time: .shortened))\(bySongs ? "（估計）" : "")").font(.caption).foregroundStyle(OrcaTheme.muted)
+            }
+            SleepCountdownStatus(model: model)
             Text(bySongs ? "自然播完才扣除；包含目前歌曲與重播，跳歌不扣除。" : "暫停時倒數仍持續；重開App不保留倒數。")
                 .font(.caption).foregroundStyle(OrcaTheme.muted)
+                }.frame(maxWidth: .infinity)
+            }
             HStack(spacing: 16) {
                 Button { model.cancelSleep(); dismiss() } label: { Label("取消倒數", systemImage: "xmark").frame(maxWidth: .infinity, minHeight: 48) }
                     .buttonStyle(.plain).foregroundStyle(.white).background(Color.red.opacity(0.8), in: RoundedRectangle(cornerRadius: 14)).disabled(model.sleepDeadline == nil && model.sleepSongsRemaining == nil)
@@ -84,7 +96,7 @@ struct SleepTimerEditor: View {
                     Label("開始倒數", systemImage: "play.fill").frame(maxWidth: .infinity, minHeight: 48)
                 }.buttonStyle(.plain).foregroundStyle(.white).background(Color(red: 0.08, green: 0.48, blue: 0.25), in: RoundedRectangle(cornerRadius: 14)).disabled(!(1...limit).contains(amount))
             }
-        }.padding(24).frame(minWidth: 300).themedSheet().presentationDetents([.height(560), .large])
+        }.padding(24).frame(minWidth: 300, idealHeight: 560).themedSheet().presentationDetents([.height(560), .large])
     }
 }
 

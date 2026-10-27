@@ -91,6 +91,8 @@ private struct SavedSettings: Codable {
     @Published var sleepSongsRemaining: Int?
     @Published var useSongProfiles = true
     var playbackQueue: [String] = []
+    @Published var playbackListID: String?
+    @Published var playbackContextName = "全部歌曲"
     private var listened = 0.0
     private var counted = false
     private var lastSample = 0.0
@@ -308,7 +310,8 @@ private struct SavedSettings: Codable {
     func previous() {
         if currentTime > 3 { choose(track, autoplay: isPlaying) } else { advance(forward: false) }
     }
-    func play(_ track: AudioTrack, queue: [AudioTrack]) {
+    func play(_ track: AudioTrack, queue: [AudioTrack], contextName: String = "全部歌曲", playlistID: String? = nil) {
+        playbackListID = playlistID; playbackContextName = contextName
         playbackQueue = queue.map(\.id); choose(track)
     }
     private func advance(forward: Bool) {
