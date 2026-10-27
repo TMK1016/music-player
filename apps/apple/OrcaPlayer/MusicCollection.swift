@@ -44,8 +44,8 @@ struct MusicCollection: Codable, Equatable, Sendable {
 
 extension PlayerModel {
     func details(_ id: String) -> SongDetails { collection.songs[id] ?? SongDetails() }
-    func title(_ track: AudioTrack) -> String { libraryIndex.titles[track.id] ?? collection.songs[track.id]?.title ?? track.title }
-    func artist(_ track: AudioTrack) -> String { libraryIndex.artistNames[track.id] ?? (track.artist == "本機音檔" ? "未知歌手" : track.artist) }
+    func title(_ track: AudioTrack) -> String { libraryIndex.metadata[track.id]?.title ?? collection.songs[track.id]?.title ?? track.title }
+    func artist(_ track: AudioTrack) -> String { libraryIndex.metadata[track.id]?.artist ?? (track.artist == "本機音檔" ? "未知歌手" : track.artist) }
     func rating(_ id: String) -> Int { collection.songs[id]?.rating ?? 0 }
     func setRating(_ id: String, _ value: Int) {
         guard tracks.contains(where: { $0.id == id }), (0...5).contains(value) else { return }
@@ -113,12 +113,7 @@ extension PlayerModel {
         guard let from = ids.firstIndex(of: id), let to = ids.firstIndex(of: target), from != to else { return }
         ids.remove(at: from); ids.insert(id, at: to); var state = collection; state.songOrder = ids; state.songSort = "自訂順序"; state.songSortAscending = true; collection = state
     }
-    func coverData(_ track: AudioTrack) -> Data? {
-        if let cover = collection.songs[track.id]?.cover { return cover }
-        let index = libraryIndex
-        guard let id = index.artistIDsByName[index.artistNames[track.id] ?? ""] else { return nil }
-        return index.artists[id]?.avatar
-    }
+    func coverData(_ track: AudioTrack) -> Data? { libraryIndex.metadata[track.id]?.artwork ?? collection.metadata(for: track).artwork }
     func setCover(_ id: String, data: Data?) {
         guard tracks.contains(where: { $0.id == id }), data == nil || data!.count <= 5_000_000 else { return }
         var info = details(id); info.cover = data; collection.songs[id] = info

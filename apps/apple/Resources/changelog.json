@@ -3,6 +3,44 @@
   "updated_at": "2026-10-28",
   "entries": [
     {
+      "id": "v8-stage2",
+      "version": "V8-2",
+      "date": "2026-10-28",
+      "title": "系統媒體與曲庫責任分離",
+      "summary": "全專案盤點；鎖屏資訊由獨立快照發布，避免分類變更透過封面重建索引。模型回歸通過。",
+      "changes": [
+        {
+          "id": "v8-media-boundary",
+          "title": "共用metadata與獨立Now Playing",
+          "summary": "統一歌名／歌手／封面優先序，保存Sendable回呼與過期圖片防護，導航狀態離開純索引。",
+          "node_ids": [
+            "ARCH-01",
+            "PLAY-01",
+            "LIB-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/NowPlaying.swift",
+              "label": "NowPlaying.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/TrackMetadata.swift",
+              "label": "TrackMetadata.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibraryState.swift",
+              "label": "HomeLibraryState.swift"
+            },
+            {
+              "path": "docs/zh-TW/V8實作與架構驗收.md",
+              "label": "V8實作與架構驗收.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "v8-stage1",
       "version": "V8-1",
       "date": "2026-10-28",

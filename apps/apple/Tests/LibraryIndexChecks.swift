@@ -50,7 +50,9 @@ import Combine
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         try FileManager.default.copyItem(at: fixture, to: root.appendingPathComponent("fixture.wav"))
         let audio = FakeAudioPlayer()
-        let model = PlayerModel(audio: audio, libraryRoot: root, demoURL: fixture)
+        var publications: [NowPlayingSnapshot] = []
+        let publisher = NowPlayingCoordinator { publications.append($0) }
+        let model = PlayerModel(audio: audio, libraryRoot: root, demoURL: fixture, nowPlaying: publisher)
         model.collectionWriteBlocked = true
         var timing: [[String: Double]] = []
         for count in [1230, 5000, 10000] {
@@ -80,12 +82,27 @@ import Combine
         for _ in 0..<20 { model.page = .settings; model.homeState.section = "歌手列表"; model.page = .player; model.page = .library }
         precondition(model.isPlaying && audio.playing && audio.loadCalls == loads && audio.stopCalls == stops && audio.configurationCalls == configurations, "Navigation must not modify audio graph")
         precondition(model.playbackQueue.count == 10000, "Playback queue includes offscreen tracks")
+        let publicationCount = publications.count
+        model.collection.searches.append("history only")
+        precondition(publications.count == publicationCount && model.cachedLibraryIndex == nil, "Unrelated data does not publish media or rebuild index via artwork")
+        model.editSong(first, title: "Current title", artistName: "Current artist")
+        precondition(publications.last?.title == "Current title" && publications.last?.artist == "Current artist", "Current metadata publishes without a clock change")
+        model.setCover(first.id, data: Data([1, 2, 3]))
+        precondition(publications.last?.artwork == Data([1, 2, 3]), "Current cover uses same metadata priority")
+        model.setCover(first.id, data: nil)
+        precondition(publications.last?.artwork == nil, "Removing cover clears stale system artwork input")
+        precondition(model.libraryIndex.metadata[first.id] == model.collection.metadata(for: first), "UI/index and system metadata share one resolver")
+        let afterEdit = publications.count
+        model.refreshNowPlayingArtwork(); model.refreshNowPlayingArtwork()
+        precondition(publications.count == afterEdit, "Repeated identical snapshots are suppressed")
+        precondition(audio.loadCalls == loads && audio.stopCalls == stops && audio.configurationCalls == configurations, "Media publication never commands audio")
+
         model.setRating(first.id, 5)
         precondition(model.songs(in: "stars5").contains { $0.id == first.id }, "Rating invalidates cached automatic categories")
         model.toggleFavorite(first)
         precondition(model.songs(in: "favorites").map(\.id) == [first.id], "Favorite invalidates membership cache")
         model.updateArtist("artist.0", name: "Renamed", avatar: nil)
-        precondition(model.artist(first) == "Renamed" && model.libraryIndex.groups["artist.0"]?.name == "Renamed", "Artist rename invalidates index")
+        precondition(model.libraryIndex.groups["artist.0"]?.name == "Renamed", "Artist rename invalidates index")
         model.collection.songSort = "歌名"
         let sorted = model.sortedSongs
         model.moveSong(sorted[1].id, to: sorted[0].id)

@@ -140,6 +140,7 @@ private struct SavedSettings: Codable {
     private var applying = false
     @Published var selectedLogChangeID: String?
     @Published private(set) var importSummary = ""
+    let nowPlaying: NowPlayingCoordinator
     let audio: any AudioPlayback
     let library: LibraryStore
     let libraryRoot: URL
@@ -153,10 +154,10 @@ private struct SavedSettings: Codable {
     var libraryInstallGeneration = 0
     var cachedLibraryIndex: LibraryIndex?
     var indexRevision = 0
-    var indexBuildTask: Task<Void, Never>?
     let homeState = HomeLibraryState()
 
-    init(savedData: Data? = nil, onSave: ((Data) -> Void)? = nil, audio: (any AudioPlayback)? = nil, libraryRoot: URL? = nil, demoURL: URL? = nil) {
+    init(savedData: Data? = nil, onSave: ((Data) -> Void)? = nil, audio: (any AudioPlayback)? = nil, libraryRoot: URL? = nil, demoURL: URL? = nil, nowPlaying: NowPlayingCoordinator? = nil) {
+        self.nowPlaying = nowPlaying ?? NowPlayingCoordinator()
         self.onSave = onSave
         self.audio = audio ?? NativeAudioPlayer()
         self.libraryRoot = libraryRoot ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("OrcaPlayer/Library", isDirectory: true)
@@ -572,56 +573,14 @@ private struct SavedSettings: Codable {
         }
         #endif
     }
-    #if os(iOS)
-    private var nowPlayingArtwork: MPMediaItemArtwork?
-    private var nowPlayingArtworkData: Data?
-    private var artworkTrackID = ""
-    private var nowPlayingArtworkTask: Task<Void, Never>?
-    #endif
-    private var nowPlayingSecond = -1
-    private var nowPlayingID = ""
-    private var nowPlayingRate = -1.0
     private func updateNowPlaying() {
-        #if os(iOS)
-        guard hasPlaybackSession else { return }
-        let second = Int(currentTime), rate = isPlaying ? 1.0 : 0.0
-        guard second != nowPlayingSecond || selectedID != nowPlayingID || rate != nowPlayingRate else { return }
-        nowPlayingSecond = second; nowPlayingID = selectedID; nowPlayingRate = rate
-        var info: [String: Any] = [
-            MPMediaItemPropertyTitle: title(track), MPMediaItemPropertyArtist: artist(track),
-            MPMediaItemPropertyPlaybackDuration: track.duration,
-            MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
-            MPNowPlayingInfoPropertyPlaybackRate: rate
-        ]
-        if let nowPlayingArtwork { info[MPMediaItemPropertyArtwork] = nowPlayingArtwork }
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-        #endif
+        guard hasPlaybackSession, !installingLibraryIndex,
+              let track = tracks.first(where: { $0.id == selectedID }) else { return }
+        let metadata = collection.metadata(for: track)
+        nowPlaying.update(NowPlayingSnapshot(id: track.id, title: metadata.title, artist: metadata.artist,
+            duration: track.duration, second: Int(currentTime), playing: isPlaying, artwork: metadata.artwork))
     }
-    func refreshNowPlayingArtwork() {
-        #if os(iOS)
-        guard hasPlaybackSession, !installingLibraryIndex else { return }
-        nowPlayingID = ""; updateNowPlaying()
-        let id = selectedID, data = coverData(track)
-        guard artworkTrackID != id || data != nowPlayingArtworkData || nowPlayingArtwork == nil else { return }
-        artworkTrackID = id; nowPlayingArtworkData = data
-        nowPlayingArtworkTask?.cancel(); nowPlayingArtwork = nil
-        nowPlayingID = ""; updateNowPlaying()
-        nowPlayingArtworkTask = Task { [weak self] in
-            let bitmap = if let data { try? await ArtworkPipeline.shared.decode(data, maxPixelSize: 512) } else { nil as ArtworkBitmap? }
-            guard !Task.isCancelled, let self, self.selectedID == id, self.nowPlayingArtworkData == data else { return }
-            let image: UIImage
-            if let bitmap { image = UIImage(cgImage: bitmap.image) }
-            else {
-                image = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { context in
-                    UIColor(red: 0.06, green: 0.12, blue: 0.21, alpha: 1).setFill(); context.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
-                    UIImage(systemName: "music.note")?.withTintColor(.white, renderingMode: .alwaysOriginal).draw(in: CGRect(x: 80, y: 70, width: 96, height: 116))
-                }
-            }
-            self.nowPlayingArtwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
-            self.nowPlayingID = ""; self.updateNowPlaying()
-        }
-        #endif
-    }
+    func refreshNowPlayingArtwork() { updateNowPlaying() }
     static func time(_ seconds: Double) -> String {
         let value = seconds.isFinite ? max(0, Int(min(seconds, Double(Int32.max)))) : 0
         return String(format: "%d:%02d", value / 60, value % 60)

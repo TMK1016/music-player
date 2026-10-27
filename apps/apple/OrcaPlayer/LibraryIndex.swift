@@ -1,6 +1,4 @@
 import Foundation
-import Combine
-import OSLog
 
 struct ArtistGroup: Identifiable, Sendable {
     let id: String
@@ -13,15 +11,13 @@ struct ArtistGroup: Identifiable, Sendable {
 /// Immutable metadata snapshot. No audio/image decoding or disk work.
 struct LibraryIndex: Sendable {
     var tracks: [String: AudioTrack] = [:]
-    var titles: [String: String] = [:]
-    var artistNames: [String: String] = [:]
+    var metadata: [String: TrackMetadata] = [:]
     var artists: [String: MusicArtist] = [:]
     var artistIDsByName: [String: String] = [:]
     var groups: [String: ArtistGroup] = [:]
     var groupOrders: [String: [String]] = [:]
     var orderedIDs: [String] = []
     var sortedSongIDs: [String] = []
-    var songOrders: [String: [String]] = [:]
     var playlistIDs: [String: [String]] = [:]
     var monthlyCounts: [String: Int] = [:]
     var totalCounts: [String: Int] = [:]
@@ -41,9 +37,12 @@ struct LibraryIndex: Sendable {
         for track in input {
             value.tracks[track.id] = track
             let info = collection.songs[track.id]
-            let name = info?.artistID.flatMap { value.artists[$0]?.name } ?? (track.artist == "本機音檔" ? "未知歌手" : track.artist)
+            let metadata = TrackMetadata.resolve(track, details: info,
+                artistByID: { value.artists[$0] },
+                artistByName: { value.artistIDsByName[$0].flatMap { value.artists[$0] } })
+            let name = metadata.artist
             let key = value.artistIDsByName[name] ?? "native:" + name
-            value.artistNames[track.id] = name; value.titles[track.id] = info?.title ?? track.title
+            value.metadata[track.id] = metadata
             if value.groups[key] == nil { value.groups[key] = ArtistGroup(id: key, name: name, songIDs: [], ratedTotal: 0, ratedCount: 0) }
             value.groups[key]!.songIDs.append(track.id)
             let rating = info?.rating ?? 0
@@ -61,10 +60,9 @@ struct LibraryIndex: Sendable {
         var seen = Set<String>()
         value.orderedIDs = ((collection.songOrder ?? []) + input.map(\.id)).filter { value.tracks[$0] != nil && seen.insert($0).inserted }
         value.playlistIDs["all"] = value.orderedIDs
-        value.songOrders["自訂順序"] = value.orderedIDs
         let mode = collection.effectiveSongSort
         func titleBefore(_ a: String, _ b: String) -> Bool {
-            let result = value.titles[a, default: ""].compare(value.titles[b, default: ""], options: [.numeric], locale: Locale(identifier: "zh_Hant_TW@collation=stroke"))
+            let result = (value.metadata[a]?.title ?? "").compare((value.metadata[b]?.title ?? ""), options: [.numeric], locale: Locale(identifier: "zh_Hant_TW@collation=stroke"))
             return result == .orderedSame ? a < b : result == .orderedAscending
         }
         let ascending = value.orderedIDs.sorted { a, b in
@@ -76,14 +74,13 @@ struct LibraryIndex: Sendable {
                 let x = collection.songs[a]?.addedAt ?? .distantPast, y = collection.songs[b]?.addedAt ?? .distantPast
                 if x != y { return x < y }
             } else if mode == "歌手" {
-                let x = value.artistNames[a, default: ""], y = value.artistNames[b, default: ""]
+                let x = (value.metadata[a]?.artist ?? ""), y = (value.metadata[b]?.artist ?? "")
                 let result = x.localizedStandardCompare(y)
                 if result != .orderedSame { return result == .orderedAscending }
             }
             return titleBefore(a, b)
         }
         value.sortedSongIDs = collection.isSongSortAscending ? ascending : ascending.reversed()
-        value.songOrders[mode] = value.sortedSongIDs
         for playlist in collection.playlists { value.playlistIDs[playlist.id] = playlist.trackIDs.filter { value.tracks[$0] != nil } }
         for event in collection.plays {
             value.totalCounts[event.trackID, default: 0] += 1
@@ -99,28 +96,12 @@ struct LibraryIndex: Sendable {
         func ranking(_ counts: [String: Int]) -> [String] {
             input.filter { counts[$0.id, default: 0] > 0 }.sorted {
                 let a = counts[$0.id, default: 0], b = counts[$1.id, default: 0]
-                return a == b ? value.titles[$0.id, default: ""] < value.titles[$1.id, default: ""] : a > b
+                return a == b ? (value.metadata[$0.id]?.title ?? "") < (value.metadata[$1.id]?.title ?? "") : a > b
             }.map(\.id)
         }
         value.monthlyRanking = ranking(value.monthlyCounts); value.totalRanking = ranking(value.totalCounts)
         return value
     }
-}
-
-/// Navigation survives page reconstruction; scrolling never publishes PlayerModel.
-@MainActor final class HomeLibraryState: ObservableObject {
-    @Published var section = "播放清單" { didSet { PlayerDiagnostics.event("LibrarySection:" + section) } }
-    @Published var expandedPlaylist: String?
-    @Published var expandedArtist: String?
-    @Published var monthly = true
-    var showsRankings: Bool { section == "播放清單" }
-    @Published var scrollPositions: [String: String] = [:]
-}
-
-enum PlayerDiagnostics {
-    static let logger = Logger(subsystem: "com.orca.player", category: "performance")
-    static let signposter = OSSignposter(subsystem: "com.orca.player", category: .pointsOfInterest)
-    static func event(_ event: String) { signposter.emitEvent("Interaction", "\(event, privacy: .public)"); logger.debug("\(event, privacy: .public)") }
 }
 
 /// Persisted labels remain compatible with collection-v1; only these choices appear in V8.
