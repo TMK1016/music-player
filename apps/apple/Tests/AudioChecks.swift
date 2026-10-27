@@ -4,6 +4,11 @@ import Combine
 import Darwin
 
 @MainActor final class FakeAudioPlayer: AudioPlayback {
+    var holdPreparation = false
+    var preparations: [@MainActor @Sendable (Result<Void, Error>) -> Void] = []
+    func prepareForPlayback(completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {
+        if holdPreparation { preparations.append(completion) } else { completion(.success(())) }
+    }
     var currentTime = 0.0
     var onCompletion: (() -> Void)?
     var onInterruption: ((String) -> Void)?
@@ -28,6 +33,17 @@ import Darwin
     func configure(gains: [Double], enabled: Bool, volume: Double) { configurationCalls += 1; appliedGains = gains; eqEnabled = enabled }
 }
 
+private final class PreparationProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var calls: [Bool] = []
+    func run(configured: Bool) throws {
+        dispatchPrecondition(condition: .notOnQueue(.main))
+        lock.lock(); calls.append(configured); let count = calls.count; lock.unlock()
+        if count == 1 { throw PlaybackError.invalidAudio }
+    }
+    var snapshot: [Bool] { lock.lock(); defer { lock.unlock() }; return calls }
+}
+
 @main struct AudioChecks {
     @MainActor static func main() async throws {
         // Reproduce the real engine notification's queue boundary without audio hardware.
@@ -47,6 +63,46 @@ import Darwin
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: work) }
         let fixture = URL(fileURLWithPath: CommandLine.arguments[2])
+        // Hold hardware activation to exercise user input while startup is in flight.
+        let delayed = FakeAudioPlayer(); delayed.holdPreparation = true
+        let pending = PlayerModel(audio: delayed, libraryRoot: work.appendingPathComponent("Pending"), demoURL: fixture)
+        pending.togglePlayback()
+        precondition(delayed.loadCalls == 0 && !pending.isPlaying, "No graph/file work before session activation")
+        pending.togglePlayback() // cancel a pending start
+        delayed.preparations.removeFirst()(.success(()))
+        precondition(!pending.isPlaying && delayed.loadCalls == 0, "Cancel prevents late restart")
+        pending.togglePlayback(); pending.choose(.demo, autoplay: false)
+        delayed.preparations.removeFirst()(.success(()))
+        precondition(!pending.isPlaying && delayed.loadCalls == 0, "Selection invalidates old preparation")
+        pending.togglePlayback(); pending.audio.onInterruption?("test")
+        delayed.preparations.removeFirst()(.success(()))
+        precondition(!pending.isPlaying, "Interruption invalidates pending start")
+        pending.togglePlayback(); delayed.preparations.removeFirst()(.failure(PlaybackError.invalidAudio))
+        precondition(!pending.isPlaying && pending.message != nil, "Activation errors reach UI")
+        pending.togglePlayback(); pending.sleepDeadline = Date.distantPast
+        delayed.preparations.removeFirst()(.success(()))
+        precondition(!pending.isPlaying, "Sleep expiry prevents late playback")
+        pending.togglePlayback(); pending.next() // retain intent when skipping during activation
+        delayed.preparations.removeFirst()(.success(()))
+        precondition(!pending.isPlaying, "Older start cannot win")
+        delayed.preparations.removeFirst()(.success(()))
+        precondition(pending.isPlaying && delayed.loadCalls == 1, "Latest start loads and plays once")
+        pending.togglePlayback()
+        let probe = PreparationProbe()
+        let preparation = SerialAudioPreparation { try probe.run(configured: $0) }
+        for attempt in 0..<3 {
+            let result: Result<Void, Error> = await withCheckedContinuation { continuation in
+                preparation.prepare { result in
+                    MainActor.assertIsolated()
+                    continuation.resume(returning: result)
+                }
+            }
+            if attempt == 0 {
+                if case .success = result { preconditionFailure("Worker failure must propagate") }
+            } else { try result.get() }
+        }
+        precondition(probe.snapshot == [false, false, true], "Failed activation retries configuration; subsequent starts retain it")
+        print("PASS: serial off-main session preparation, MainActor completion, cancellation/selection/interruption/sleep/error and latest-start guards")
         try await LibraryIndexChecks.run(work: work, fixture: fixture)
         let source = work.appendingPathComponent("海岸測試.wav")
         let duplicate = work.appendingPathComponent("same-content.wav")

@@ -6,6 +6,7 @@ import OSLog
     var currentTime: Double { get }
     var onCompletion: (() -> Void)? { get set }
     var onInterruption: ((String) -> Void)? { get set }
+    func prepareForPlayback(completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void)
     func load(_ url: URL) throws
     func play() throws
     func pause()
@@ -13,6 +14,29 @@ import OSLog
     func stop()
     func configure(gains: [Double], enabled: Bool, volume: Double)
     func configureEffects(bass: Double, ambience: Ambience, mix: Double, enabled: Bool)
+}
+
+// Backends without a hardware session can complete immediately (including macOS).
+extension AudioPlayback {
+    func prepareForPlayback(completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {
+        completion(.success(()))
+    }
+}
+
+/// All mutable preparation state belongs to this queue. No sync wait on MainActor.
+/// Completion is explicitly actor-isolated; the worker never touches UI/engine state.
+final class SerialAudioPreparation: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "com.orca.player.session", qos: .userInitiated)
+    private let operation: @Sendable (Bool) throws -> Void
+    private var configured = false // queue-confined, set only after successful preparation
+    init(operation: @escaping @Sendable (Bool) throws -> Void) { self.operation = operation }
+    func prepare(completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {
+        queue.async { [self] in
+            let result = Result { try operation(configured) }
+            if case .success = result { configured = true }
+            Task { @MainActor in completion(result) }
+        }
+    }
 }
 
 enum PlaybackError: LocalizedError {
@@ -78,7 +102,19 @@ enum EqualizerSettings {
     private var needsReconnect = false
     private var parametersApplied = false
     private var preparedEQRate: Double?
-    private var sessionPrepared = false
+    #if os(iOS)
+    private let sessionPreparation = SerialAudioPreparation { configured in
+        dispatchPrecondition(condition: .notOnQueue(.main))
+        let session = AVAudioSession.sharedInstance()
+        if session.category != .playback { try session.setCategory(.playback, mode: .default) }
+        if !configured {
+            do { try session.setPreferredIOBufferDuration(0.046) }
+            catch { Logger(subsystem: "com.orca.player", category: "audio-continuity").notice("Preferred I/O duration unavailable; retaining system value") }
+        }
+        // Re-activate on each explicit start, including after a system interruption.
+        try session.setActive(true)
+    }
+    #endif
     private let logger = Logger(subsystem: "com.orca.player", category: "audio-continuity")
     var onCompletion: (() -> Void)?
     var onInterruption: ((String) -> Void)?
@@ -128,10 +164,6 @@ enum EqualizerSettings {
         guard FileManager.default.fileExists(atPath: url.path) else { throw PlaybackError.missingFile }
         let candidate = try AVAudioFile(forReading: url)
         guard candidate.length > 0, candidate.length <= Int64(UInt32.max), (1...2).contains(candidate.processingFormat.channelCount), candidate.processingFormat.sampleRate > 0 else { throw PlaybackError.invalidAudio }
-        #if os(iOS)
-        // Activate before connecting the graph so its hardware format is current.
-        try prepareSession()
-        #endif
         file = candidate
         try reconnect()
         parametersApplied = false; preparedEQRate = nil
@@ -152,31 +184,18 @@ enum EqualizerSettings {
     }
     func play() throws {
         guard file != nil else { throw PlaybackError.noTrack }
-        #if os(iOS)
-        try prepareSession()
-        #endif
         if needsReconnect { try reconnect() }
         if !engine.isRunning { try engine.start() }
         if !scheduled { schedule() }
         try AudioGraph.play(player)
     }
-    #if os(iOS)
-    private func prepareSession() throws {
-        let session = AVAudioSession.sharedInstance()
-        if session.category != .playback { try session.setCategory(.playback, mode: .default) }
-        if !sessionPrepared {
-            // Offline playback does not require live-instrument latency. Request once,
-            // before activation; never renegotiate hardware while opening a UI control.
-            do { try session.setPreferredIOBufferDuration(0.046) }
-            catch { logger.notice("Preferred I/O duration unavailable; retaining system value") }
-        }
-        try session.setActive(true)
-        if !sessionPrepared {
-            sessionPrepared = true
-            logger.notice("Playback I/O buffer seconds: \(session.ioBufferDuration, privacy: .public)")
-        }
+    func prepareForPlayback(completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {
+        #if os(iOS)
+        sessionPreparation.prepare(completion: completion)
+        #else
+        completion(.success(()))
+        #endif
     }
-    #endif
     func pause() { player.pause() }
     func seek(to seconds: Double) throws {
         guard let file, seconds.isFinite else { return }

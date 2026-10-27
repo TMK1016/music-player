@@ -147,6 +147,7 @@ private struct SavedSettings: Codable {
     private let onSave: ((Data) -> Void)?
     private var timer: AnyCancellable?
     var loadedID: String?
+    private var playbackRequest: UUID?
     private var libraryLoaded = false
     private var installingLibraryIndex = false
     var libraryInstallGeneration = 0
@@ -184,6 +185,7 @@ private struct SavedSettings: Codable {
         self.audio.onCompletion = { [weak self] in self?.handleCompletion() }
         self.audio.onInterruption = { [weak self] message in
             guard let self else { return }
+            self.playbackRequest = nil
             self.accountPlayback()
             self.currentTime = self.audio.currentTime
             self.isPlaying = false
@@ -283,6 +285,7 @@ private struct SavedSettings: Codable {
         }
     }
     func choose(_ track: AudioTrack, autoplay: Bool = true) {
+        playbackRequest = nil
         accountPlayback()
         audio.stop()
         loadedID = nil
@@ -295,15 +298,33 @@ private struct SavedSettings: Codable {
         if autoplay { start() }
     }
     func togglePlayback() {
+        if isPlaying || playbackRequest != nil { pausePlayback() }
+        else { start() }
+    }
+    func pausePlayback() {
+        playbackRequest = nil
         if isPlaying {
             accountPlayback()
             currentTime = audio.currentTime
-            audio.pause()
-            isPlaying = false
-        } else { start() }
+        }
+        audio.pause()
+        isPlaying = false
     }
     private func start() {
         if expireSleepTimer() { return }
+        let request = UUID()
+        playbackRequest = request
+        audio.prepareForPlayback { [weak self] result in
+            guard let self, self.playbackRequest == request else { return }
+            self.playbackRequest = nil
+            if self.expireSleepTimer() { return }
+            switch result {
+            case .success: self.startPreparedPlayback()
+            case .failure(let error): self.isPlaying = false; self.message = error.localizedDescription
+            }
+        }
+    }
+    private func startPreparedPlayback() {
         do {
             if loadedID != selectedID {
                 let url: URL
@@ -340,7 +361,7 @@ private struct SavedSettings: Codable {
     }
     func next() { advance(forward: true) }
     func previous() {
-        if currentTime > 3 { choose(track, autoplay: isPlaying) } else { advance(forward: false) }
+        if currentTime > 3 { choose(track, autoplay: isPlaying || playbackRequest != nil) } else { advance(forward: false) }
     }
     func play(_ track: AudioTrack, queue: [AudioTrack], contextName: String = "全部歌曲", playlistID: String? = nil) {
         playbackListID = playlistID; playbackContextName = contextName
@@ -351,7 +372,7 @@ private struct SavedSettings: Codable {
         guard !queue.isEmpty else { return }
         let index = queue.firstIndex(where: { $0.id == selectedID }) ?? 0
         let offset = shuffle && queue.count > 1 ? Int.random(in: 1..<queue.count) : (forward ? 1 : queue.count - 1)
-        choose(queue[(index + offset) % queue.count], autoplay: isPlaying)
+        choose(queue[(index + offset) % queue.count], autoplay: isPlaying || playbackRequest != nil)
     }
     private func handleCompletion() { finishedTrack() }
     private func finishedTrack() {
@@ -383,6 +404,7 @@ private struct SavedSettings: Codable {
     }
     func cancelSleep() { sleepDeadline = nil; sleepSongsRemaining = nil }
     private func stopForSleep() {
+        playbackRequest = nil
         audio.pause(); isPlaying = false; cancelSleep(); message = "已達聆聽設定，播放已暫停。"
     }
     @discardableResult private func expireSleepTimer() -> Bool {
@@ -527,11 +549,11 @@ private struct SavedSettings: Codable {
         #if os(iOS)
         let center = MPRemoteCommandCenter.shared()
         center.playCommand.addTarget { @Sendable [weak self] _ in
-            Task { @MainActor [weak self] in guard let self else { return }; if !self.isPlaying { self.togglePlayback() } }
+            Task { @MainActor [weak self] in guard let self else { return }; if !self.isPlaying && self.playbackRequest == nil { self.start() } }
             return .success
         }
         center.pauseCommand.addTarget { @Sendable [weak self] _ in
-            Task { @MainActor [weak self] in guard let self else { return }; if self.isPlaying { self.togglePlayback() } }
+            Task { @MainActor [weak self] in guard let self else { return }; if self.isPlaying || self.playbackRequest != nil { self.togglePlayback() } }
             return .success
         }
         center.togglePlayPauseCommand.addTarget { @Sendable [weak self] _ in
@@ -595,7 +617,7 @@ private struct SavedSettings: Codable {
                     UIImage(systemName: "music.note")?.withTintColor(.white, renderingMode: .alwaysOriginal).draw(in: CGRect(x: 80, y: 70, width: 96, height: 116))
                 }
             }
-            self.nowPlayingArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            self.nowPlayingArtwork = MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
             self.nowPlayingID = ""; self.updateNowPlaying()
         }
         #endif

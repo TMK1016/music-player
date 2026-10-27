@@ -3,6 +3,62 @@
   "updated_at": "2026-10-28",
   "entries": [
     {
+      "id": "release-0-14-1",
+      "version": "v0.14.1",
+      "date": "2026-10-28",
+      "title": "音訊Session與鎖屏封面崩潰修復",
+      "summary": "Session改為序列背景準備；修正系統背景讀取鎖屏封面造成的actor斷言。",
+      "changes": [
+        {
+          "id": "v0141-session",
+          "title": "非同步Session與過期播放請求防護",
+          "summary": "移除主執行緒Session設定／啟動與重複啟用；切歌、取消、中斷、定時不會由舊回覆重啟。",
+          "node_ids": [
+            "PLAY-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "Session背景準備"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "播放請求管理"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "準備／取消回歸"
+            }
+          ]
+        },
+        {
+          "id": "v0141-artwork",
+          "title": "鎖屏封面背景回呼崩潰",
+          "summary": "依真機完整堆疊定位MediaPlayer封面回呼的MainActor限制，改為Sendable回傳已準備圖片。一般操作雜音仍待聽測。",
+          "node_ids": [
+            "PLAY-01",
+            "UI-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "鎖屏封面回呼"
+            },
+            {
+              "path": "docs/zh-TW/音訊Session與鎖屏封面崩潰修復-v0141.md",
+              "label": "原因、堆疊與驗收"
+            },
+            {
+              "path": "docs/zh-TW/問題追蹤日誌.md",
+              "label": "MP-026／027"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-0-14",
       "version": "v0.14.0",
       "date": "2026-10-28",

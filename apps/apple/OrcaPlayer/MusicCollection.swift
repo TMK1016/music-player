@@ -123,7 +123,7 @@ extension PlayerModel {
         guard !isImporting else { message = "請等本次匯入完成後再刪除音檔。"; return }
         guard !track.isDemo else { message = "內建試聽音不提供檔案刪除。"; return }
         libraryInstallGeneration += 1
-        if selectedID == track.id { audio.pause(); isPlaying = false; loadedID = nil }
+        if selectedID == track.id { pausePlayback(); loadedID = nil }
         do {
             let imported = try await library.remove(track.id)
             tracks = [.demo] + imported
