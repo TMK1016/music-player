@@ -3,6 +3,36 @@
   "updated_at": "2026-10-28",
   "entries": [
     {
+      "id": "plan-v8",
+      "version": "V8-planned",
+      "date": "2026-10-28",
+      "title": "V8需求與06:30 Astra架構整理待辦",
+      "summary": "保存排行榜顯示範圍、全部歌曲無50首限制與三種可反向排序；App尚未改版。",
+      "changes": [
+        {
+          "id": "v8-planned-scope",
+          "title": "V8驗收與Astra重構計畫",
+          "summary": "為保留額度先建立可追蹤待辦；06:30延續V8實作與架構一致性整理，排程啟動不等於完成驗收。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01",
+            "PLAY-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V8待辦與架構整理.md",
+              "label": "V8待辦與驗收"
+            },
+            {
+              "path": "docs/en/v8-requirements.md",
+              "label": "完整英文需求"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-0-14-1",
       "version": "v0.14.1",
       "date": "2026-10-28",
