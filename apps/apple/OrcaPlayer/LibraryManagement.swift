@@ -17,6 +17,8 @@ struct LibraryArtwork: View {
 struct ArtworkChooser: View {
     @Binding var data: Data?
     var circular = false
+    var compactEditor = false
+    var fallback: Data? = nil
     @ViewState private var photos = false
     @ViewState private var files = false
     @ViewState private var selectedPhoto: PhotosPickerItem?
@@ -25,13 +27,19 @@ struct ArtworkChooser: View {
     @ViewState private var loading = false
     var body: some View {
         VStack(spacing: 8) {
-            Button { photos = true } label: {
-                LibraryArtwork(data: data, symbol: circular ? "person.fill" : "music.note.list", size: 104, circular: circular)
-            }.buttonStyle(.plain).accessibilityLabel("選擇照片")
-            HStack(spacing: 24) {
-                Button("更換照片") { photos = true }.frame(minHeight: 44)
-                Button("匯入圖片檔") { files = true }.frame(minHeight: 44)
-            }.buttonStyle(.plain).foregroundStyle(.white)
+            if compactEditor {
+                LibraryArtwork(data: data ?? fallback, size: 144)
+                    .overlay(alignment: .topTrailing) {
+                        Menu {
+                            Button("選擇照片") { photos = true }
+                            Button("匯入圖片檔") { files = true }
+                            Button("移除照片，使用歌手頭貼", role: .destructive) { data = nil }.disabled(data == nil)
+                        } label: { Image(systemName: "camera.fill").frame(width: 44, height: 44).background(OrcaTheme.sheet.opacity(0.9), in: Circle()) }.menuStyle(.borderlessButton).menuIndicator(.hidden).accessibilityLabel("封面照片選項")
+                    }
+            } else {
+                Button { photos = true } label: { LibraryArtwork(data: data, symbol: circular ? "person.fill" : "music.note.list", size: 104, circular: circular) }.buttonStyle(.plain).accessibilityLabel("選擇照片")
+                HStack(spacing: 24) { Button("更換照片") { photos = true }.frame(minHeight: 44); Button("匯入圖片檔") { files = true }.frame(minHeight: 44) }.buttonStyle(.plain).foregroundStyle(.white)
+            }
             if loading { ProgressView("讀取圖片…") }
             if let error { Text(error).font(.caption).foregroundStyle(.orange) }
         }

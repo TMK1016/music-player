@@ -2,6 +2,7 @@ import Foundation
 import Combine
 #if os(iOS)
 import MediaPlayer
+import UIKit
 #endif
 
 enum PlayerPage: String, CaseIterable, Identifiable {
@@ -83,7 +84,7 @@ private struct SavedSettings: Codable {
 }
 
 @MainActor final class PlayerModel: ObservableObject {
-    @Published var collection = MusicCollection() { didSet { persistCollection() } }
+    @Published var collection = MusicCollection() { didSet { invalidateLibraryIndex(); persistCollection(); refreshNowPlayingArtwork() } }
     let collectionWriter = CollectionWriter()
     var collectionWriteBlocked = false
     @Published var repeatOne = false
@@ -99,11 +100,11 @@ private struct SavedSettings: Codable {
     private var lastSample = 0.0
     private var lastTick = ProcessInfo.processInfo.systemUptime
     static let frequencies = EQBands.labels
-    @Published var page: PlayerPage = .library
+    @Published var page: PlayerPage = .library { didSet { PlayerDiagnostics.event("Page:" + page.id) } }
     @Published var search = ""
     @Published var showLibrarySearch = false
     @Published var favoritesOnly = false
-    @Published var tracks: [AudioTrack] = [.demo]
+    @Published var tracks: [AudioTrack] = [.demo] { didSet { invalidateLibraryIndex() } }
     @Published var selectedID = AudioTrack.demo.id
     @Published var isPlaying = false { didSet { updateNowPlaying() } }
     let playbackClock = PlaybackClock()
@@ -118,7 +119,7 @@ private struct SavedSettings: Codable {
     @Published var volume = 0.5 { didSet { syncAudio(); save() } }
     @Published var eqEnabled = true { didSet { syncAudio(); save() } }
     @Published var gains = EQPreset.flat.gains { didSet { syncAudio(); save() } }
-    @Published var favorites: Set<String> = [] { didSet { save() } }
+    @Published var favorites: Set<String> = [] { didSet { invalidateLibraryIndex(); save() } }
     @Published var message: String?
     @Published var showQueue = false
     @Published var bassBoost = 0.0 { didSet { syncAudio(); save() } }
@@ -147,6 +148,12 @@ private struct SavedSettings: Codable {
     private var timer: AnyCancellable?
     var loadedID: String?
     private var libraryLoaded = false
+    private var installingLibraryIndex = false
+    var libraryInstallGeneration = 0
+    var cachedLibraryIndex: LibraryIndex?
+    var indexRevision = 0
+    var indexBuildTask: Task<Void, Never>?
+    let homeState = HomeLibraryState()
 
     init(savedData: Data? = nil, onSave: ((Data) -> Void)? = nil, audio: (any AudioPlayback)? = nil, libraryRoot: URL? = nil, demoURL: URL? = nil) {
         self.onSave = onSave
@@ -204,7 +211,7 @@ private struct SavedSettings: Codable {
             }
         }
     }
-    var track: AudioTrack { tracks.first { $0.id == selectedID } ?? .demo }
+    var track: AudioTrack { libraryIndex.tracks[selectedID] ?? .demo }
     var filteredTracks: [AudioTrack] {
         tracks.filter {
             (!favoritesOnly || favorites.contains($0.id)) &&
@@ -235,23 +242,45 @@ private struct SavedSettings: Codable {
     func loadLibrary() async {
         guard !libraryLoaded else { return }
         libraryLoaded = true
-        do { tracks = [.demo] + (try await library.load()) }
+        libraryInstallGeneration += 1
+        let generation = libraryInstallGeneration
+        do { await installLibraryTracks([.demo] + (try await library.load()), markImported: false, generation: generation) }
         catch { message = error.localizedDescription }
     }
     func importFiles(_ urls: [URL]) async {
         guard !isImporting else { return }
         isImporting = true
+        libraryInstallGeneration += 1
+        let generation = libraryInstallGeneration
         defer { isImporting = false }
         do {
             let result = try await library.importFiles(urls)
-            tracks = [.demo] + result.tracks
-            var state = collection
-            for track in result.tracks where state.songs[track.id] == nil { state.songs[track.id] = SongDetails() }
-            collection = state
+            await installLibraryTracks([.demo] + result.tracks, markImported: true, generation: generation)
             importSummary = "新增 \(result.added) 首，略過 \(result.duplicates) 首重複音檔"
             if !result.failures.isEmpty { message = importSummary + "\n\n" + result.failures.joined(separator: "\n") }
             else if result.added == 0 { message = importSummary }
         } catch { message = error.localizedDescription }
+    }
+    private func installLibraryTracks(_ newTracks: [AudioTrack], markImported: Bool, generation: Int) async {
+        while generation == libraryInstallGeneration {
+            let revision = indexRevision
+            var state = collection
+            if markImported { for track in newTracks where !track.isDemo && state.songs[track.id] == nil { state.songs[track.id] = SongDetails() } }
+            let snapshotState = state, snapshotFavorites = favorites
+            let index = await Task.detached(priority: .utility) { LibraryIndex.build(tracks: newTracks, collection: snapshotState, favorites: snapshotFavorites) }.value
+            guard generation == libraryInstallGeneration else { return }
+            guard revision == indexRevision else { continue }
+            // Publish one coherent generation after background preparation. UI never
+            // sees new tracks paired with an old or half-built metadata index.
+            installingLibraryIndex = true
+            tracks = newTracks
+            if markImported { collection = state }
+            cachedLibraryIndex = index
+            installingLibraryIndex = false
+            refreshNowPlayingArtwork()
+            PlayerDiagnostics.event("LibraryReady:tracks=\(newTracks.count)")
+            return
+        }
     }
     func choose(_ track: AudioTrack, autoplay: Bool = true) {
         accountPlayback()
@@ -262,6 +291,7 @@ private struct SavedSettings: Codable {
         listened = 0; counted = false; lastSample = 0; lastTick = ProcessInfo.processInfo.systemUptime
         applySongBinding()
         currentTime = 0
+        refreshNowPlayingArtwork()
         if autoplay { start() }
     }
     func togglePlayback() {
@@ -292,6 +322,7 @@ private struct SavedSettings: Codable {
             try audio.play()
             isPlaying = true
             hasPlaybackSession = true
+            refreshNowPlayingArtwork()
             lastSample = audio.currentTime; lastTick = ProcessInfo.processInfo.systemUptime
         } catch {
             isPlaying = false
@@ -316,7 +347,7 @@ private struct SavedSettings: Codable {
         playbackQueue = queue.map(\.id); choose(track)
     }
     private func advance(forward: Bool) {
-        let queue = playbackQueue.isEmpty ? tracks : playbackQueue.compactMap { id in tracks.first { $0.id == id } }
+        let queue = playbackQueue.isEmpty ? tracks : playbackQueue.compactMap { libraryIndex.tracks[$0] }
         guard !queue.isEmpty else { return }
         let index = queue.firstIndex(where: { $0.id == selectedID }) ?? 0
         let offset = shuffle && queue.count > 1 ? Int.random(in: 1..<queue.count) : (forward ? 1 : queue.count - 1)
@@ -362,6 +393,7 @@ private struct SavedSettings: Codable {
         if isPlaying { accountPlayback(now: now); currentTime = audio.currentTime }
         _ = expireSleepTimer()
         updateNowPlaying()
+        if let index = cachedLibraryIndex, Date() >= index.expiresAt { invalidateLibraryIndex() }
     }
     private func accountPlayback(now: Double = ProcessInfo.processInfo.systemUptime, finalPosition: Double? = nil) {
         guard isPlaying else { return }
@@ -515,6 +547,12 @@ private struct SavedSettings: Codable {
         }
         #endif
     }
+    #if os(iOS)
+    private var nowPlayingArtwork: MPMediaItemArtwork?
+    private var nowPlayingArtworkData: Data?
+    private var artworkTrackID = ""
+    private var nowPlayingArtworkTask: Task<Void, Never>?
+    #endif
     private var nowPlayingSecond = -1
     private var nowPlayingID = ""
     private var nowPlayingRate = -1.0
@@ -524,12 +562,39 @@ private struct SavedSettings: Codable {
         let second = Int(currentTime), rate = isPlaying ? 1.0 : 0.0
         guard second != nowPlayingSecond || selectedID != nowPlayingID || rate != nowPlayingRate else { return }
         nowPlayingSecond = second; nowPlayingID = selectedID; nowPlayingRate = rate
-        MPNowPlayingInfoCenter.default().nowPlayingInfo = [
+        var info: [String: Any] = [
             MPMediaItemPropertyTitle: title(track), MPMediaItemPropertyArtist: artist(track),
             MPMediaItemPropertyPlaybackDuration: track.duration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
             MPNowPlayingInfoPropertyPlaybackRate: rate
         ]
+        if let nowPlayingArtwork { info[MPMediaItemPropertyArtwork] = nowPlayingArtwork }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        #endif
+    }
+    func refreshNowPlayingArtwork() {
+        #if os(iOS)
+        guard hasPlaybackSession, !installingLibraryIndex else { return }
+        nowPlayingID = ""; updateNowPlaying()
+        let id = selectedID, data = coverData(track)
+        guard artworkTrackID != id || data != nowPlayingArtworkData || nowPlayingArtwork == nil else { return }
+        artworkTrackID = id; nowPlayingArtworkData = data
+        nowPlayingArtworkTask?.cancel(); nowPlayingArtwork = nil
+        nowPlayingID = ""; updateNowPlaying()
+        nowPlayingArtworkTask = Task { [weak self] in
+            let bitmap = if let data { try? await ArtworkPipeline.shared.decode(data, maxPixelSize: 512) } else { nil as ArtworkBitmap? }
+            guard !Task.isCancelled, let self, self.selectedID == id, self.nowPlayingArtworkData == data else { return }
+            let image: UIImage
+            if let bitmap { image = UIImage(cgImage: bitmap.image) }
+            else {
+                image = UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { context in
+                    UIColor(red: 0.06, green: 0.12, blue: 0.21, alpha: 1).setFill(); context.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
+                    UIImage(systemName: "music.note")?.withTintColor(.white, renderingMode: .alwaysOriginal).draw(in: CGRect(x: 80, y: 70, width: 96, height: 116))
+                }
+            }
+            self.nowPlayingArtwork = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            self.nowPlayingID = ""; self.updateNowPlaying()
+        }
         #endif
     }
     static func time(_ seconds: Double) -> String {

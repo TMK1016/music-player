@@ -3,6 +3,165 @@
   "updated_at": "2026-10-28",
   "entries": [
     {
+      "id": "release-0-14",
+      "version": "v0.14.0",
+      "date": "2026-10-28",
+      "title": "V7 千首曲庫與播放體驗實作",
+      "summary": "索引與50首續載、保留頁面狀態、減少音訊／存檔競爭，完成表單、鎖屏封面與播放器細節。",
+      "changes": [
+        {
+          "id": "v014-index",
+          "title": "千首曲庫索引、排序與續載",
+          "summary": "背景原子公布索引，重用分組／統計與完整佇列；首頁狀態保存，排序可操作、50首接續。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryIndex.swift",
+              "label": "LibraryIndex.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "HomeLibrary.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "MusicCollection.swift"
+            },
+            {
+              "path": "docs/zh-TW/V7實作與手機驗收-v014.md",
+              "label": "V7實作與驗收"
+            }
+          ]
+        },
+        {
+          "id": "v014-continuity",
+          "title": "降低播放期間資源競爭",
+          "summary": "合併最新存檔、分尺寸圖片與釋放、相同音效參數不重寫；保留即時圖與診斷，真機聽測另驗。",
+          "node_ids": [
+            "PLAY-01",
+            "UI-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/CollectionWriter.swift",
+              "label": "CollectionWriter.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ArtworkPipeline.swift",
+              "label": "ArtworkPipeline.swift"
+            },
+            {
+              "path": "docs/zh-TW/V7實作與手機驗收-v014.md",
+              "label": "V7實作與驗收"
+            }
+          ]
+        },
+        {
+          "id": "v014-artwork",
+          "title": "相機封面表單、條件式清評分及鎖屏封面",
+          "summary": "歌曲封面相機選單與歌手備援；已評分才出現清除圖示，系統Now Playing使用封面並防過期更新。",
+          "node_ids": [
+            "UI-01",
+            "PLAY-01",
+            "LIB-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryManagement.swift",
+              "label": "LibraryManagement.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/SongActionsSheet.swift",
+              "label": "SongActionsSheet.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "docs/zh-TW/V7實作與手機驗收-v014.md",
+              "label": "V7實作與驗收"
+            }
+          ]
+        },
+        {
+          "id": "v014-layout",
+          "title": "工具盤、浮動播放器與模式密度",
+          "summary": "六工具霧面盤、封面模糊迷你播放器與2pt進度、短橫向分欄、縮小模式視覺並保留44pt觸控。",
+          "node_ids": [
+            "UI-01",
+            "PROFILE-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+              "label": "ModeSelectionView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlaybackUI.swift",
+              "label": "PlaybackUI.swift"
+            },
+            {
+              "path": "docs/zh-TW/V7實作與手機驗收-v014.md",
+              "label": "V7實作與驗收"
+            }
+          ]
+        },
+        {
+          "id": "v014-checks",
+          "title": "萬首回歸與正式索引效能證據",
+          "summary": "1230／5000／10000首、50首對全庫佇列、1000事件保存及原生PCM；各項真機／工具限制如實記錄。",
+          "node_ids": [
+            "LIB-01",
+            "PLAY-01",
+            "UI-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V7實作與手機驗收-v014.md",
+              "label": "V7實作與驗收"
+            },
+            {
+              "path": "apps/apple/Tests/LibraryIndexChecks.swift",
+              "label": "行為回歸"
+            },
+            {
+              "path": "docs/technical/v7-production-index-release.json",
+              "label": "正式索引量測"
+            },
+            {
+              "path": "docs/technical/v7-native-pcm-result.txt",
+              "label": "原生PCM"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "v7-assessment-20261028",
       "version": "V7 評估",
       "date": "2026-10-28",

@@ -6,20 +6,21 @@ import UniformTypeIdentifiers
 struct ArtworkBitmap: @unchecked Sendable { let image: CGImage }
 actor ArtworkPipeline {
     static let shared = ArtworkPipeline()
-    private let cache = NSCache<NSData, BitmapBox>()
+    private let cache = NSCache<ArtworkCacheKey, BitmapBox>()
     init() { cache.totalCostLimit = 24 * 1024 * 1024; cache.countLimit = 12 }
-    func decode(_ data: Data) throws -> ArtworkBitmap {
-        if let cached = cache.object(forKey: data as NSData) { return cached.bitmap }
+    func decode(_ data: Data, maxPixelSize: Int = 1024) throws -> ArtworkBitmap {
+        let key = ArtworkCacheKey(data, size: maxPixelSize)
+        if let cached = cache.object(forKey: key) { return cached.bitmap }
         guard data.count <= 20_000_000,
               let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                 kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceThumbnailMaxPixelSize: 1024,
+                kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
                 kCGImageSourceCreateThumbnailWithTransform: true,
                 kCGImageSourceShouldCacheImmediately: true
               ] as CFDictionary) else { throw ArtworkError.invalid }
         let bitmap = ArtworkBitmap(image: image)
-        cache.setObject(BitmapBox(bitmap), forKey: data as NSData, cost: image.bytesPerRow * image.height + data.count)
+        cache.setObject(BitmapBox(bitmap), forKey: key, cost: image.bytesPerRow * image.height + data.count)
         return bitmap
     }
     func read(_ url: URL) throws -> Data {
@@ -39,6 +40,14 @@ actor ArtworkPipeline {
         return output as Data
     }
 }
+private final class ArtworkCacheKey: NSObject {
+    let data: Data
+    let size: Int
+    private let cachedHash: Int
+    init(_ data: Data, size: Int) { self.data = data; self.size = size; var h = Hasher(); h.combine(data); h.combine(size); cachedHash = h.finalize() }
+    override var hash: Int { cachedHash }
+    override func isEqual(_ object: Any?) -> Bool { guard let other = object as? ArtworkCacheKey else { return false }; return size == other.size && data == other.data }
+}
 private final class BitmapBox: NSObject {
     let bitmap: ArtworkBitmap
     init(_ bitmap: ArtworkBitmap) { self.bitmap = bitmap }
@@ -50,6 +59,7 @@ enum ArtworkError: LocalizedError {
 struct DecodedArtwork: View {
     let data: Data?
     var symbol = "music.note"
+    var maxPixelSize = 256
     @ViewState private var bitmap: ArtworkBitmap?
     var body: some View {
         Group {
@@ -58,10 +68,10 @@ struct DecodedArtwork: View {
         }.task(id: data, priority: .utility) {
             bitmap = nil
             if let data {
-                let decoded = try? await ArtworkPipeline.shared.decode(data)
+                let decoded = try? await ArtworkPipeline.shared.decode(data, maxPixelSize: maxPixelSize)
                 if !Task.isCancelled { bitmap = decoded }
             }
-        }
+        }.onDisappear { bitmap = nil }
     }
 }
 struct SongArtwork: View {
@@ -71,7 +81,7 @@ struct SongArtwork: View {
     var body: some View {
         GeometryReader { geometry in
             Group {
-                if let data = model.coverData(track) { DecodedArtwork(data: data).frame(width: geometry.size.width, height: geometry.size.height).clipped() }
+                if let data = model.coverData(track) { DecodedArtwork(data: data, maxPixelSize: compact ? 128 : 768).frame(width: geometry.size.width, height: geometry.size.height).clipped() }
                 else { AlbumArtwork(variant: track.artwork, compact: compact).equatable() }
             }
         }.aspectRatio(1, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: compact ? 9 : 18))

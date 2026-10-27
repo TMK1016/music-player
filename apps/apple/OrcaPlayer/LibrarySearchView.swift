@@ -6,7 +6,8 @@ struct LibrarySearchView: View {
     @ViewState private var selectedArtist: String?
     private var query: String { model.search.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var songs: [AudioTrack] { model.tracks.filter { "\(model.title($0)) \(model.artist($0))".localizedCaseInsensitiveContains(query) } }
-    private var artists: [String] { Array(Set(model.tracks.map { model.artist($0) })).filter { $0.localizedCaseInsensitiveContains(query) }.sorted() }
+    private var artists: [String] { model.libraryIndex.groups.values.map(\.name).filter { $0.localizedCaseInsensitiveContains(query) }.sorted() }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 8) {
@@ -26,8 +27,9 @@ struct LibrarySearchView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("歌曲").font(.headline)
                     if songs.isEmpty { Text("沒有符合的歌曲").font(.subheadline).foregroundStyle(OrcaTheme.muted) }
-                    LazyVStack(spacing: 12) { ForEach(songs) { song in
-                        CollectionSongRow(model: model, track: song, queue: songs, queueName: "搜尋結果").id("search-song:" + song.id)
+                    let matching = songs
+                    LazyVStack(spacing: 12) { ForEach(matching) { song in
+                        CollectionSongRow(model: model, track: song, queue: matching, queueName: "搜尋結果").id("search-song:" + song.id)
                     } }.id("search-songs")
                 }
                 VStack(alignment: .leading, spacing: 12) {
@@ -36,7 +38,7 @@ struct LibrarySearchView: View {
                     ForEach(artists, id: \.self) { artist in
                         Button { focused = false; selectedArtist = artist } label: {
                             HStack(spacing: 12) {
-                                ArtistAvatar(data: model.collection.artists.first { $0.name == artist }?.avatar)
+                                ArtistAvatar(data: model.libraryIndex.artists[model.artistKey(artist)]?.avatar)
                                 Text(artist).foregroundStyle(OrcaTheme.text).lineLimit(1)
                                 Spacer(); Image(systemName: "chevron.right")
                             }.padding(12).frame(maxWidth: .infinity, minHeight: 60).background(OrcaTheme.panel, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
@@ -49,7 +51,8 @@ struct LibrarySearchView: View {
                 if let artist = selectedArtist {
                     NavigationStack {
                         ScrollView { LazyVStack(spacing: 12) {
-                            let works = model.tracks.filter { model.artist($0) == artist }
+                            let index = model.libraryIndex
+                            let works = (index.groups[model.artistKey(artist)]?.songIDs ?? []).compactMap { index.tracks[$0] }
                             ForEach(works) { CollectionSongRow(model: model, track: $0, queue: works, queueName: artist) }
                         }.padding(16) }.navigationTitle(artist)
                             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { selectedArtist = nil } } }

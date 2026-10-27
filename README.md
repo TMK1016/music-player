@@ -1,3 +1,5 @@
+**v0.14.0／build18 V7**：[實作、效能與手機驗收](docs/zh-TW/V7實作與手機驗收-v014.md)。已更新iPhone並確認Running；雜音聽測／鎖屏畫面待實際回饋，詳見驗收紀錄。
+
 **V7 評估（2026-10-28，尚未改版）**：[千首曲庫效能、雜音架構與8張標註圖方案](docs/zh-TW/V7效能與音訊架構評估.md)。手機版本仍為0.13.1／17；本輪先評估常見做法與量測，不宣稱已修復。
 
 **v0.13.1／build17 V6**：[播放穩定、封面裁剪與曲庫管理](docs/zh-TW/V6播放穩定與曲庫管理-v013.md)／[問題追蹤日誌](docs/zh-TW/問題追蹤日誌.md)。已安裝iPhone並確認啟動；雜音聽測與原資料夾重掃待回饋。
@@ -45,7 +47,7 @@
 - [Mac v0.4 開發包](deliverables/OrcaPlayer-macOS-0.4-sound-profiles.zip)：歷史開發包，未公證／上架，v0.4 已另透過 Xcode 更新並啟動於連線 iPhone；實車驗證仍待完成。
 
 - [開發日誌與更新流程](docs/zh-TW/開發日誌與更新流程.md)
-- [日誌資料來源](planning/changelog.json)：28 階段、76 項改動，與 App 共用。
+- [日誌資料來源](planning/changelog.json)：29 階段、81 項改動，與 App 共用。
 - [本次需求英文翻譯](docs/en/development-journal-requirements.md)
 - [Mac v0.3 開發日誌版本](deliverables/OrcaPlayer-macOS-0.3-development-log.zip)：歷史開發包，首頁側邊欄包含開發日誌。
 

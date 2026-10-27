@@ -14,7 +14,12 @@ struct PlaybackMiniProgress: View {
     let model: PlayerModel
     @ObservedObject var clock: PlaybackClock
     var body: some View {
-        ProgressView(value: min(1, max(0, clock.time / max(1, model.track.duration)))).tint(OrcaTheme.cyan).accessibilityLabel("歌曲進度")
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Color.white.opacity(0.12)
+                Rectangle().fill(OrcaTheme.cyan).frame(width: geometry.size.width * min(1, max(0, clock.time / max(1, model.track.duration))))
+            }
+        }.frame(height: 2).accessibilityLabel("歌曲進度").accessibilityValue("\(Int(min(100, max(0, clock.time / max(1, model.track.duration) * 100))))百分比")
     }
 }
 struct PlaybackSeekBar: View {

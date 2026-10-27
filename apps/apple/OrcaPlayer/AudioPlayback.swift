@@ -77,6 +77,7 @@ enum EqualizerSettings {
     private var observers: [AnyCancellable] = []
     private var needsReconnect = false
     private var parametersApplied = false
+    private var preparedEQRate: Double?
     private var sessionPrepared = false
     private let logger = Logger(subsystem: "com.orca.player", category: "audio-continuity")
     var onCompletion: (() -> Void)?
@@ -133,7 +134,7 @@ enum EqualizerSettings {
         #endif
         file = candidate
         try reconnect()
-        parametersApplied = false
+        parametersApplied = false; preparedEQRate = nil
         configure(gains: gains, enabled: enabled, volume: volume)
     }
     private func reconnect() throws {
@@ -211,11 +212,28 @@ enum EqualizerSettings {
         file = nil
     }
     func configure(gains: [Double], enabled: Bool, volume: Double) {
-        guard !parametersApplied || self.gains != gains || self.enabled != enabled || self.volume != volume else { return }
-        self.gains = gains; self.enabled = enabled; self.volume = volume
-        EqualizerSettings.apply(to: equalizer, gains: gains, enabled: enabled, sampleRate: file?.processingFormat.sampleRate ?? 44_100)
-        applyEffects()
-        engine.mainMixerNode.outputVolume = Float(min(1, max(0, volume.isFinite ? volume : 0.5)))
+        let rate = file?.processingFormat.sampleRate ?? 44_100
+        let soundChanged = !parametersApplied || self.gains != gains || self.enabled != enabled || preparedEQRate != rate
+        let safeVolume = min(1, max(0, volume.isFinite ? volume : 0.5))
+        guard soundChanged || self.volume != safeVolume else { return }
+        self.gains = gains; self.enabled = enabled; self.volume = safeVolume
+        if soundChanged {
+            if preparedEQRate != rate {
+                // Topology parameters only change with format, never with a page,
+                // volume update or opening an editor.
+                EqualizerSettings.apply(to: equalizer, gains: gains, enabled: enabled, sampleRate: rate)
+                preparedEQRate = rate
+            } else {
+                for (index, band) in equalizer.bands.enumerated() {
+                    let gain = Float(index < gains.count && gains[index].isFinite ? min(12, max(-12, gains[index])) : 0)
+                    if band.gain != gain { band.gain = gain }
+                    let bypass = !enabled || Double(EqualizerSettings.frequencies[index]) >= rate * 0.45
+                    if band.bypass != bypass { band.bypass = bypass }
+                }
+            }
+            applyEffects()
+        }
+        if engine.mainMixerNode.outputVolume != Float(safeVolume) { engine.mainMixerNode.outputVolume = Float(safeVolume) }
         parametersApplied = true
     }
     func configureEffects(bass: Double, ambience: Ambience, mix: Double, enabled: Bool) {
@@ -248,11 +266,17 @@ enum EqualizerSettings {
     static func apply(equalizer: AVAudioUnitEQ, bassUnit: AVAudioUnitEQ, reverb: AVAudioUnitReverb, gains: [Double], bass: Double, ambience: Ambience, mix: Double, enabled: Bool, sampleRate: Double = 44100) {
         let amount = bass.isFinite ? min(9, max(0, bass)) : 0
         let band = bassUnit.bands[0]
-        band.filterType = .lowShelf; band.frequency = 90; band.gain = Float(amount)
-        band.bypass = !enabled || amount == 0
-        equalizer.globalGain = EQHeadroom.gain(gains: gains, bass: amount, sampleRate: sampleRate, ambience: ambience, mix: mix)
-        reverb.wetDryMix = enabled && ambience != .off ? Float(mix.isFinite ? min(35, max(0, mix)) : 0) : 0
-        reverb.bypass = !enabled || ambience == .off
+        if band.filterType != .lowShelf { band.filterType = .lowShelf }
+        if band.frequency != 90 { band.frequency = 90 }
+        if band.gain != Float(amount) { band.gain = Float(amount) }
+        let bypassBass = !enabled || amount == 0
+        if band.bypass != bypassBass { band.bypass = bypassBass }
+        let headroom = EQHeadroom.gain(gains: gains, bass: amount, sampleRate: sampleRate, ambience: ambience, mix: mix)
+        if equalizer.globalGain != headroom { equalizer.globalGain = headroom }
+        let wet = enabled && ambience != .off ? Float(mix.isFinite ? min(35, max(0, mix)) : 0) : 0
+        if reverb.wetDryMix != wet { reverb.wetDryMix = wet }
+        let bypassReverb = !enabled || ambience == .off
+        if reverb.bypass != bypassReverb { reverb.bypass = bypassReverb }
     }
 }
 

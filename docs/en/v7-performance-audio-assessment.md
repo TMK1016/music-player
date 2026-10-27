@@ -21,3 +21,5 @@
 ## Assessment boundaries
 
 Use only synthetic data for reproducible isolated probes. Distinguish source-code findings, desktop computation probes, device UI traces and audible device playback. A smaller displayed batch does not fix expensive whole-library aggregation, and a desktop probe is not a phone latency measurement. No production playback, data schema or native UI changes are part of this assessment delivery. Proposed migrations or audio backend changes require review of concrete scope and evidence first.
+
+Implementation authorized by the user on 2026-10-28: complete all V7 changes and install on the connected iPhone. See the separate v0.14 implementation/verification document; this assessment remains historical.

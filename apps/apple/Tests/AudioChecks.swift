@@ -47,6 +47,7 @@ import Darwin
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: work) }
         let fixture = URL(fileURLWithPath: CommandLine.arguments[2])
+        try await LibraryIndexChecks.run(work: work, fixture: fixture)
         let source = work.appendingPathComponent("海岸測試.wav")
         let duplicate = work.appendingPathComponent("same-content.wav")
         try FileManager.default.copyItem(at: fixture, to: source)

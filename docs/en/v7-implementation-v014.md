@@ -1,0 +1,5 @@
+# V7 implementation authorization and delivery
+
+2026-10-28: The user explicitly requests complete implementation of the V7 assessment and deployment to the connected iPhone. Implement indexed/cached library metadata, preserved Home state, a functional All Songs sort menu, 50-row incremental display with full-library search and playback, coalesced persistence and size-aware artwork. Reduce redundant audio parameter writes without changing the EQ headroom strategy. Implement the eight reference images: refined tools/mini-player, camera-based cover editing and removal with artist fallback, conditional clear-rating trash, system Now Playing artwork, and denser mode chips with accessible targets. Validate meaningful data/performance/audio invariants, update the shared flow/journal, install the final app, and back up to GitHub or retain a verified offline bundle if blocked.
+
+Version 0.14.0 / build 18. Complete requirements remain in v7-performance-audio-assessment.md; current implementation and evidence are recorded in docs/zh-TW/V7實作與手機驗收-v014.md. Device audio glitches remain an explicit verification item until reproduced and tested on the actual output route.

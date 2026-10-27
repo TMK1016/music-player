@@ -1,0 +1,1 @@
+PASS: native EQ offline PCM rendering; 800Hz boost = 6.00 dB; bypass compensation delta = -6.00 dB; bass shelf at 32Hz = 5.90 dB; reverb tail RMS = 0.00046491; bypass tail RMS = 0.00000000; combined-response probes = 130; max model error = 0.033 dB; max underestimate = 0.016 dB

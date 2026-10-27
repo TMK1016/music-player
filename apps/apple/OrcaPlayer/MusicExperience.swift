@@ -55,8 +55,11 @@ struct FavoriteRatingButton: View {
             .popover(isPresented: $rating) {
                 VStack(spacing: 12) {
                     Text("左右滑動評分").font(.headline)
-                    SlidingStarRating(model: model, trackID: track.id)
-                    HStack { Button("清除評分") { model.setRating(track.id, 0) }; Spacer(); Button("完成") { rating = false } }
+                    HStack(spacing: 4) {
+                        SlidingStarRating(model: model, trackID: track.id)
+                        if model.rating(track.id) > 0 { Button { model.setRating(track.id, 0) } label: { Image(systemName: "trash").frame(width: 44, height: 44) }.accessibilityLabel("清除評分") }
+                    }
+                    HStack { Spacer(); Button("完成") { rating = false }.frame(minHeight: 44) }
                 }.padding(20).frame(width: 280).presentationCompactAdaptation(.popover)
                     .presentationBackground(OrcaTheme.panel)
             }
@@ -72,12 +75,10 @@ struct SongEditor: View {
     @FocusState private var artistFocused: Bool
     var body: some View {
         ScrollView { VStack(alignment: .leading, spacing: 18) {
-            Text("編輯歌曲資料").font(.title2)
-            HStack { ArtworkChooser(data: $cover); if cover != nil { Button("使用歌手頭貼") { cover = nil } } }
-            Text("歌曲名稱").font(.caption)
-            TextField("歌名", text: $title).songEditorField()
-            Text("歌手").font(.caption)
-            TextField("歌手／作者（可留白）", text: $artist).songEditorField().focused($artistFocused)
+            Text("編輯歌曲").font(.headline)
+            ArtworkChooser(data: $cover, compactEditor: true, fallback: model.collection.artists.first { $0.name.localizedCaseInsensitiveCompare(artist) == .orderedSame }?.avatar).frame(maxWidth: .infinity).padding(.vertical, 8)
+            HStack(spacing: 12) { Text("歌曲").frame(width: 40, alignment: .leading); TextField("歌名", text: $title).songEditorField().accessibilityLabel("歌曲名稱") }
+            HStack(spacing: 12) { Text("歌手").frame(width: 40, alignment: .leading); TextField("歌手／作者（可留白）", text: $artist).songEditorField().focused($artistFocused).accessibilityLabel("歌手") }
             if artistFocused && !model.collection.artists.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack { ForEach(model.collection.artists) { item in
@@ -86,8 +87,8 @@ struct SongEditor: View {
                 }.accessibilityLabel("已有歌手標籤")
             }
 
-            HStack { Button("取消") { dismiss() }; Spacer(); Button("儲存") { model.editSong(track, title: title, artistName: artist); model.setCover(track.id, data: cover); if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { dismiss() } }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 200 || artist.count > 100) }
-        }.padding(20) }.frame(minWidth: 280, maxWidth: 500).themedSheet().presentationDetents(artistFocused ? [.height(650), .large] : [.height(580), .large]).onAppear { title = model.title(track); cover = model.details(track.id).cover; artist = model.artist(track) == "未知歌手" ? "" : model.artist(track) }
+            HStack { Button("取消") { dismiss() }; Spacer(); Button("儲存") { model.editSong(track, title: title, artistName: artist); model.setCover(track.id, data: cover); if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { dismiss() } }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 200 || artist.count > 100) }.buttonStyle(.bordered).padding(.top, 8)
+        }.padding(20) }.frame(minWidth: 280, maxWidth: 500).themedSheet().presentationDetents(artistFocused ? [.height(570), .large] : [.height(500), .large]).onAppear { title = model.title(track); cover = model.details(track.id).cover; artist = model.artist(track) == "未知歌手" ? "" : model.artist(track) }
     }
 }
 struct ArtistAvatar: View {
@@ -108,44 +109,50 @@ struct MusicPlayerPage: View {
             VStack(spacing: 6) {
                 Text(model.playingListTitle).font(.subheadline.weight(.semibold)).lineLimit(1)
                     .frame(maxWidth: .infinity, minHeight: 28).foregroundStyle(model.playbackListID?.hasPrefix("stars") == true ? OrcaTheme.star : OrcaTheme.text).accessibilityLabel("目前播放清單：\(model.playingListTitle)")
-                if !showingEQ {
-                HStack(spacing: 6) {
-                    SlidingStarRating(model: model, trackID: model.selectedID, compactDisplay: true)
-                    Spacer(minLength: 0)
-                    Button { changeFace(true) } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "slider.horizontal.3")
-                            Text(model.presetName).lineLimit(1).minimumScaleFactor(0.7)
-                        }.font(.caption.weight(.semibold)).frame(minHeight: 44)
-                    }.buttonStyle(.plain).foregroundStyle(OrcaTheme.cyan)
-                        .accessibilityLabel("等化器模式：\(model.presetName)，點選調音")
-                }
-                }
-                if showingEQ {
-                    InlineTuningPanel(model: model, useSongPolicy: true, onBack: { changeFace(false) })
+                if !showingEQ && geometry.size.width > 500 && geometry.size.height < 420 {
+                    HStack(spacing: 20) {
+                        let side = min(220, max(80, geometry.size.height - 60))
+                        coverArt.frame(width: side, height: side)
+                        ScrollView { VStack(spacing: 4) { ratingAndMode; coverDetails(compact: true); PlaybackTransport(model: model, compact: true) } }
+                    }
                 } else {
-                    cover
+                    if !showingEQ { ratingAndMode }
+                    if showingEQ { InlineTuningPanel(model: model, useSongPolicy: true, onBack: { changeFace(false) }) }
+                    else { cover }
+                    PlaybackTransport(model: model, compact: geometry.size.height < 420)
                 }
-                PlaybackTransport(model: model, compact: geometry.size.height < 420)
             }.padding(.horizontal, 16).padding(.vertical, 4)
                 .frame(maxWidth: 700).frame(maxWidth: .infinity)
         }.sheet(isPresented: $playlists) { TrackPlaylistEditor(model: model, trackID: model.selectedID) }
         .sheet(isPresented: $editingSong) { SongEditor(model: model, track: model.track) }
     }
+    private var ratingAndMode: some View {
+        HStack(spacing: 6) {
+            SlidingStarRating(model: model, trackID: model.selectedID, compactDisplay: true)
+            Spacer(minLength: 0)
+            Button { changeFace(true) } label: {
+                HStack(spacing: 4) { Image(systemName: "slider.horizontal.3"); Text(model.presetName).lineLimit(1).minimumScaleFactor(0.7) }.font(.caption.weight(.semibold)).frame(minHeight: 44)
+            }.buttonStyle(.plain).foregroundStyle(OrcaTheme.cyan).accessibilityLabel("等化器模式：\(model.presetName)，點選調音")
+        }
+    }
+    private var coverArt: some View {
+        SongArtwork(model: model, track: model.track).contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 24).onEnded { value in
+                if value.translation.width < -48 && abs(value.translation.width) > abs(value.translation.height) * 1.5 { changeFace(true) }
+            }).accessibilityLabel("歌曲封面，向左滑動調音").accessibilityAction(named: "顯示等化器") { changeFace(true) }
+    }
     private var cover: some View {
         VStack(spacing: 6) {
             GeometryReader { geometry in
                 let side = max(40, min(340, geometry.size.width, geometry.size.height))
-                SongArtwork(model: model, track: model.track).frame(width: side, height: side)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .gesture(DragGesture(minimumDistance: 24).onEnded { value in
-                        if value.translation.width < -48 && abs(value.translation.width) > abs(value.translation.height) * 1.5 { changeFace(true) }
-                    })
-                    .accessibilityLabel("歌曲封面，向左滑動調音")
-                    .accessibilityAction(named: "顯示等化器") { changeFace(true) }
+                coverArt.frame(width: side, height: side).frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            Text(model.title(model.track)).font(.title3.weight(.semibold)).lineLimit(2).multilineTextAlignment(.center).offset(y: -4)
+            coverDetails()
+        }
+    }
+    private func coverDetails(compact: Bool = false) -> some View {
+        VStack(spacing: 6) {
+            Text(model.title(model.track)).font(compact ? .headline : .title3.weight(.semibold)).lineLimit(compact ? 1 : 2).multilineTextAlignment(.center).offset(y: -4)
             Text(model.artist(model.track)).font(.caption).foregroundStyle(OrcaTheme.muted).lineLimit(1).offset(y: -4)
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
@@ -156,7 +163,8 @@ struct MusicPlayerPage: View {
                         Button { playlists = true } label: { Image(systemName: "text.badge.plus").frame(width: 44, height: 44) }.accessibilityLabel("新增或移除播放清單")
                         PlaybackModeButton(model: model)
                         FavoriteRatingButton(model: model, track: model.track)
-                    }.padding(.horizontal, 4).background(Color.white.opacity(0.16), in: RoundedRectangle(cornerRadius: 12))
+                    }.padding(.horizontal, 4).background(LinearGradient(colors: [Color.white.opacity(0.12), OrcaTheme.elevated.opacity(0.8)], startPoint: .top, endPoint: .bottom), in: RoundedRectangle(cornerRadius: 15))
+                        .overlay(RoundedRectangle(cornerRadius: 15).stroke(.white.opacity(0.16), lineWidth: 0.75))
                         .opacity(toolsExpanded ? 1 : 0).allowsHitTesting(toolsExpanded).accessibilityHidden(!toolsExpanded)
                 Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { toolsExpanded.toggle() } } label: {
                     Image(systemName: toolsExpanded ? "chevron.right" : "chevron.left").frame(width: 44, height: 44)
@@ -242,9 +250,23 @@ struct CompactMusicPlayer: View {
                 IconButton(symbol: "forward.end.fill", label: "下一首") { model.next() }
             }.padding(.horizontal, 14).padding(.vertical, 8)
             PlaybackMiniProgress(model: model, clock: model.playbackClock)
-        }.background(OrcaTheme.blue.opacity(0.28), in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(OrcaTheme.cyan.opacity(0.7), lineWidth: 1))
-            .padding(.horizontal, 10).padding(.vertical, 6)
+        }.background { MiniPlayerBackdrop(data: model.coverData(model.track)).equatable() }
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.18), lineWidth: 0.75))
+            .shadow(color: .black.opacity(0.24), radius: 10, y: 3)
+            .padding(.horizontal, 12).padding(.top, 6).padding(.bottom, 12)
+    }
+}
+private struct MiniPlayerBackdrop: View, Equatable {
+    let data: Data?
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                OrcaTheme.elevated
+                if let data { DecodedArtwork(data: data, maxPixelSize: 128).frame(width: geometry.size.width, height: geometry.size.height).blur(radius: 18).overlay(.black.opacity(0.55)) }
+                else { LinearGradient(colors: [OrcaTheme.blue.opacity(0.24), OrcaTheme.panel], startPoint: .topLeading, endPoint: .bottomTrailing) }
+            }.clipped()
+        }
     }
 }
 struct SleepMenu: View {

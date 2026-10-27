@@ -14,6 +14,8 @@ struct ContentView: View {
                         MusicPlayerPage(model: model)
                     } else if model.page == .equalizer {
                         InlineTuningPanel(model: model).padding(12)
+                    } else if model.page == .library && !model.showLibrarySearch {
+                        MusicHomeView(model: model)
                     } else { ScrollView {
                         Group {
                             switch model.page {
@@ -24,7 +26,7 @@ struct ContentView: View {
                             case .developmentLog: DevelopmentLogView(model: model)
                             }
                         }.padding(wide ? 28 : (model.page == .equalizer ? 12 : 20))
-                    }.id(model.page.rawValue + (model.showLibrarySearch ? ".search" : ".browse")) }
+                    } }
                     if model.hasPlaybackSession && model.page != .player { CompactMusicPlayer(model: model) }
                     if !wide { mobileNavigation }
                 }
@@ -77,7 +79,7 @@ struct ContentView: View {
                 Image(systemName: "sparkles").foregroundStyle(OrcaTheme.cyan)
                 Text("為每段旅程\n找到你的聲音。")
                     .font(.system(size: 15, weight: .medium)).lineSpacing(5)
-                Text("MUSIC PLAYER / 0.13.1").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
+                Text("MUSIC PLAYER / 0.14.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
             }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                 .background(LinearGradient(colors: [OrcaTheme.blue.opacity(0.17), OrcaTheme.panel], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 15))
                 .padding(.bottom, 22)
@@ -95,6 +97,9 @@ struct ContentView: View {
                 }
                 Spacer()
                 if model.page == .library {
+                    Menu {
+                        Button("開發日誌") { model.page = .developmentLog }
+                    } label: { Image(systemName: "sidebar.left").frame(width: 44, height: 44) }.menuStyle(.borderlessButton).menuIndicator(.hidden).accessibilityLabel("專案側邊欄")
                     Button { model.showLibrarySearch.toggle(); if !model.showLibrarySearch { model.search = "" } } label: { Image(systemName: "magnifyingglass").frame(width: 44, height: 44) }.accessibilityLabel("搜尋歌曲")
                     Button { model.showImporter = true } label: { Image(systemName: "plus").frame(width: 44, height: 44) }.disabled(model.isImporting).accessibilityLabel("匯入音樂")
                 } else if wide { Tag(text: "本機播放", symbol: "waveform") }

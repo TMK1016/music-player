@@ -16,16 +16,17 @@ struct ModeSelectionStrip: View {
                 GeometryReader { geometry in
                     ScrollViewReader { reader in
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 4) {
                                 ForEach(model.modeOptions) { option in
                                     Button {
                                         select(option.id)
                                         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { reader.scrollTo(option.id, anchor: .center) }
                                     } label: {
                                         Text(option.name).font(.caption.weight(.medium)).lineLimit(1)
-                                            .frame(width: 100, height: 44)
+                                            .frame(width: 76, height: 32)
                                             .foregroundStyle(model.presetName == option.name ? OrcaTheme.cyan : OrcaTheme.text)
                                             .background(model.presetName == option.name ? OrcaTheme.blue.opacity(0.25) : OrcaTheme.background, in: RoundedRectangle(cornerRadius: 10))
+                                            .padding(.vertical, 6).contentShape(Rectangle())
                                     }.buttonStyle(.plain).id(option.id)
                                         .onDrag { draggedMode = option.id; return NSItemProvider(object: option.id as NSString) }
                                         .onDrop(of: [.text], delegate: ModeReorderDrop(model: model, target: option.id, dragged: $draggedMode))
@@ -36,7 +37,7 @@ struct ModeSelectionStrip: View {
                                 }
                                 if !model.hiddenPresets.isEmpty { Button("還原內建") { model.restoreBuiltinModes() }.frame(minHeight: 44) }
                             }.scrollTargetLayout()
-                        }.contentMargins(.horizontal, max(0, (geometry.size.width - 100) / 2), for: .scrollContent)
+                        }.contentMargins(.horizontal, max(0, (geometry.size.width - 76) / 2), for: .scrollContent)
                             .scrollTargetBehavior(.viewAligned)
                             .onAppear { if let id = selectedID { reader.scrollTo(id, anchor: .center) } }
                             .onChange(of: model.presetName) { _, _ in

@@ -18,8 +18,13 @@ struct SongActionsSheet: View {
                 }
                 Divider()
                 Button { model.toggleFavorite(track) } label: { Label(model.favorites.contains(track.id) ? "取消收藏" : "收藏", systemImage: model.favorites.contains(track.id) ? "heart.fill" : "heart").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }
-                SlidingStarRating(model: model, trackID: track.id)
-                Button("清除評分") { model.setRating(track.id, 0) }.font(.caption).frame(minHeight: 44)
+                HStack(spacing: 8) {
+                    SlidingStarRating(model: model, trackID: track.id)
+                    Spacer(minLength: 0)
+                    if model.rating(track.id) > 0 {
+                        Button { model.setRating(track.id, 0) } label: { Image(systemName: "trash").frame(width: 44, height: 44) }.accessibilityLabel("清除評分")
+                    }
+                }
                 Button { editing = true } label: { Label("編輯歌曲", systemImage: "square.and.pencil").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }
                 Button { playlists = true } label: { Label("加入播放清單", systemImage: "text.badge.plus").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }
                 if model.collection.playlists.contains(where: { $0.id == playlistID }) {
