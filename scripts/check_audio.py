@@ -11,10 +11,13 @@ common = ["swiftc", "-swift-version", "6", "-target", "arm64-apple-macos14.0", "
 backend = apple / "OrcaPlayer/AudioPlayback.swift"
 native_checks = apple / "Tests/NativeEQChecks.swift"
 cli = build / "audio-checks"
-subprocess.run(common + [str(backend), str(apple / "OrcaPlayer/EQBands.swift"), str(apple / "OrcaPlayer/EQHeadroom.swift"), str(apple / "OrcaPlayer/SoundProfiles.swift"), str(apple / "OrcaPlayer/LibraryStore.swift"), str(apple / "OrcaPlayer/PlayerModel.swift"), str(apple / "OrcaPlayer/MusicCollection.swift"), str(apple / "Tests/AudioChecks.swift"), str(native_checks), "-o", str(cli)], check=True)
-result = subprocess.run([str(cli), str(build), str(apple / "Resources/Orca-Soundcheck.wav"), "--model-only"], check=True, text=True, capture_output=True)
+subprocess.run(common + [str(backend), str(apple / "OrcaPlayer/EQBands.swift"), str(apple / "OrcaPlayer/EQHeadroom.swift"), str(apple / "OrcaPlayer/SoundProfiles.swift"), str(apple / "OrcaPlayer/LibraryStore.swift"), str(apple / "OrcaPlayer/PlayerModel.swift"), str(apple / "OrcaPlayer/MusicCollection.swift"), str(apple / "OrcaPlayer/CollectionWriter.swift"), str(apple / "OrcaPlayer/LibraryScan.swift"), str(apple / "OrcaPlayer/CropGeometry.swift"), str(apple / "Tests/AudioChecks.swift"), str(native_checks), "-o", str(cli)], check=True)
+result = subprocess.run([str(cli), str(build), str(apple / "Resources/Orca-Soundcheck.wav"), "--model-only"], text=True, capture_output=True)
 (build / "results.log").write_text(result.stdout + result.stderr)
 print(result.stdout, end="")
+if result.returncode:
+    print(result.stderr, end="")
+    result.check_returncode()
 contents = build / "NativeEQValidation.app/Contents"
 (contents / "MacOS").mkdir(parents=True, exist_ok=True)
 info = {"CFBundleIdentifier": "com.orca.player.audio-validation", "CFBundleExecutable": "NativeEQValidation", "CFBundleName": "Orca EQ Validation", "CFBundlePackageType": "APPL", "LSMinimumSystemVersion": "14.0", "NSHighResolutionCapable": True, "ReportPath": str(build / "native-eq-result.txt")}

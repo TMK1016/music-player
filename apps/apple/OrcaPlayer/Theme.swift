@@ -68,7 +68,7 @@ struct Tag: View {
 }
 
 /// Procedural cover art; no remote images, third-party music, or licensed artwork.
-struct AlbumArtwork: View {
+struct AlbumArtwork: View, Equatable {
     var variant = 0
     var compact = false
     var body: some View {
@@ -76,7 +76,7 @@ struct AlbumArtwork: View {
             let size = geometry.size
             ZStack {
                 LinearGradient(colors: [Color(hex: 0x102E55), Color(hex: 0x071326), Color(hex: 0x14395C)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                Canvas { context, s in
+                Canvas(rendersAsynchronously: true) { context, s in
                     let center = CGPoint(x: s.width * 0.51, y: s.height * 0.46)
                     let radius = s.width * 0.29
                     for ring in 0..<7 {

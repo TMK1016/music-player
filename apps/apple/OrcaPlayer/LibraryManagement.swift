@@ -8,15 +8,8 @@ struct LibraryArtwork: View {
     var size: CGFloat = 56
     var circular = false
     var body: some View {
-        Group {
-            #if os(iOS)
-            if let data, let picture = UIImage(data: data) { Image(uiImage: picture).resizable().scaledToFill() }
-            else { placeholder }
-            #else
-            if let data, let picture = NSImage(data: data) { Image(nsImage: picture).resizable().scaledToFill() }
-            else { placeholder }
-            #endif
-        }.frame(width: size, height: size).clipShape(RoundedRectangle(cornerRadius: circular ? size / 2 : 12))
+        DecodedArtwork(data: data, symbol: symbol)
+            .frame(width: size, height: size).clipShape(RoundedRectangle(cornerRadius: circular ? size / 2 : 12))
             .accessibilityHidden(true)
     }
     private var placeholder: some View { Image(systemName: symbol).font(.system(size: size * 0.4)).foregroundStyle(.white).frame(width: size, height: size).background(OrcaTheme.gradient) }
@@ -28,6 +21,8 @@ struct ArtworkChooser: View {
     @ViewState private var files = false
     @ViewState private var selectedPhoto: PhotosPickerItem?
     @ViewState private var error: String?
+    @ViewState private var pending: CropSelection?
+    @ViewState private var loading = false
     var body: some View {
         VStack(spacing: 8) {
             Button { photos = true } label: {
@@ -37,31 +32,38 @@ struct ArtworkChooser: View {
                 Button("更換照片") { photos = true }.frame(minHeight: 44)
                 Button("匯入圖片檔") { files = true }.frame(minHeight: 44)
             }.buttonStyle(.plain).foregroundStyle(.white)
+            if loading { ProgressView("讀取圖片…") }
             if let error { Text(error).font(.caption).foregroundStyle(.orange) }
         }
         .photosPicker(isPresented: $photos, selection: $selectedPhoto, matching: .images)
         .onChange(of: selectedPhoto) { _, value in
-            Task { do { if let bytes = try await value?.loadTransferable(type: Data.self) { accept(bytes) } } catch { self.error = "無法讀取照片，請重試。" } }
+            guard value != nil else { return }
+            Task {
+                loading = true
+                defer { loading = false; selectedPhoto = nil }
+                do { if let bytes = try await value?.loadTransferable(type: Data.self) { try await accept(bytes) } }
+                catch { self.error = error.localizedDescription }
+            }
         }
-        .fileImporter(isPresented: $files, allowedContentTypes: [.image]) { result in
-            do {
-                let url = try result.get(), scoped = url.startAccessingSecurityScopedResource()
-                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                guard (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) <= 5_000_000 else { error = "圖片請小於5 MB。"; return }
-                accept(try Data(contentsOf: url))
-            } catch { self.error = "無法讀取圖片，請重試。" }
+        .fileImporter(isPresented: $files, allowedContentTypes: [.image, .jpeg, .png, .heic, .tiff, .gif]) { result in
+            Task {
+                loading = true
+                defer { loading = false }
+                do { let bytes = try await ArtworkPipeline.shared.read(result.get()); try await accept(bytes) }
+                catch { self.error = error.localizedDescription }
+            }
+        }
+        .sheet(item: $pending) { selection in
+            ArtworkCropEditor(bitmap: selection.bitmap, circular: circular) { bytes in data = bytes }
         }
     }
-    private func accept(_ bytes: Data) {
-        guard bytes.count <= 5_000_000 else { error = "圖片請小於5 MB。"; return }
-        #if os(iOS)
-        guard UIImage(data: bytes) != nil else { error = "圖片格式無法解碼。"; return }
-        #else
-        guard NSImage(data: bytes) != nil else { error = "圖片格式無法解碼。"; return }
-        #endif
-        data = bytes; error = nil
+    private func accept(_ bytes: Data) async throws {
+        let bitmap = try await ArtworkPipeline.shared.decode(bytes)
+        pending = CropSelection(bitmap: bitmap); error = nil
     }
 }
+private struct CropSelection: Identifiable { let id = UUID(); let bitmap: ArtworkBitmap }
+
 struct PlaylistDetailsEditor: View {
     @ObservedObject var model: PlayerModel
     let playlistID: String

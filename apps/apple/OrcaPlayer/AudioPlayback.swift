@@ -1,5 +1,6 @@
 import AVFoundation
 import Combine
+import OSLog
 
 @MainActor protocol AudioPlayback: AnyObject {
     var currentTime: Double { get }
@@ -75,6 +76,9 @@ enum EqualizerSettings {
     private var volume = 0.5
     private var observers: [AnyCancellable] = []
     private var needsReconnect = false
+    private var parametersApplied = false
+    private var sessionPrepared = false
+    private let logger = Logger(subsystem: "com.orca.player", category: "audio-continuity")
     var onCompletion: (() -> Void)?
     var onInterruption: ((String) -> Void)?
 
@@ -85,6 +89,7 @@ enum EqualizerSettings {
         engine.attach(reverb)
         AudioNotificationBridge.observe(.AVAudioEngineConfigurationChange, object: engine) { [weak self] in
             guard let self, self.file != nil, !self.engine.isRunning else { return }
+            self.logger.notice("Engine configuration changed while stopped; pausing for explicit reconnect")
             let position = self.currentTime
             self.generation += 1
             self.player.stop()
@@ -124,12 +129,11 @@ enum EqualizerSettings {
         guard candidate.length > 0, candidate.length <= Int64(UInt32.max), (1...2).contains(candidate.processingFormat.channelCount), candidate.processingFormat.sampleRate > 0 else { throw PlaybackError.invalidAudio }
         #if os(iOS)
         // Activate before connecting the graph so its hardware format is current.
-        let session = AVAudioSession.sharedInstance()
-        if session.category != .playback { try session.setCategory(.playback, mode: .default) }
-        try session.setActive(true)
+        try prepareSession()
         #endif
         file = candidate
         try reconnect()
+        parametersApplied = false
         configure(gains: gains, enabled: enabled, volume: volume)
     }
     private func reconnect() throws {
@@ -148,15 +152,30 @@ enum EqualizerSettings {
     func play() throws {
         guard file != nil else { throw PlaybackError.noTrack }
         #if os(iOS)
-        let session = AVAudioSession.sharedInstance()
-        if session.category != .playback { try session.setCategory(.playback, mode: .default) }
-        try session.setActive(true)
+        try prepareSession()
         #endif
         if needsReconnect { try reconnect() }
         if !engine.isRunning { try engine.start() }
         if !scheduled { schedule() }
         try AudioGraph.play(player)
     }
+    #if os(iOS)
+    private func prepareSession() throws {
+        let session = AVAudioSession.sharedInstance()
+        if session.category != .playback { try session.setCategory(.playback, mode: .default) }
+        if !sessionPrepared {
+            // Offline playback does not require live-instrument latency. Request once,
+            // before activation; never renegotiate hardware while opening a UI control.
+            do { try session.setPreferredIOBufferDuration(0.046) }
+            catch { logger.notice("Preferred I/O duration unavailable; retaining system value") }
+        }
+        try session.setActive(true)
+        if !sessionPrepared {
+            sessionPrepared = true
+            logger.notice("Playback I/O buffer seconds: \(session.ioBufferDuration, privacy: .public)")
+        }
+    }
+    #endif
     func pause() { player.pause() }
     func seek(to seconds: Double) throws {
         guard let file, seconds.isFinite else { return }
@@ -192,13 +211,18 @@ enum EqualizerSettings {
         file = nil
     }
     func configure(gains: [Double], enabled: Bool, volume: Double) {
+        guard !parametersApplied || self.gains != gains || self.enabled != enabled || self.volume != volume else { return }
         self.gains = gains; self.enabled = enabled; self.volume = volume
         EqualizerSettings.apply(to: equalizer, gains: gains, enabled: enabled, sampleRate: file?.processingFormat.sampleRate ?? 44_100)
         applyEffects()
         engine.mainMixerNode.outputVolume = Float(min(1, max(0, volume.isFinite ? volume : 0.5)))
+        parametersApplied = true
     }
     func configureEffects(bass: Double, ambience: Ambience, mix: Double, enabled: Bool) {
-        self.bass = bass.isFinite ? min(9, max(0, bass)) : 0
+        let nextBass = bass.isFinite ? min(9, max(0, bass)) : 0
+        let nextMix = mix.isFinite ? min(35, max(0, mix)) : 15
+        guard self.bass != nextBass || self.ambience != ambience || self.ambienceMix != nextMix || self.enabled != enabled else { return }
+        self.bass = nextBass
         if self.ambience != ambience {
             switch ambience {
             case .off: break

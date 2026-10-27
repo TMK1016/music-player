@@ -84,6 +84,7 @@ private struct SavedSettings: Codable {
 
 @MainActor final class PlayerModel: ObservableObject {
     @Published var collection = MusicCollection() { didSet { persistCollection() } }
+    let collectionWriter = CollectionWriter()
     var collectionWriteBlocked = false
     @Published var repeatOne = false
     @Published private(set) var hasPlaybackSession = false

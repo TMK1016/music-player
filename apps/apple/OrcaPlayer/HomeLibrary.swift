@@ -19,6 +19,7 @@ struct MusicHomeView: View {
     @ViewState private var draggedArtist: String?
     @ViewState private var hiddenLists = false
     @ViewState private var sortingArtists = false
+    @ViewState private var draggedSong: String?
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             if !model.importSummary.isEmpty { Text(model.importSummary).font(.caption).foregroundStyle(OrcaTheme.cyan) }
@@ -28,7 +29,21 @@ struct MusicHomeView: View {
             if section == "播放清單" { playlistRows }
             else if section == "歌手列表" { artistRows }
             else {
-                LazyVStack(spacing: 12) { ForEach(model.tracks) { CollectionSongRow(model: model, track: $0, queue: model.tracks).id("all-song:" + $0.id) } }.id("all-songs-section")
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack { Spacer(); Label("自訂順序", systemImage: "arrow.up.arrow.down").font(.subheadline).foregroundStyle(.white).frame(minHeight: 44) }
+                    LazyVStack(spacing: 12) {
+                        ForEach(model.orderedSongs) { song in
+                            CollectionSongRow(model: model, track: song, queue: model.orderedSongs).id("all-song:" + song.id)
+                                .contextMenu {
+                                    Button("往上移") { moveSong(song.id, by: -1) }.disabled(model.orderedSongs.first?.id == song.id)
+                                    Button("往下移") { moveSong(song.id, by: 1) }.disabled(model.orderedSongs.last?.id == song.id)
+                                }
+                                .onDrag { draggedSong = song.id; return NSItemProvider(object: song.id as NSString) }
+                                .onDrop(of: [.text], delegate: LibraryReorderDrop(target: song.id, dragged: $draggedSong) { source, target in model.moveSong(source, to: target) })
+                        }
+                    }.id("all-songs-section")
+                }
+
             }
             Divider()
             Text("排行榜").font(.title3.weight(.semibold))
@@ -67,6 +82,7 @@ struct MusicHomeView: View {
                     }.buttonStyle(.plain).accessibilityLabel("\(model.playlistTitle(id))，\(expandedPlaylist == id ? "收合" : "展開")")
                 }
                 .background(expandedPlaylist == id ? OrcaTheme.blue.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 14))
+                .selectionOutline(expandedPlaylist == id)
                 .contextMenu {
                     Button("編輯清單照片與名稱") { editingPlaylist = id }
                     Button("編輯清單歌曲") { editingSongs = id }
@@ -89,6 +105,11 @@ struct MusicHomeView: View {
                 Button { hiddenLists = true } label: { Label("管理隱藏清單", systemImage: "eye.slash").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }.buttonStyle(.plain)
             }
         }
+    }
+    private func moveSong(_ id: String, by offset: Int) {
+        let ids = model.orderedSongs.map(\.id)
+        guard let index = ids.firstIndex(of: id), ids.indices.contains(index + offset) else { return }
+        model.moveSong(id, to: ids[index + offset])
     }
     private func movePlaylist(_ id: String, by offset: Int) {
         let ids = model.visiblePlaylistIDs
@@ -135,12 +156,12 @@ struct MusicHomeView: View {
                 let songs = model.tracks.filter { model.artist($0) == name }
                 Button { expandedArtist = expandedArtist == key ? nil : key } label: {
                     HStack(spacing: 12) {
-                        ArtistAvatar(data: model.collection.artists.first { $0.name == name }?.avatar)
-                        Text(name).foregroundStyle(.white).lineLimit(1)
-                        Spacer(); Text("\(songs.count) 首").foregroundStyle(OrcaTheme.muted)
+                        ArtistAvatar(data: model.collection.artists.first { $0.name == name }?.avatar, size: 68)
+                        VStack(alignment: .leading, spacing: 5) { Text(name).font(.title3).foregroundStyle(.white).lineLimit(1); Text("歌手 · \(songs.count) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted) }
+                        Spacer()
                         Image(systemName: expandedArtist == key ? "chevron.up" : "chevron.down")
                     }.padding(12).frame(maxWidth: .infinity, minHeight: 64).contentShape(Rectangle())
-                }.buttonStyle(.plain).background(OrcaTheme.panel, in: RoundedRectangle(cornerRadius: 12))
+                }.buttonStyle(.plain).background(OrcaTheme.panel, in: RoundedRectangle(cornerRadius: 12)).selectionOutline(expandedArtist == key)
                     .contextMenu {
                         Button("編輯資料") { editingArtist = model.collection.artists.first { $0.name == name } ?? MusicArtist(id: "native:" + name, name: name) }
                         Button("往上移") { moveArtist(key, by: -1) }.disabled(groups.first.map { model.artistKey($0) } == key)
@@ -205,4 +226,12 @@ struct LibraryReorderDrop: DropDelegate {
     func dropEntered(info: DropInfo) { if let id = dragged, id != target { move(id, target) } }
     func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
     func performDrop(info: DropInfo) -> Bool { dragged = nil; return true }
+}
+
+extension View {
+    func selectionOutline(_ selected: Bool) -> some View {
+        overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(selected ? 0.9 : 0), lineWidth: 1.5)
+            .shadow(color: .white.opacity(selected ? 0.4 : 0), radius: 4))
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
 }

@@ -1,12 +1,16 @@
 import Foundation
 import AVFoundation
 import Combine
+import Darwin
 
 @MainActor final class FakeAudioPlayer: AudioPlayback {
     var currentTime = 0.0
     var onCompletion: (() -> Void)?
     var onInterruption: ((String) -> Void)?
     var loadedURL: URL?
+    var loadCalls = 0
+    var stopCalls = 0
+    var configurationCalls = 0
     var playing = false
     var appliedGains: [Double] = []
     var eqEnabled = true
@@ -14,14 +18,14 @@ import Combine
     var appliedAmbience: Ambience = .off
     func load(_ url: URL) throws {
         guard FileManager.default.fileExists(atPath: url.path) else { throw PlaybackError.missingFile }
-        loadedURL = url; currentTime = 0
+        loadCalls += 1; loadedURL = url; currentTime = 0
     }
     func play() throws { playing = true }
     func pause() { playing = false }
     func seek(to seconds: Double) { currentTime = seconds }
-    func stop() { playing = false; currentTime = 0 }
+    func stop() { stopCalls += 1; playing = false; currentTime = 0 }
     func configureEffects(bass: Double, ambience: Ambience, mix: Double, enabled: Bool) { appliedBass = bass; appliedAmbience = ambience }
-    func configure(gains: [Double], enabled: Bool, volume: Double) { appliedGains = gains; eqEnabled = enabled }
+    func configure(gains: [Double], enabled: Bool, volume: Double) { configurationCalls += 1; appliedGains = gains; eqEnabled = enabled }
 }
 
 @main struct AudioChecks {
@@ -72,6 +76,24 @@ import Combine
             precondition(preserved == damaged, "Corrupt index is not overwritten")
         }
 
+        let largeHashFile = work.appendingPathComponent("large-stream-test.bin")
+        FileManager.default.createFile(atPath: largeHashFile.path, contents: nil)
+        let largeHandle = try FileHandle(forWritingTo: largeHashFile)
+        try largeHandle.truncate(atOffset: 512 * 1024 * 1024)
+        try largeHandle.close()
+        var usageBefore = rusage()
+        precondition(getrusage(RUSAGE_SELF, &usageBefore) == 0, "Self-process memory metric available")
+        let digestA = try await store.hash(largeHashFile)
+        let digestB = try await store.hash(largeHashFile)
+        var usageAfter = rusage()
+        precondition(getrusage(RUSAGE_SELF, &usageAfter) == 0, "Self-process memory metric available after hash")
+        let peakGrowth = max(0, usageAfter.ru_maxrss - usageBefore.ru_maxrss)
+        precondition(peakGrowth < 128 * 1024 * 1024, "Streaming 1 GiB of reads must not retain whole-file buffers")
+        print("HASH MEMORY peak bytes before=\(usageBefore.ru_maxrss) after=\(usageAfter.ru_maxrss) growth=\(peakGrowth)")
+        precondition(digestA == digestB && digestA.count == 64, "512 MiB chunked hash is stable without whole-file allocation")
+        try FileManager.default.removeItem(at: largeHashFile)
+        print("PASS: 512 MiB streaming hash twice with per-chunk autorelease pool")
+
         // v0.7 collection and listening rules use an isolated library.
         let managementRoot = work.appendingPathComponent("Management")
         let management = PlayerModel(audio: FakeAudioPlayer(), libraryRoot: managementRoot, demoURL: fixture)
@@ -111,6 +133,7 @@ import Combine
         management.hidePlaylist(firstList, hidden: true)
         precondition(!management.visiblePlaylistIDs.contains(firstList) && management.playlistPickerIDs.contains(firstList), "Hidden custom lists remain available in song membership picker")
         precondition(Set(management.playlistPickerIDs).count == management.playlistPickerIDs.count && management.playlistPickerIDs.contains("favorites"), "Picker has unique choices and includes Favorites")
+        await management.flushCollection()
         let reloadedManagement = PlayerModel(audio: FakeAudioPlayer(), libraryRoot: managementRoot, demoURL: fixture)
         await reloadedManagement.loadLibrary()
         precondition(reloadedManagement.collection.hiddenPlaylists?.contains(firstList) == true && reloadedManagement.playlistTitle(firstList) == "公路" && reloadedManagement.collection.playlistAppearance?[firstList]?.artwork == art, "Hidden status, name and artwork persist")
@@ -127,6 +150,42 @@ import Combine
         let legacyCollection = try JSONDecoder().decode(MusicCollection.self, from: JSONSerialization.data(withJSONObject: oldCollection))
         precondition(legacyCollection.playlistAppearance == nil && legacyCollection.hiddenPlaylists == nil, "Pre-v11 collection remains decodable")
         print("PASS: conditional system lists, seven-day window, hide/restore, mixed reorder, membership, artwork/name persistence, artist linking, queue context and legacy compatibility")
+        let existingOrder = management.orderedSongs.map(\.id)
+        management.moveSong(existingOrder.last!, to: existingOrder.first!)
+        precondition(management.orderedSongs.first?.id == existingOrder.last!, "All songs support custom order")
+        precondition(management.coverData(importedSong) == art, "Missing song cover falls back to linked artist avatar")
+        let ownCover = Data([9,8,7])
+        management.setCover(importedSong.id, data: ownCover)
+        precondition(management.coverData(importedSong) == ownCover, "Song cover takes priority over avatar")
+        await management.flushCollection()
+        let v6Restored = PlayerModel(audio: FakeAudioPlayer(), libraryRoot: managementRoot, demoURL: fixture)
+        await v6Restored.loadLibrary()
+        precondition(v6Restored.orderedSongs.map(\.id) == management.orderedSongs.map(\.id) && v6Restored.coverData(importedSong) == ownCover, "Background FIFO writes preserve latest order and cover after restart")
+        management.setCover(importedSong.id, data: nil)
+        precondition(management.coverData(importedSong) == art, "Removing own cover restores avatar")
+        let crop = CropGeometry.sourceRect(width: 1200, height: 800, side: 300, zoom: 1, offset: .zero)
+        precondition(crop == CGRect(x: 200, y: 0, width: 800, height: 800), "Landscape crop centers square without distortion")
+        let edgeCrop = CropGeometry.sourceRect(width: 800, height: 1200, side: 300, zoom: 2, offset: CGSize(width: 9999, height: -9999))
+        precondition(edgeCrop.minX >= 0 && edgeCrop.minY >= 0 && edgeCrop.maxX <= 800 && edgeCrop.maxY <= 1200, "Crop clamps within portrait source")
+        let scan = try await management.library.scanFolder(work)
+        precondition(!scan.songs.contains { $0.id == importedSong.id } && scan.duplicates > 0, "Folder scan excludes previously imported bytes")
+        let emptyScanRoot = work.appendingPathComponent("scan-empty-library")
+        let emptyScanner = LibraryStore(root: emptyScanRoot)
+        let independentScan = try await emptyScanner.scanFolder(fixture.deletingLastPathComponent())
+        precondition(independentScan.songs.contains { $0.name == fixture.deletingPathExtension().lastPathComponent }, "Folder scan returns selectable decoded audio")
+        let quietAudio = FakeAudioPlayer()
+        let quietModel = PlayerModel(audio: quietAudio, libraryRoot: work.appendingPathComponent("quiet-model"), demoURL: fixture)
+        quietModel.choose(.demo)
+        let controlCounts = [quietAudio.loadCalls, quietAudio.stopCalls, quietAudio.configurationCalls]
+        quietModel.editSong(.demo, title: "Quiet UI test", artistName: "Singer")
+        let quietArtist = quietModel.collection.artists.first!.id
+        quietModel.updateArtist(quietArtist, name: "Singer", avatar: art)
+        quietModel.setCover(AudioTrack.demo.id, data: ownCover)
+        quietModel.moveSong(AudioTrack.demo.id, to: AudioTrack.demo.id)
+        precondition(quietAudio.playing && [quietAudio.loadCalls, quietAudio.stopCalls, quietAudio.configurationCalls] == controlCounts, "Metadata/photo/order work does not reload, stop or configure audio")
+        let emptyScan = try await emptyScanner.scanFolder(emptyScanRoot)
+        precondition(emptyScan.songs.isEmpty, "Empty folder has no candidates")
+        print("PASS: V6 background persistence, song order/cover/avatar fallback, bounded crop and local scan deduplication")
         let uiRoot = work.appendingPathComponent("Experience")
         let uiAudio = FakeAudioPlayer()
         let uiModel = PlayerModel(audio: uiAudio, libraryRoot: uiRoot, demoURL: fixture)
@@ -230,6 +289,7 @@ import Combine
         precondition(!uiModel.isPlaying && uiModel.sleepSongsRemaining == nil, "Song limit wins over repeat and pauses")
         uiModel.choose(.demo); uiModel.sleepDeadline = .distantPast; uiModel.pollPlayback()
         precondition(!uiModel.isPlaying && uiModel.sleepDeadline == nil, "Expired timer pauses")
+        await uiModel.flushCollection()
         let uiReload = PlayerModel(audio: FakeAudioPlayer(), libraryRoot: uiRoot, demoURL: fixture)
         precondition(uiReload.rating(AudioTrack.demo.id) == 3 && uiReload.artist(.demo) == "New Artist" && uiReload.playCount(AudioTrack.demo.id, monthly: false) == 2, "Collection persistence round trip")
         await uiModel.importFiles([fixture])

@@ -1,30 +1,31 @@
 import Foundation
 
-struct SongDetails: Codable, Equatable {
+struct SongDetails: Codable, Equatable, Sendable {
     var title: String?
     var artistID: String?
+    var cover: Data?
     var rating: Int?
     var addedAt = Date()
 }
-struct MusicArtist: Codable, Identifiable, Equatable {
+struct MusicArtist: Codable, Identifiable, Equatable, Sendable {
     var id = UUID().uuidString
     var name: String
     var avatar: Data?
 }
-struct MusicPlaylist: Codable, Identifiable, Equatable {
+struct MusicPlaylist: Codable, Identifiable, Equatable, Sendable {
     var id = UUID().uuidString
     var name: String
     var trackIDs: [String] = []
 }
-struct ListeningEvent: Codable, Equatable {
+struct ListeningEvent: Codable, Equatable, Sendable {
     var trackID: String
     var date: Date
 }
-struct PlaylistAppearance: Codable, Equatable {
+struct PlaylistAppearance: Codable, Equatable, Sendable {
     var name: String?
     var artwork: Data?
 }
-struct MusicCollection: Codable, Equatable {
+struct MusicCollection: Codable, Equatable, Sendable {
     var version = 1
     var songs: [String: SongDetails] = [:]
     var artists: [MusicArtist] = []
@@ -36,6 +37,7 @@ struct MusicCollection: Codable, Equatable {
     var hiddenPlaylists: Set<String>?
     var artistOrder: [String]?
     var artistSort: String?
+    var songOrder: [String]?
 }
 
 extension PlayerModel {
@@ -89,7 +91,7 @@ extension PlayerModel {
     }
     func songs(in id: String) -> [AudioTrack] {
         switch id {
-        case "all": return tracks
+        case "all": return orderedSongs
         case "favorites": return tracks.filter { favorites.contains($0.id) }
         case "recent": return tracks.filter { !$0.isDemo && (collection.songs[$0.id]?.addedAt ?? .distantPast) >= Date().addingTimeInterval(-7 * 86400) }.sorted { (collection.songs[$0.id]?.addedAt ?? .distantPast) > (collection.songs[$1.id]?.addedAt ?? .distantPast) }
         case "liked": return tracks.filter { rating($0.id) >= 3 }
@@ -106,10 +108,29 @@ extension PlayerModel {
     }
     func persistCollection() {
         guard !collectionWriteBlocked else { return }
-        do {
-            try FileManager.default.createDirectory(at: libraryRoot, withIntermediateDirectories: true)
-            try JSONEncoder().encode(collection).write(to: libraryRoot.appendingPathComponent("collection-v1.json"), options: .atomic)
-        } catch { message = "曲庫分類儲存失敗：" + error.localizedDescription }
+        collectionWriter.enqueue(collection, to: libraryRoot.appendingPathComponent("collection-v1.json")) { [weak self] error in
+            Task { @MainActor in self?.message = "曲庫分類儲存失敗：" + error }
+        }
+    }
+    func flushCollection() async { await collectionWriter.flush() }
+    var orderedSongs: [AudioTrack] {
+        let order = collection.songOrder ?? []
+        let byID = Dictionary(uniqueKeysWithValues: tracks.map { ($0.id, $0) })
+        var seen = Set<String>()
+        return (order.compactMap { byID[$0] } + tracks).filter { seen.insert($0.id).inserted }
+    }
+    func moveSong(_ id: String, to target: String) {
+        var ids = orderedSongs.map(\.id)
+        guard let from = ids.firstIndex(of: id), let to = ids.firstIndex(of: target), from != to else { return }
+        ids.remove(at: from); ids.insert(id, at: to); collection.songOrder = ids
+    }
+    func coverData(_ track: AudioTrack) -> Data? {
+        if let cover = collection.songs[track.id]?.cover { return cover }
+        return collection.artists.first { $0.name == artist(track) }?.avatar
+    }
+    func setCover(_ id: String, data: Data?) {
+        guard tracks.contains(where: { $0.id == id }), data == nil || data!.count <= 5_000_000 else { return }
+        var info = details(id); info.cover = data; collection.songs[id] = info
     }
     func deleteAudioFile(_ track: AudioTrack) async {
         guard !track.isDemo else { message = "內建試聽音不提供檔案刪除。"; return }
@@ -117,7 +138,7 @@ extension PlayerModel {
         do {
             let imported = try await library.remove(track.id)
             tracks = [.demo] + imported
-            var state = collection; state.songs.removeValue(forKey: track.id)
+            var state = collection; state.songs.removeValue(forKey: track.id); state.songOrder?.removeAll { $0 == track.id }
             for index in state.playlists.indices { state.playlists[index].trackIDs.removeAll { $0 == track.id } }
             collection = state; favorites.remove(track.id); songBindings.removeValue(forKey: track.id)
             playbackQueue.removeAll { $0 == track.id }

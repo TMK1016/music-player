@@ -5,11 +5,21 @@ import SwiftUI
         savedData: SettingsMigration.sourceData(),
         onSave: { UserDefaults.standard.set($0, forKey: "orca.ui.settings.v1") }
     )
+    @Environment(\.scenePhase) private var scenePhase
     var body: some Scene {
         WindowGroup {
             ContentView(model: model)
                 .preferredColorScheme(.dark)
                 .tint(OrcaTheme.blue)
+                .onChange(of: scenePhase) { _, phase in
+                    guard phase == .background else { return }
+                    #if os(iOS)
+                    let lease = UIApplication.shared.beginBackgroundTask(withName: "Save music library", expirationHandler: nil)
+                    Task { await model.flushCollection(); if lease != .invalid { UIApplication.shared.endBackgroundTask(lease) } }
+                    #else
+                    Task { await model.flushCollection() }
+                    #endif
+                }
                 #if os(macOS)
                 .frame(minWidth: 360, minHeight: 650)
                 #endif

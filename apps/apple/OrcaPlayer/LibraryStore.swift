@@ -123,11 +123,22 @@ actor LibraryStore {
         if exists { try? FileManager.default.removeItem(at: quarantine) }
         return tracks
     }
-    private func hash(_ url: URL) throws -> String {
+    func hash(_ url: URL) throws -> String {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         var hasher = SHA256()
-        while let data = try handle.read(upToCount: 1_048_576), !data.isEmpty { hasher.update(data: data) }
+        while true {
+            try Task.checkCancellation()
+            // Foundation's bridged read buffers may be autoreleased. A long actor
+            // job has no per-iteration pool; drain each chunk instead of retaining
+            // gigabytes until the entire scan/import finishes.
+            let count: Int = try autoreleasepool {
+                guard let data = try handle.read(upToCount: 1_048_576), !data.isEmpty else { return 0 }
+                hasher.update(data: data)
+                return data.count
+            }
+            if count == 0 { break }
+        }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 }

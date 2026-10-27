@@ -3,6 +3,171 @@
   "updated_at": "2026-10-27",
   "entries": [
     {
+      "id": "release-0-13",
+      "version": "v0.13.1",
+      "date": "2026-10-27",
+      "title": "V6 播放穩定、封面與曲庫整理",
+      "summary": "右側抽屜、背景圖片與存檔、歌曲排序／封面裁剪、資料夾雷達搜尋與問題追蹤。",
+      "changes": [
+        {
+          "id": "v013-continuity",
+          "title": "互動期間播放穩定修正",
+          "summary": "抽屜常駐輸出元件，照片背景縮圖／快取及FIFO存檔，首次播放請求I/O緩衝；雜音真機聽測另驗。；真機掃描發現記憶體超限，追加每塊／每檔暫存釋放與512 MiB壓力回歸，最終build17。",
+          "node_ids": [
+            "PLAY-01",
+            "UI-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ArtworkPipeline.swift",
+              "label": "ArtworkPipeline.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/CollectionWriter.swift",
+              "label": "CollectionWriter.swift"
+            },
+            {
+              "path": "docs/zh-TW/V6播放穩定與曲庫管理-v013.md",
+              "label": "V6規格與驗收"
+            },
+            {
+              "path": "docs/zh-TW/問題追蹤日誌.md",
+              "label": "問題追蹤日誌"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryStore.swift",
+              "label": "分塊雜湊與記憶體修復"
+            }
+          ]
+        },
+        {
+          "id": "v013-library",
+          "title": "自訂歌曲排序與操作面板",
+          "summary": "全部歌曲支援保存排序、歌手大頭貼與亮邊；⋯集中收藏／評分／編輯／清單／確認刪檔。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "HomeLibrary.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/SongActionsSheet.swift",
+              "label": "SongActionsSheet.swift"
+            },
+            {
+              "path": "docs/zh-TW/V6播放穩定與曲庫管理-v013.md",
+              "label": "V6規格與驗收"
+            },
+            {
+              "path": "docs/zh-TW/問題追蹤日誌.md",
+              "label": "問題追蹤日誌"
+            }
+          ]
+        },
+        {
+          "id": "v013-artwork",
+          "title": "歌曲封面與照片裁剪",
+          "summary": "個別封面優先、無封面使用歌手頭貼；共用中央裁剪框、縮放與置中。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ArtworkPipeline.swift",
+              "label": "ArtworkPipeline.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/CropGeometry.swift",
+              "label": "CropGeometry.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryManagement.swift",
+              "label": "LibraryManagement.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "MusicCollection.swift"
+            },
+            {
+              "path": "docs/zh-TW/V6播放穩定與曲庫管理-v013.md",
+              "label": "V6規格與驗收"
+            },
+            {
+              "path": "docs/zh-TW/問題追蹤日誌.md",
+              "label": "問題追蹤日誌"
+            }
+          ]
+        },
+        {
+          "id": "v013-scan",
+          "title": "授權資料夾搜尋與勾選匯入",
+          "summary": "設定新增本機搜尋：旋轉雷達、內容排重、候選勾選匯入；簡化設定、強化迷你播放器辨識。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "settings",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryScan.swift",
+              "label": "LibraryScan.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LocalMusicSearch.swift",
+              "label": "LocalMusicSearch.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "docs/zh-TW/V6播放穩定與曲庫管理-v013.md",
+              "label": "V6規格與驗收"
+            },
+            {
+              "path": "docs/zh-TW/問題追蹤日誌.md",
+              "label": "問題追蹤日誌"
+            }
+          ]
+        },
+        {
+          "id": "v013-issues",
+          "title": "歷史問題與驗證狀態",
+          "summary": "記錄已回報錯誤、歷史處理及尚待真機驗證項目，不把風險修正冒稱雜音根治。",
+          "node_ids": [
+            "PLAY-01",
+            "UI-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V6播放穩定與曲庫管理-v013.md",
+              "label": "V6規格與驗收"
+            },
+            {
+              "path": "docs/zh-TW/問題追蹤日誌.md",
+              "label": "問題追蹤日誌"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-0-12",
       "version": "v0.12.0",
       "date": "2026-10-27",
