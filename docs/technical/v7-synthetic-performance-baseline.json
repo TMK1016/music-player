@@ -1,0 +1,42 @@
+{
+  "date" : "2026-10-28",
+  "rows" : [
+    {
+      "artists" : 10,
+      "candidate_combined_aggregation_ms" : 1.0309999925084412,
+      "current_artist_groups_ms" : 26.224208340863697,
+      "current_monthly_ranking_ms" : 61.605833339854144,
+      "equivalent_results" : true,
+      "events" : 600,
+      "tracks" : 150
+    },
+    {
+      "artists" : 100,
+      "candidate_combined_aggregation_ms" : 3.2877916673896834,
+      "current_artist_groups_ms" : 20229.290499992203,
+      "current_monthly_ranking_ms" : 1.2775833456544206,
+      "equivalent_results" : true,
+      "events" : 0,
+      "tracks" : 1230
+    },
+    {
+      "artists" : 100,
+      "candidate_combined_aggregation_ms" : 9.2472916730912402,
+      "current_artist_groups_ms" : 17537.432291661389,
+      "current_monthly_ranking_ms" : 2871.3164166692877,
+      "equivalent_results" : true,
+      "events" : 4920,
+      "tracks" : 1230
+    },
+    {
+      "artists" : 200,
+      "candidate_combined_aggregation_ms" : 11.184791670530103,
+      "current_artist_groups_ms" : 72458.439249996445,
+      "current_monthly_ranking_ms" : 2853.3627500000875,
+      "equivalent_results" : true,
+      "events" : 4920,
+      "tracks" : 1230
+    }
+  ],
+  "scope" : "macOS arm64 CLI -O; one synthetic sample per case; view computations only, not device\/UI\/audio measurements"
+}

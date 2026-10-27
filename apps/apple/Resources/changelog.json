@@ -1,7 +1,93 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-27",
+  "updated_at": "2026-10-28",
   "entries": [
+    {
+      "id": "v7-assessment-20261028",
+      "version": "V7 評估",
+      "date": "2026-10-28",
+      "title": "V7 效能與音訊架構評估（尚未實作）",
+      "summary": "完成來源檢查、合成計算探針、常見載入方案與8張圖需求整理；產品仍為0.13.1／17，未部署V7。",
+      "changes": [
+        {
+          "id": "v7-assessment-performance",
+          "title": "千首曲庫計算基準與載入方案評估",
+          "summary": "已確認重複分組／榜單計算成本；比較索引快取、可見列及50筆分批。僅隔離探針，尚未接入App。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V7效能與音訊架構評估.md",
+              "label": "V7效能方案與驗收"
+            },
+            {
+              "path": "apps/apple/Tests/LibraryPerformanceProbe.swift",
+              "label": "隔離計算探針"
+            },
+            {
+              "path": "scripts/benchmark_library.py",
+              "label": "重現腳本"
+            },
+            {
+              "path": "docs/technical/v7-synthetic-performance-baseline.json",
+              "label": "原始量測"
+            }
+          ]
+        },
+        {
+          "id": "v7-assessment-audio",
+          "title": "V6後雜音仍存在，重新取證",
+          "summary": "保留使用者回報；區分主執行緒計算、系統即時渲染與藍牙／DSP問題，未宣稱根治或更換後端。",
+          "node_ids": [
+            "PLAY-01",
+            "UI-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V7效能與音訊架構評估.md",
+              "label": "音訊取證與架構邊界"
+            },
+            {
+              "path": "docs/zh-TW/問題追蹤日誌.md",
+              "label": "未解決問題追蹤"
+            }
+          ]
+        },
+        {
+          "id": "v7-assessment-ui",
+          "title": "V7八張標註圖與排序／鎖屏缺漏",
+          "summary": "自訂順序Label無按鈕、系統播放資訊缺封面已確認；表單、評分、工具盤、迷你播放器及模式密度列為下一步草案。",
+          "node_ids": [
+            "UI-01",
+            "PLAY-01",
+            "PROFILE-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V7效能與音訊架構評估.md",
+              "label": "八張圖的下一步規格"
+            },
+            {
+              "path": "docs/en/v7-performance-audio-assessment.md",
+              "label": "完整英文需求"
+            },
+            {
+              "path": "docs/design/references/v7/Pasted image 20261028011748.png",
+              "label": "歌曲編輯參考"
+            },
+            {
+              "path": "docs/design/references/v7/Pasted image 20261028011814.png",
+              "label": "迷你播放器參考"
+            }
+          ]
+        }
+      ]
+    },
     {
       "id": "release-0-13",
       "version": "v0.13.1",
