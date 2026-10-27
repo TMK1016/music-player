@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 
 @MainActor enum LibraryIndexChecks {
     static func run(work: URL, fixture: URL) async throws {
@@ -52,6 +53,14 @@ import Foundation
         precondition(expired.playlistIDs["recent"]?.isEmpty != false, "Seven-day categories rebuild at expiry")
         await model.warmLibraryIndex()
         precondition(model.libraryIndex.tracks.count == 10000, "Background snapshot can warm same complete index")
+        model.cachedLibraryIndex?.expiresAt = .distantPast
+        var expiryUpdates = 0
+        let expiryObserver = model.objectWillChange.sink { expiryUpdates += 1 }
+        model.pollPlayback()
+        precondition(expiryUpdates == 1 && (model.cachedLibraryIndex?.expiresAt ?? .distantFuture) > Date(), "Expired date categories notify visible UI exactly once")
+        model.pollPlayback()
+        precondition(expiryUpdates == 1, "Polling an invalid index does not repeatedly invalidate UI")
+        expiryObserver.cancel()
         let writer = CollectionWriter()
         let url = root.appendingPathComponent("coalesced.json")
         var written = MusicCollection()

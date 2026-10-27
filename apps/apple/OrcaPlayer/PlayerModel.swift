@@ -390,10 +390,13 @@ private struct SavedSettings: Codable {
         return false
     }
     func pollPlayback(now: Double = ProcessInfo.processInfo.systemUptime) {
+        if let index = cachedLibraryIndex, Date() >= index.expiresAt {
+            invalidateLibraryIndex()
+            objectWillChange.send()
+        }
         if isPlaying { accountPlayback(now: now); currentTime = audio.currentTime }
         _ = expireSleepTimer()
         updateNowPlaying()
-        if let index = cachedLibraryIndex, Date() >= index.expiresAt { invalidateLibraryIndex() }
     }
     private func accountPlayback(now: Double = ProcessInfo.processInfo.systemUptime, finalPosition: Double? = nil) {
         guard isPlaying else { return }
