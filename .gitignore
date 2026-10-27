@@ -15,3 +15,6 @@
 media/
 downloads/
 artifacts/
+
+# Local offline restore bundles; never recursively upload repository backups.
+backups/local/
