@@ -20,15 +20,7 @@ struct MusicHomeView: View {
     @ViewState private var hiddenLists = false
     @ViewState private var sortingArtists = false
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: 18) {
-            if model.showLibrarySearch {
-                TextField("搜尋歌曲或歌手", text: $model.search).textFieldStyle(.roundedBorder)
-                if !model.search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    let found = model.filteredTracks
-                    if found.isEmpty { Text("找不到符合的歌曲").foregroundStyle(OrcaTheme.muted) }
-                    ForEach(found) { CollectionSongRow(model: model, track: $0, queue: found, queueName: "搜尋結果") }
-                }
-            }
+        VStack(alignment: .leading, spacing: 18) {
             if !model.importSummary.isEmpty { Text(model.importSummary).font(.caption).foregroundStyle(OrcaTheme.cyan) }
             Picker("曲庫", selection: $section) {
                 ForEach(["播放清單", "歌手列表", "全部歌曲"], id: \.self) { Text($0) }
@@ -36,15 +28,12 @@ struct MusicHomeView: View {
             if section == "播放清單" { playlistRows }
             else if section == "歌手列表" { artistRows }
             else {
-                ForEach(model.tracks) { CollectionSongRow(model: model, track: $0, queue: model.tracks) }
+                LazyVStack(spacing: 12) { ForEach(model.tracks) { CollectionSongRow(model: model, track: $0, queue: model.tracks).id("all-song:" + $0.id) } }.id("all-songs-section")
             }
             Divider()
             Text("排行榜").font(.title3.weight(.semibold))
             Picker("排行榜範圍", selection: $monthly) { Text("當月").tag(true); Text("累計").tag(false) }.pickerStyle(.segmented).labelsHidden()
             rankingRows
-        }
-        .confirmationDialog("歌手排序", isPresented: $sortingArtists, titleVisibility: .visible) {
-            ForEach(["歌曲數目", "名字筆畫", "喜好高低", "自訂順序"], id: \.self) { value in Button(value) { model.collection.artistSort = value } }
         }
         .sheet(isPresented: $newList) { newPlaylist }
         .sheet(isPresented: Binding(get: { editingPlaylist != nil }, set: { if !$0 { editingPlaylist = nil } })) {
@@ -60,7 +49,7 @@ struct MusicHomeView: View {
         }
     }
     private var playlistRows: some View {
-        Group {
+        VStack(alignment: .leading, spacing: 12) {
             if model.visiblePlaylistIDs.isEmpty { Text("匯入、收藏或評分後，對應清單會出現在這裡。也可以建立自己的清單。").font(.subheadline).foregroundStyle(OrcaTheme.muted) }
             ForEach(model.visiblePlaylistIDs, id: \.self) { id in
                 HStack(spacing: 0) {
@@ -68,7 +57,7 @@ struct MusicHomeView: View {
                         HStack(spacing: 14) {
                             LibraryArtwork(data: model.collection.playlistAppearance?[id]?.artwork, symbol: id == "favorites" ? "heart.fill" : "music.note.list")
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(model.playlistTitle(id)).foregroundStyle(.white).lineLimit(1)
+                                Text(model.playlistTitle(id)).foregroundStyle(id.hasPrefix("stars") ? OrcaTheme.star : .white).lineLimit(1)
                                 Text("\(model.songs(in: id).count) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
                             }
                             Spacer(minLength: 4)
@@ -76,7 +65,6 @@ struct MusicHomeView: View {
                         }.padding(.vertical, 8).padding(.leading, 8).padding(.trailing, 4)
                             .frame(maxWidth: .infinity, minHeight: 72).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel("\(model.playlistTitle(id))，\(expandedPlaylist == id ? "收合" : "展開")")
-                    PlaylistMembershipButton(model: model, playlistID: id, trackID: model.selectedID) { expandedPlaylist = expandedPlaylist == id ? nil : id }
                 }
                 .background(expandedPlaylist == id ? OrcaTheme.blue.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 14))
                 .contextMenu {
@@ -89,11 +77,11 @@ struct MusicHomeView: View {
                 }
                 .onDrag { draggedPlaylist = id; return NSItemProvider(object: id as NSString) }
                 .onDrop(of: [.text], delegate: LibraryReorderDrop(target: id, dragged: $draggedPlaylist) { source, target in model.movePlaylist(source, to: target) })
-                .accessibilityHint("長按編輯或上下拖曳排序，右側可管理目前歌曲是否加入")
+                .accessibilityHint("點擊整列展開或收合；長按編輯或上下拖曳排序")
                 if expandedPlaylist == id {
-                    ForEach(model.songs(in: id)) { song in
-                        CollectionSongRow(model: model, track: song, queue: model.songs(in: id), playlistID: id, queueName: model.playlistTitle(id))
-                    }
+                    LazyVStack(spacing: 12) { ForEach(model.songs(in: id)) { song in
+                        CollectionSongRow(model: model, track: song, queue: model.songs(in: id), playlistID: id, queueName: model.playlistTitle(id)).id("playlist:" + id + ":" + song.id)
+                    } }.id("playlist-songs:" + id)
                 }
             }
             Button { name = ""; listError = nil; newList = true } label: { Label("新增播放清單", systemImage: "plus.circle").frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle()) }.buttonStyle(.plain)
@@ -125,12 +113,22 @@ struct MusicHomeView: View {
         }
     }
     private var artistRows: some View {
-        Group {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Spacer()
                 Button { sortingArtists = true } label: {
-                    Label(artistSort, systemImage: "arrow.up.arrow.down").foregroundStyle(.white).frame(minHeight: 44).contentShape(Rectangle())
+                    Label(artistSort, systemImage: "arrow.up.arrow.down").font(.subheadline).foregroundStyle(.white).frame(minHeight: 44).contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel("歌手排序：\(artistSort)")
+                    .popover(isPresented: $sortingArtists, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(["歌曲數目", "名字筆畫", "喜好高低", "自訂順序"], id: \.self) { value in
+                                Button { model.collection.artistSort = value; sortingArtists = false } label: {
+                                    HStack { Text(value); Spacer(); if artistSort == value { Image(systemName: "checkmark") } }
+                                        .font(.subheadline).foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                                }.buttonStyle(.plain)
+                            }
+                        }.padding(12).frame(width: 180).presentationCompactAdaptation(.popover).presentationBackground(OrcaTheme.sheet)
+                    }
             }
             ForEach(groups, id: \.self) { name in
                 let key = model.artistKey(name)
@@ -153,7 +151,7 @@ struct MusicHomeView: View {
                         model.moveArtist(source, to: target, in: groups.map { model.artistKey($0) }); model.collection.artistSort = "自訂順序"
                     })
                 if expandedArtist == key {
-                    ForEach(songs) { CollectionSongRow(model: model, track: $0, queue: songs, queueName: name) }.padding(.leading, 8)
+                    LazyVStack(spacing: 12) { ForEach(songs) { CollectionSongRow(model: model, track: $0, queue: songs, queueName: name).id("artist:" + key + ":" + $0.id) } }.id("artist-songs:" + key).padding(.leading, 8)
                 }
             }
         }
@@ -168,16 +166,16 @@ struct MusicHomeView: View {
             let a = model.playCount($0.id, monthly: monthly), b = model.playCount($1.id, monthly: monthly)
             return a == b ? model.title($0) < model.title($1) : a > b
         }
-        return Group {
+        return VStack(alignment: .leading, spacing: 12) {
             if ranked.isEmpty { Text("尚無達標播放紀錄").foregroundStyle(OrcaTheme.muted) }
             ForEach(Array(ranked.prefix(10).enumerated()), id: \.element.id) { index, song in
                 HStack(spacing: 10) {
                     Text("\(index + 1)").monospacedDigit().frame(width: 24)
                     Button { model.play(song, queue: ranked, contextName: monthly ? "當月排行榜" : "累計排行榜") } label: {
-                        Text(model.title(song)).lineLimit(1).foregroundStyle(OrcaTheme.ink).frame(maxWidth: .infinity, minHeight: 48, alignment: .leading).padding(.horizontal, 12).background(.white, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
+                        Text(model.title(song)).lineLimit(1).foregroundStyle(OrcaTheme.text).frame(maxWidth: .infinity, minHeight: 48, alignment: .leading).padding(.horizontal, 12).background(OrcaTheme.panel, in: RoundedRectangle(cornerRadius: 12)).contentShape(Rectangle())
                     }.buttonStyle(.plain)
                     Text("\(model.playCount(song.id, monthly: monthly))次").font(.caption.monospacedDigit()).frame(minWidth: 36)
-                }
+                }.id("ranking:" + (monthly ? "month:" : "all:") + song.id)
             }
         }
     }

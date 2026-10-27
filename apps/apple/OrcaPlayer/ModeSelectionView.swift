@@ -22,7 +22,7 @@ struct ModeSelectionStrip: View {
                                         select(option.id)
                                         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) { reader.scrollTo(option.id, anchor: .center) }
                                     } label: {
-                                        Text(option.name).font(.subheadline.weight(.medium)).lineLimit(1)
+                                        Text(option.name).font(.caption.weight(.medium)).lineLimit(1)
                                             .frame(width: 100, height: 44)
                                             .foregroundStyle(model.presetName == option.name ? OrcaTheme.cyan : OrcaTheme.text)
                                             .background(model.presetName == option.name ? OrcaTheme.blue.opacity(0.25) : OrcaTheme.background, in: RoundedRectangle(cornerRadius: 10))

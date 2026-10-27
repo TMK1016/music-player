@@ -80,3 +80,11 @@ struct SleepCountdownStatus: View {
         }
     }
 }
+
+extension View {
+    func songEditorField() -> some View {
+        self.textFieldStyle(.plain).padding(.horizontal, 12).frame(minHeight: 44)
+            .foregroundStyle(OrcaTheme.ink).background(Color.white, in: RoundedRectangle(cornerRadius: 10)).tint(OrcaTheme.blue)
+            .environment(\.colorScheme, .light)
+    }
+}

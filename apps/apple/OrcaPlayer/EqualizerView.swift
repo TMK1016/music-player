@@ -162,12 +162,14 @@ struct InlineTuningPanel: View {
                         }
                     }
                 } else {
+                    let modeHeight: CGFloat = geometry.size.height < 350 ? 44 : 90
+                    let pairedHeight = max(50, (geometry.size.height - 16 - 44 - 44 - modeHeight - 16) / 2)
                     VStack(spacing: 4) {
                         controls
                         bass
                         EQCurve(gains: model.eqEnabled ? model.gains : EQBands.flat)
-                            .frame(maxHeight: .infinity).accessibilityLabel("等化器增益示意，並非量測響應").contentShape(Rectangle()).gesture(returnGesture)
-                        SevenBandControls(model: model).frame(height: max(78, min(140, geometry.size.height * 0.24)))
+                            .frame(height: pairedHeight).accessibilityLabel("等化器增益示意，並非量測響應").contentShape(Rectangle()).gesture(returnGesture)
+                        SevenBandControls(model: model).frame(height: pairedHeight)
                         ModeSelectionStrip(model: model, useSongPolicy: useSongPolicy, compact: geometry.size.height < 350)
                     }
                 }
@@ -195,7 +197,7 @@ struct InlineTuningPanel: View {
                 .accessibilityLabel("低音增強，10段，0至9 dB")
                 .accessibilityValue(String(format: "%.1f dB", model.bassBoost)).disabled(!model.eqEnabled)
             Text(String(format: "%.1f", model.bassBoost)).font(.caption.monospacedDigit()).frame(width: 28)
-        }.padding(.horizontal, 10).frame(height: 44).background(Color.white, in: RoundedRectangle(cornerRadius: 12)).foregroundStyle(OrcaTheme.ink).tint(OrcaTheme.blue)
+        }.padding(.horizontal, 10).frame(height: 44).background(OrcaTheme.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 12)).overlay(RoundedRectangle(cornerRadius: 12).stroke(OrcaTheme.line)).foregroundStyle(OrcaTheme.text).tint(OrcaTheme.cyan)
     }
 }
 struct SevenBandControls: View {

@@ -90,14 +90,14 @@ import Combine
         management.togglePlaylistMembership(importedSong.id, "stars4")
         precondition(management.rating(importedSong.id) == 5, "Automatic membership cannot silently change rating")
         management.togglePlaylistMembership(importedSong.id, "favorites")
-        precondition(management.containsSong(importedSong.id, inPlaylist: "favorites"), "Favorite check activates on home")
+        precondition(management.containsSong(importedSong.id, inPlaylist: "favorites"), "Favorite membership can be changed from song picker")
         management.createPlaylist("旅途")
         management.createPlaylist("晚間")
         let firstList = management.collection.playlists[0].id, secondList = management.collection.playlists[1].id
         management.togglePlaylistMembership(importedSong.id, firstList)
-        precondition(management.containsSong(importedSong.id, inPlaylist: firstList), "Home check inserts song")
+        precondition(management.containsSong(importedSong.id, inPlaylist: firstList), "Playlist picker inserts song")
         management.togglePlaylistMembership(importedSong.id, firstList)
-        precondition(!management.containsSong(importedSong.id, inPlaylist: firstList) && management.tracks.contains(importedSong), "Home check removes membership and retains file")
+        precondition(!management.containsSong(importedSong.id, inPlaylist: firstList) && management.tracks.contains(importedSong), "Playlist picker removes membership and retains file")
         let art = Data([1,2,3])
         precondition(management.updatePlaylist(firstList, name: "公路", artwork: art), "Playlist appearance edit saves")
         precondition(!management.updatePlaylist(firstList, name: "晚間", artwork: nil), "Duplicate playlist names rejected without overwriting")
@@ -109,6 +109,8 @@ import Combine
         management.collection.artistOrder = [editable.id]
         management.collection.artistSort = "自訂順序"
         management.hidePlaylist(firstList, hidden: true)
+        precondition(!management.visiblePlaylistIDs.contains(firstList) && management.playlistPickerIDs.contains(firstList), "Hidden custom lists remain available in song membership picker")
+        precondition(Set(management.playlistPickerIDs).count == management.playlistPickerIDs.count && management.playlistPickerIDs.contains("favorites"), "Picker has unique choices and includes Favorites")
         let reloadedManagement = PlayerModel(audio: FakeAudioPlayer(), libraryRoot: managementRoot, demoURL: fixture)
         await reloadedManagement.loadLibrary()
         precondition(reloadedManagement.collection.hiddenPlaylists?.contains(firstList) == true && reloadedManagement.playlistTitle(firstList) == "公路" && reloadedManagement.collection.playlistAppearance?[firstList]?.artwork == art, "Hidden status, name and artwork persist")

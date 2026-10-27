@@ -6,17 +6,16 @@ struct TrackPlaylistEditor: View {
     @Environment(\.dismiss) private var dismiss
     @ViewState private var name = ""
     @ViewState private var error: String?
-    @ViewState private var deleting: String?
     var body: some View {
         NavigationStack {
             List {
                 Section("所屬播放清單") {
-                    ForEach(model.visiblePlaylistIDs, id: \.self) { id in
+                    ForEach(model.playlistPickerIDs, id: \.self) { id in
                         HStack {
                             Button {
                                 if !model.isSystemPlaylist(id) || id == "favorites" { model.togglePlaylistMembership(trackID, id) }
                             } label: {
-                                HStack { Text(model.playlistTitle(id)); Spacer(); Image(systemName: model.containsSong(trackID, inPlaylist: id) ? "checkmark.circle.fill" : "circle").foregroundStyle(model.containsSong(trackID, inPlaylist: id) ? .green : OrcaTheme.muted) }
+                                HStack { Text(model.playlistTitle(id)).foregroundStyle(id.hasPrefix("stars") ? OrcaTheme.star : OrcaTheme.text); Spacer(); Image(systemName: model.containsSong(trackID, inPlaylist: id) ? "checkmark.circle.fill" : "circle").foregroundStyle(model.containsSong(trackID, inPlaylist: id) ? .green : OrcaTheme.muted) }
                                     .frame(maxWidth: .infinity, minHeight: 48).contentShape(Rectangle())
                             }.buttonStyle(.plain).disabled(model.isSystemPlaylist(id) && id != "favorites")
                         }
@@ -29,12 +28,9 @@ struct TrackPlaylistEditor: View {
                     Button("建立並加入目前歌曲") { create() }
                 }
                 Section { Text("點擊清單可加入／移除目前歌曲，音檔會保留。評分與最近新增清單僅顯示自動分類狀態。").font(.caption) }
-            }.navigationTitle("播放清單")
+            }.scrollContentBackground(.hidden).navigationTitle("加入播放清單")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
-        }.frame(minWidth: 300, minHeight: 350)
-            .confirmationDialog("刪除整份播放清單？音樂檔案會保留。", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
-                Button("刪除清單", role: .destructive) { if let id = deleting { model.deletePlaylist(id) }; deleting = nil }
-            }
+        }.frame(minWidth: 300, minHeight: 350).themedSheet()
     }
     private func create() {
         let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -51,17 +47,31 @@ struct SleepTimerEditor: View {
     @Environment(\.dismiss) private var dismiss
     @ViewState private var bySongs = false
     @ViewState private var amount = 10
-    @ViewState private var custom = false
+    @ViewState private var selectedChoice = 10
     private var limit: Int { bySongs ? 100 : 120 }
+    private var presets: [Int] { bySongs ? [3, 5, 10] : [5, 10, 20] }
     var body: some View {
-        VStack(spacing: 16) {
-            HStack { Text("睡眠模式").font(.title2.bold()); Spacer(); Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }.accessibilityLabel("關閉睡眠模式") }
-            Picker("倒數方式", selection: $bySongs) { Text("計時倒數").tag(false); Text("歌曲倒數").tag(true) }.pickerStyle(.segmented)
-                .onChange(of: bySongs) { _, value in amount = value ? 3 : 10 }
-            ScrollView {
-                VStack(spacing: 12) {
-            if custom {
-                Picker(bySongs ? "首數" : "分鐘", selection: $amount) {
+        VStack(spacing: 14) {
+            HStack {
+                Text("睡眠模式").font(.title2.bold()); Spacer()
+                Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }.accessibilityLabel("關閉睡眠模式")
+            }
+            Picker("倒數方式", selection: $bySongs) { Text("計時倒數").tag(false); Text("歌曲倒數").tag(true) }.pickerStyle(.segmented).labelsHidden()
+                .onChange(of: bySongs) { _, value in amount = value ? 3 : 10; selectedChoice = amount }
+            ScrollView { VStack(spacing: 12) {
+            Picker("倒數選擇", selection: $selectedChoice) {
+                ForEach(presets, id: \.self) { value in Text("\(value) \(bySongs ? "首歌" : "分鐘")").tag(value) }
+                Text("自訂\(bySongs ? "首數" : "時間")").tag(-1)
+            }
+            #if os(iOS)
+            .pickerStyle(.wheel)
+            #else
+            .pickerStyle(.inline)
+            #endif
+            .frame(height: 150).clipped()
+                .onChange(of: selectedChoice) { _, value in if value > 0 { amount = value } }
+            if selectedChoice == -1 {
+                Picker(bySongs ? "自訂首數" : "自訂分鐘", selection: $amount) {
                     ForEach(1...limit, id: \.self) { value in Text("\(value) \(bySongs ? "首歌" : "分鐘")").tag(value) }
                 }
                 #if os(iOS)
@@ -69,34 +79,23 @@ struct SleepTimerEditor: View {
                 #else
                 .pickerStyle(.menu)
                 #endif
-                .frame(height: 140).clipped()
-                Button("返回預設選擇") { custom = false }.frame(minHeight: 44)
-            } else {
-                ForEach(bySongs ? [3, 5, 10] : [5, 10, 20], id: \.self) { value in
-                    Button { amount = value } label: {
-                        HStack { Text("\(value) \(bySongs ? "首歌" : "分鐘")"); Spacer(); if amount == value { Image(systemName: "checkmark.circle.fill") } }
-                            .frame(maxWidth: .infinity, minHeight: 44).padding(.horizontal, 12).contentShape(Rectangle()).background(amount == value ? OrcaTheme.blue.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 12))
-                    }.buttonStyle(.plain).accessibilityAddTraits(amount == value ? [.isSelected] : [])
-                }
-                Button("自訂\(bySongs ? "首數" : "時間")（最多\(limit)\(bySongs ? "首" : "分鐘")）") { custom = true }.frame(minHeight: 44)
+                .frame(height: 110).clipped()
             }
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 let end = bySongs ? model.estimatedEnd(afterSongs: amount) : context.date.addingTimeInterval(Double(amount) * 60)
                 Text("預計結束 \(end.formatted(date: .omitted, time: .shortened))\(bySongs ? "（估計）" : "")").font(.caption).foregroundStyle(OrcaTheme.muted)
             }
             SleepCountdownStatus(model: model)
-            Text(bySongs ? "自然播完才扣除；包含目前歌曲與重播，跳歌不扣除。" : "暫停時倒數仍持續；重開App不保留倒數。")
-                .font(.caption).foregroundStyle(OrcaTheme.muted)
-                }.frame(maxWidth: .infinity)
-            }
+            }.frame(maxWidth: .infinity) }
+            Spacer(minLength: 0)
             HStack(spacing: 16) {
                 Button { model.cancelSleep(); dismiss() } label: { Label("取消倒數", systemImage: "xmark").frame(maxWidth: .infinity, minHeight: 48) }
                     .buttonStyle(.plain).foregroundStyle(.white).background(Color.red.opacity(0.8), in: RoundedRectangle(cornerRadius: 14)).disabled(model.sleepDeadline == nil && model.sleepSongsRemaining == nil)
-                Button { if bySongs { model.scheduleSleep(songs: amount) } else { model.scheduleSleep(minutes: amount) }; dismiss() } label: {
-                    Label("開始倒數", systemImage: "play.fill").frame(maxWidth: .infinity, minHeight: 48)
-                }.buttonStyle(.plain).foregroundStyle(.white).background(Color(red: 0.08, green: 0.48, blue: 0.25), in: RoundedRectangle(cornerRadius: 14)).disabled(!(1...limit).contains(amount))
+                Button { if bySongs { model.scheduleSleep(songs: amount) } else { model.scheduleSleep(minutes: amount) }; dismiss() } label: { Label("開始倒數", systemImage: "play.fill").frame(maxWidth: .infinity, minHeight: 48) }
+                    .buttonStyle(.plain).foregroundStyle(.white).background(Color(red: 0.08, green: 0.48, blue: 0.25), in: RoundedRectangle(cornerRadius: 14)).disabled(!(1...limit).contains(amount))
             }
-        }.padding(24).frame(minWidth: 300, idealHeight: 560).themedSheet().presentationDetents([.height(560), .large])
+        }.padding(20).frame(minWidth: 300, idealHeight: selectedChoice == -1 ? 590 : 480).themedSheet()
+            .presentationDetents(selectedChoice == -1 ? [.height(590), .large] : [.height(480), .large])
     }
 }
 

@@ -62,27 +62,6 @@ struct ArtworkChooser: View {
         data = bytes; error = nil
     }
 }
-struct PlaylistMembershipButton: View {
-    @ObservedObject var model: PlayerModel
-    let playlistID: String
-    let trackID: String
-    var onStatusTap: () -> Void = {}
-    private var member: Bool { model.containsSong(trackID, inPlaylist: playlistID) }
-    private var editable: Bool { !model.isSystemPlaylist(playlistID) || playlistID == "favorites" }
-    var body: some View {
-        Group {
-            if editable {
-                Button { model.togglePlaylistMembership(trackID, playlistID) } label: {
-                    Image(systemName: member ? "checkmark.circle.fill" : "plus.circle").foregroundStyle(member ? .green : OrcaTheme.muted).frame(width: 44, height: 56).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityLabel("\(member ? "將目前歌曲移出" : "將目前歌曲加入")\(model.playlistTitle(playlistID))")
-            } else {
-                Image(systemName: member ? "checkmark.circle.fill" : "circle").foregroundStyle(member ? .green : OrcaTheme.muted).frame(width: 44, height: 56)
-                    .contentShape(Rectangle()).onTapGesture(perform: onStatusTap)
-                    .accessibilityLabel("目前歌曲\(member ? "符合" : "不符合")\(model.playlistTitle(playlistID))自動分類")
-            }
-        }
-    }
-}
 struct PlaylistDetailsEditor: View {
     @ObservedObject var model: PlayerModel
     let playlistID: String

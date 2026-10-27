@@ -9,7 +9,7 @@ struct ContentView: View {
             HStack(spacing: 0) {
                 if wide { sidebar.frame(width: 210) }
                 VStack(spacing: 0) {
-                    if model.page != .player { header(wide: wide) }
+                    if model.page != .player && !(model.page == .library && model.showLibrarySearch) { header(wide: wide) }
                     if model.page == .player {
                         MusicPlayerPage(model: model)
                     } else if model.page == .equalizer {
@@ -19,12 +19,12 @@ struct ContentView: View {
                             switch model.page {
                             case .settings: MusicSettingsView(model: model)
                             case .player: MusicPlayerPage(model: model)
-                            case .library: MusicHomeView(model: model)
+                            case .library: if model.showLibrarySearch { LibrarySearchView(model: model) } else { MusicHomeView(model: model) }
                             case .equalizer: EqualizerPage(model: model)
                             case .developmentLog: DevelopmentLogView(model: model)
                             }
                         }.padding(wide ? 28 : (model.page == .equalizer ? 12 : 20))
-                    }.id(model.page.rawValue) }
+                    }.id(model.page.rawValue + (model.showLibrarySearch ? ".search" : ".browse")) }
                     if model.hasPlaybackSession && model.page != .player { CompactMusicPlayer(model: model) }
                     if !wide { mobileNavigation }
                 }
@@ -77,7 +77,7 @@ struct ContentView: View {
                 Image(systemName: "sparkles").foregroundStyle(OrcaTheme.cyan)
                 Text("為每段旅程\n找到你的聲音。")
                     .font(.system(size: 15, weight: .medium)).lineSpacing(5)
-                Text("MUSIC PLAYER / 0.11.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
+                Text("MUSIC PLAYER / 0.12.0").font(.system(size: 9, design: .monospaced)).foregroundStyle(OrcaTheme.muted)
             }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
                 .background(LinearGradient(colors: [OrcaTheme.blue.opacity(0.17), OrcaTheme.panel], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 15))
                 .padding(.bottom, 22)
@@ -99,7 +99,7 @@ struct ContentView: View {
                     Button { model.showImporter = true } label: { Image(systemName: "plus").frame(width: 44, height: 44) }.disabled(model.isImporting).accessibilityLabel("匯入音樂")
                 } else if wide { Tag(text: "本機播放", symbol: "waveform") }
             }.padding(.horizontal, wide ? 28 : 20).padding(.top, wide ? 26 : 16).padding(.bottom, 15)
-            if model.page != .player && model.page != .library && model.page != .equalizer { HStack(spacing: 6) {
+            if model.page == .developmentLog { HStack(spacing: 6) {
                 Image(systemName: "info.circle").foregroundStyle(OrcaTheme.cyan)
                 Text(model.statusText)
                 Spacer(minLength: 0)

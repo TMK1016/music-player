@@ -250,3 +250,12 @@ extension PlayerModel {
         return Date().addingTimeInterval(seconds)
     }
 }
+
+@MainActor extension PlayerModel {
+    /// Song-to-playlist choices include hidden custom lists; hiding only affects Home.
+    var playlistPickerIDs: [String] {
+        let choices = collection.playlists.map(\.id) + ["favorites"] + visiblePlaylistIDs
+        var seen = Set<String>()
+        return choices.filter { seen.insert($0).inserted }
+    }
+}

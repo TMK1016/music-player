@@ -1,3 +1,5 @@
+**v0.12.0／build15 已更新iPhone（V5 修復）**：[規格與驗收](docs/zh-TW/V5介面修復與驗收-v012.md)。
+
 **v0.11.0／build14 已部署iPhone（v4 改版）**：[需求與驗收](docs/zh-TW/v4清單與抽屜播放頁-v011.md)。
 
 **v0.10.0／build 13 已部署iPhone**（背景／閃爍操作驗收待回饋）：[需求、修復依據與驗收](docs/zh-TW/背景播放與互動優化-v010.md)。
@@ -39,7 +41,7 @@
 - [Mac v0.4 開發包](deliverables/OrcaPlayer-macOS-0.4-sound-profiles.zip)：歷史開發包，未公證／上架，v0.4 已另透過 Xcode 更新並啟動於連線 iPhone；實車驗證仍待完成。
 
 - [開發日誌與更新流程](docs/zh-TW/開發日誌與更新流程.md)
-- [日誌資料來源](planning/changelog.json)：25 階段、64 項改動，與 App 共用。
+- [日誌資料來源](planning/changelog.json)：26 階段、68 項改動，與 App 共用。
 - [本次需求英文翻譯](docs/en/development-journal-requirements.md)
 - [Mac v0.3 開發日誌版本](deliverables/OrcaPlayer-macOS-0.3-development-log.zip)：歷史開發包，首頁側邊欄包含開發日誌。
 

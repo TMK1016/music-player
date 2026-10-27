@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum OrcaTheme {
+    static let star = Color(hex: 0xFFD45A)
     static let sheet = Color(hex: 0x242629)
     static let ink = Color(hex: 0x07111F)
     static let background = Color(hex: 0x080F1B)

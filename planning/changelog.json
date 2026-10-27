@@ -3,6 +3,123 @@
   "updated_at": "2026-10-27",
   "entries": [
     {
+      "id": "release-0-12",
+      "version": "v0.12.0",
+      "date": "2026-10-27",
+      "title": "V5 清單位置與版面修復",
+      "summary": "綠勾回到單曲清單選擇器、深色一致列高、黃星、睡眠輪選與搜尋／調音／設定細節。",
+      "changes": [
+        {
+          "id": "v012-library-identity",
+          "title": "歌曲列表與綠勾位置",
+          "summary": "首頁移除綠勾；單首歌選單支援加入／取消；曲庫與榜單以不同識別範圍顯示。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "HomeLibrary.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ExperienceControls.swift",
+              "label": "ExperienceControls.swift"
+            },
+            {
+              "path": "docs/zh-TW/V5介面修復與驗收-v012.md",
+              "label": "V5介面修復與驗收-v012.md"
+            }
+          ]
+        },
+        {
+          "id": "v012-search-editor",
+          "title": "搜尋分組與緊湊編輯",
+          "summary": "搜尋歌曲／歌手、叉叉返回；白底輸入欄、移除表單長段說明；排序選單錨定按鈕。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/LibrarySearchView.swift",
+              "label": "LibrarySearchView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlaybackUI.swift",
+              "label": "PlaybackUI.swift"
+            },
+            {
+              "path": "docs/zh-TW/V5介面修復與驗收-v012.md",
+              "label": "V5介面修復與驗收-v012.md"
+            }
+          ]
+        },
+        {
+          "id": "v012-player-eq",
+          "title": "抽屜順序與調音比例",
+          "summary": "六工具置中半透明底、黃星、EQ主區波形與七段等高及低對比低音。",
+          "node_ids": [
+            "PLAY-01",
+            "EQ-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "MusicExperience.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "EqualizerView.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+              "label": "ModeSelectionView.swift"
+            },
+            {
+              "path": "docs/zh-TW/V5介面修復與驗收-v012.md",
+              "label": "V5介面修復與驗收-v012.md"
+            }
+          ]
+        },
+        {
+          "id": "v012-settings-wheel",
+          "title": "睡眠輪選與設定整理",
+          "summary": "預設／自訂輪選、移除技術狀態文字；輸出放主頁、獨立歌曲綁定。",
+          "node_ids": [
+            "UI-01",
+            "PROFILE-01"
+          ],
+          "target_page": "settings",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ExperienceControls.swift",
+              "label": "ExperienceControls.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ProfileControls.swift",
+              "label": "ProfileControls.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "ContentView.swift"
+            },
+            {
+              "path": "docs/zh-TW/V5介面修復與驗收-v012.md",
+              "label": "V5介面修復與驗收-v012.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-0-11",
       "version": "v0.11.0",
       "date": "2026-10-27",

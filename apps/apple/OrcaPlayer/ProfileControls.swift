@@ -36,3 +36,23 @@ struct ProfileControls: View {
         }
     }
 }
+
+struct SongBindingEditor: View {
+    @ObservedObject var model: PlayerModel
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("目前歌曲") {
+                    Text(model.title(model.track))
+                    Toggle("依歌曲套用音效", isOn: Binding(get: { model.useSongProfiles }, set: { model.setSongProfilePolicy($0) }))
+                    Picker("歌曲音效模式", selection: Binding(get: { model.songBindings[model.selectedID] ?? "" }, set: { model.bindSong(to: $0) })) {
+                        Text("無綁定，使用一般調音").tag("")
+                        ForEach(model.modeOptions) { Text($0.name).tag($0.id) }
+                    }
+                }
+            }.scrollContentBackground(.hidden).navigationTitle("歌曲音效綁定")
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }
+        }.frame(minWidth: 300, minHeight: 300).themedSheet()
+    }
+}
