@@ -108,9 +108,8 @@ struct MusicHomeView: View {
             }
         }.scrollTargetLayout()
     }
-    private var allSongRows: some View {
+    @ViewBuilder private var allSongRows: some View {
         let songs = model.sortedSongs
-        return LazyVStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("\(songs.count) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
                 Spacer()
@@ -134,7 +133,6 @@ struct MusicHomeView: View {
                     .onDrop(of: [.text], delegate: LibraryReorderDrop(target: song.id, dragged: $draggedSong) { source, target in model.moveSong(source, to: target) })
             }
 
-        }.scrollTargetLayout()
     }
     private func moveSong(_ id: String, by offset: Int) {
         let ids = model.sortedSongs.map(\.id)

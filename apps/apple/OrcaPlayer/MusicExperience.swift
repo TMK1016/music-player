@@ -217,8 +217,6 @@ struct SlidingStarRating: View {
 struct PlaybackTransport: View {
     @ObservedObject var model: PlayerModel
     var compact = false
-    private var mode: String { model.repeatOne ? "單曲循環" : model.shuffle ? "隨機播放" : "歌單循環" }
-    private var symbol: String { model.repeatOne ? "repeat.1" : model.shuffle ? "shuffle" : "repeat" }
     var body: some View {
         VStack(spacing: compact ? 2 : 6) {
             PlaybackSeekBar(model: model, clock: model.playbackClock)

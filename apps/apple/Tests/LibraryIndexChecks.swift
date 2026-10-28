@@ -82,6 +82,14 @@ import Combine
         for _ in 0..<20 { model.page = .settings; model.homeState.section = "歌手列表"; model.page = .player; model.page = .library }
         precondition(model.isPlaying && audio.playing && audio.loadCalls == loads && audio.stopCalls == stops && audio.configurationCalls == configurations, "Navigation must not modify audio graph")
         precondition(model.playbackQueue.count == 10000, "Playback queue includes offscreen tracks")
+        model.repeatOne = true; model.shuffle = true
+        precondition(!model.repeatOne && model.shuffle && !model.repeatAll, "Legacy setters cannot create conflicting playback modes")
+        model.repeatAll = true
+        precondition(!model.repeatOne && !model.shuffle && model.playbackMode == .repeatAll)
+        let subset = [model.tracks[10], model.tracks[30]]
+        model.playbackQueue = subset.map(\.id)
+        precondition(model.queueTracks == subset, "Queue display and transport resolve the same subset, not all songs")
+        model.playbackQueue = model.tracks.map(\.id)
         let publicationCount = publications.count
         model.collection.searches.append("history only")
         precondition(publications.count == publicationCount && model.cachedLibraryIndex == nil, "Unrelated data does not publish media or rebuild index via artwork")

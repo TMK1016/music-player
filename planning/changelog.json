@@ -3,6 +3,87 @@
   "updated_at": "2026-10-28",
   "entries": [
     {
+      "id": "release-v8-delivery",
+      "version": "v0.15.0",
+      "date": "2026-10-28",
+      "title": "V8整合驗收與交付",
+      "summary": "全庫、排序與排行榜原生驗收通過；統一播放政策、metadata與系統媒體發布，手機部署另列。",
+      "changes": [
+        {
+          "id": "v8-delivery-verification",
+          "title": "正式介面與千首曲庫驗收",
+          "summary": "1230首合成曲庫可直接捲到末首；喜好排序可反向，排行榜只在播放清單。真機音訊與藍牙聽測另列。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01",
+            "PLAY-01",
+            "ARCH-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V8實作與架構驗收.md",
+              "label": "V8驗收紀錄"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlaybackPolicy.swift",
+              "label": "模式與佇列"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/NowPlaying.swift",
+              "label": "系統媒體發布"
+            },
+            {
+              "path": "apps/apple/Tests/V8UIValidationApp.swift",
+              "label": "無聲原生介面驗證"
+            },
+            {
+              "path": "docs/technical/v8-production-index-release.json",
+              "label": "合成資料效能量測"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-stage3",
+      "version": "V8-3",
+      "date": "2026-10-28",
+      "title": "播放模式與佇列一致性",
+      "summary": "單一播放政策消除衝突旗標；佇列畫面、切歌及睡眠預估共用同一曲目集合。回歸通過。",
+      "changes": [
+        {
+          "id": "v8-playback-policy",
+          "title": "單一政策與真實佇列",
+          "summary": "保留模式循環與既有入口，佇列不再誤顯示全曲庫。",
+          "node_ids": [
+            "PLAY-01",
+            "UI-01",
+            "ARCH-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/PlaybackPolicy.swift",
+              "label": "PlaybackPolicy.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryView.swift",
+              "label": "LibraryView.swift"
+            },
+            {
+              "path": "apps/apple/Tests/LibraryIndexChecks.swift",
+              "label": "LibraryIndexChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/V8實作與架構驗收.md",
+              "label": "V8實作與架構驗收.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "v8-stage2",
       "version": "V8-2",
       "date": "2026-10-28",

@@ -113,7 +113,7 @@ extension PlayerModel {
         guard let from = ids.firstIndex(of: id), let to = ids.firstIndex(of: target), from != to else { return }
         ids.remove(at: from); ids.insert(id, at: to); var state = collection; state.songOrder = ids; state.songSort = "自訂順序"; state.songSortAscending = true; collection = state
     }
-    func coverData(_ track: AudioTrack) -> Data? { libraryIndex.metadata[track.id]?.artwork ?? collection.metadata(for: track).artwork }
+    func coverData(_ track: AudioTrack) -> Data? { (libraryIndex.metadata[track.id] ?? collection.metadata(for: track)).artwork }
     func setCover(_ id: String, data: Data?) {
         guard tracks.contains(where: { $0.id == id }), data == nil || data!.count <= 5_000_000 else { return }
         var info = details(id); info.cover = data; collection.songs[id] = info
@@ -152,22 +152,6 @@ enum RatingInteraction {
         return min(5, max(1, Int(ceil(min(width, max(0, x)) / width * 5))))
     }
 }
-extension PlayerModel {
-    func setPlaybackMode(_ label: String) {
-        let name = label == "單曲循環" ? "單曲重複" : label == "歌單循環" ? "清單循環" : label
-        guard ["順序播放", "單曲重複", "清單循環", "隨機播放"].contains(name) else { return }
-        repeatOne = name == "單曲重複"
-        repeatAll = name == "清單循環"
-        shuffle = name == "隨機播放"
-    }
-}
-
-@MainActor extension PlayerModel {
-    func cyclePlaybackMode() {
-        setPlaybackMode(shuffle ? "歌單循環" : repeatOne ? "隨機播放" : "單曲循環")
-    }
-}
-
 @MainActor extension PlayerModel {
     static let systemPlaylistIDs = ["favorites", "recent", "stars5", "stars4", "stars3", "stars2", "stars1", "liked", "unfamiliar"]
     func isSystemPlaylist(_ id: String) -> Bool { Self.systemPlaylistIDs.contains(id) }
@@ -252,7 +236,7 @@ extension PlayerModel {
         let count = min(100, max(1, count))
         let remaining = max(0, track.duration - currentTime)
         if repeatOne { return Date().addingTimeInterval(remaining + Double(count - 1) * track.duration) }
-        let queue = playbackQueue.compactMap { libraryIndex.tracks[$0] }
+        let queue = queueTracks
         guard !queue.isEmpty else { return Date().addingTimeInterval(remaining + Double(count - 1) * track.duration) }
         if shuffle { return Date().addingTimeInterval(remaining + Double(count - 1) * queue.map(\.duration).reduce(0, +) / Double(queue.count)) }
         let start = queue.firstIndex { $0.id == selectedID } ?? 0

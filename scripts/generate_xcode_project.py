@@ -49,7 +49,7 @@ for platform in ["macOS", "iOS"]:
         settings = {
             "PRODUCT_NAME": "OrcaPlayer", "PRODUCT_BUNDLE_IDENTIFIER": "com.orca.player.preview" + (".mac" if platform == "macOS" else ".ios"),
             "SWIFT_VERSION": "6.0", "GENERATE_INFOPLIST_FILE": "YES", "INFOPLIST_KEY_CFBundleDisplayName": "Music Player",
-            "MARKETING_VERSION": "0.14.1", "CURRENT_PROJECT_VERSION": "19", "CODE_SIGN_STYLE": "Automatic",
+            "MARKETING_VERSION": "0.15.0", "CURRENT_PROJECT_VERSION": "20", "CODE_SIGN_STYLE": "Automatic",
             "SWIFT_OPTIMIZATION_LEVEL": "-Onone" if config == "Debug" else "-O",
             "ENABLE_USER_SCRIPT_SANDBOXING": "YES", "ENABLE_HARDENED_RUNTIME": "YES",
             "SDKROOT": "macosx" if platform == "macOS" else "iphoneos",

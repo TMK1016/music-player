@@ -65,8 +65,7 @@ struct LibraryIndex: Sendable {
             let result = (value.metadata[a]?.title ?? "").compare((value.metadata[b]?.title ?? ""), options: [.numeric], locale: Locale(identifier: "zh_Hant_TW@collation=stroke"))
             return result == .orderedSame ? a < b : result == .orderedAscending
         }
-        let ascending = value.orderedIDs.sorted { a, b in
-            if mode == "自訂順序" { return false }
+        let ascending = mode == "自訂順序" ? value.orderedIDs : value.orderedIDs.sorted { a, b in
             if mode == "喜好程度" {
                 let x = collection.songs[a]?.rating ?? 0, y = collection.songs[b]?.rating ?? 0
                 if x != y { return x < y }

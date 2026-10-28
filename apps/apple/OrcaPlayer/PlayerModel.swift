@@ -87,7 +87,7 @@ private struct SavedSettings: Codable {
     @Published var collection = MusicCollection() { didSet { invalidateLibraryIndex(); persistCollection(); refreshNowPlayingArtwork() } }
     let collectionWriter = CollectionWriter()
     var collectionWriteBlocked = false
-    @Published var repeatOne = false
+    @Published var playbackMode: PlaybackMode = .repeatAll
     @Published private(set) var hasPlaybackSession = false
     @Published var sleepDeadline: Date?
     @Published var sleepSongsRemaining: Int?
@@ -114,8 +114,6 @@ private struct SavedSettings: Codable {
     }
     @Published private(set) var isImporting = false
     @Published var showImporter = false
-    @Published var shuffle = false
-    @Published var repeatAll = true
     @Published var volume = 0.5 { didSet { syncAudio(); save() } }
     @Published var eqEnabled = true { didSet { syncAudio(); save() } }
     @Published var gains = EQPreset.flat.gains { didSet { syncAudio(); save() } }
@@ -369,7 +367,7 @@ private struct SavedSettings: Codable {
         playbackQueue = queue.map(\.id); choose(track)
     }
     private func advance(forward: Bool) {
-        let queue = playbackQueue.isEmpty ? tracks : playbackQueue.compactMap { libraryIndex.tracks[$0] }
+        let queue = queueTracks
         guard !queue.isEmpty else { return }
         let index = queue.firstIndex(where: { $0.id == selectedID }) ?? 0
         let offset = shuffle && queue.count > 1 ? Int.random(in: 1..<queue.count) : (forward ? 1 : queue.count - 1)
@@ -385,7 +383,7 @@ private struct SavedSettings: Codable {
         }
         if expireSleepTimer() { return }
         if repeatOne { choose(track); return }
-        let ids = playbackQueue.isEmpty ? tracks.map(\.id) : playbackQueue
+        let ids = queueTracks.map(\.id)
         if repeatAll || shuffle || ids.last != selectedID { advance(forward: true) }
         else { isPlaying = false }
     }

@@ -1,0 +1,27 @@
+{
+  "date" : "2026-10-28",
+  "results" : [
+    {
+      "artists" : 200,
+      "events" : 4920,
+      "production_index_build_ms" : 17.109874985180795,
+      "tracks" : 1230,
+      "warm_100_reads_ms" : 0.077916687587276101
+    },
+    {
+      "artists" : 200,
+      "events" : 20000,
+      "production_index_build_ms" : 52.390750002814457,
+      "tracks" : 5000,
+      "warm_100_reads_ms" : 0.079791643656790257
+    },
+    {
+      "artists" : 200,
+      "events" : 40000,
+      "production_index_build_ms" : 102.3318333318457,
+      "tracks" : 10000,
+      "warm_100_reads_ms" : 0.078166660387068987
+    }
+  ],
+  "scope" : "macOS arm64 Swift6 -O; production LibraryIndex; synthetic metadata only, no UI\/audio latency"
+}

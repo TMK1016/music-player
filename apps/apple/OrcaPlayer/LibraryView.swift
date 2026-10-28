@@ -105,8 +105,12 @@ struct QueueView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack { Text("播放佇列").font(.title2.weight(.semibold)); Spacer(); Button("完成") { dismiss() }.buttonStyle(.plain).foregroundStyle(OrcaTheme.cyan) }
-            Text("\(model.tracks.count) 首 · 選擇歌曲開始播放").font(.system(size: 12)).foregroundStyle(OrcaTheme.muted)
-            ScrollView { VStack(spacing: 8) { ForEach(model.tracks) { TrackRow(model: model, track: $0) } } }
+            Text("\(model.queueTracks.count) 首 · \(model.playingListTitle)").font(.system(size: 12)).foregroundStyle(OrcaTheme.muted)
+            ScrollView { LazyVStack(spacing: 8) {
+                let queue = model.queueTracks
+                ForEach(queue) { CollectionSongRow(model: model, track: $0, queue: queue,
+                    playlistID: model.playbackListID ?? "all", queueName: model.playingListTitle) }
+            } }
         }.padding(24).frame(minWidth: 300, idealWidth: 480, minHeight: 400)
             .background(OrcaTheme.background).foregroundStyle(OrcaTheme.text).preferredColorScheme(.dark)
     }

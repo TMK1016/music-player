@@ -60,10 +60,10 @@ struct PlaybackSeekBar: View {
 
 struct PlaybackModeButton: View {
     @ObservedObject var model: PlayerModel
-    private var title: String { model.repeatOne ? "單曲循環" : model.shuffle ? "隨機播放" : "歌單循環" }
+    private var title: String { model.playbackMode.title }
     var body: some View {
         Button { model.cyclePlaybackMode() } label: {
-            Image(systemName: model.repeatOne ? "repeat.1" : model.shuffle ? "shuffle" : "repeat").frame(width: 44, height: 44)
+            Image(systemName: model.playbackMode.symbol).frame(width: 44, height: 44)
         }.buttonStyle(.plain).accessibilityLabel("切換播放模式").accessibilityValue(title)
     }
 }
