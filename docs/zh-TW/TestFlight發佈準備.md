@@ -52,3 +52,7 @@ Native SwiftUI／AVFoundation，沒有第三方 SDK、後端帳號或 AI 功能�
 本輪 `git push origin main` 仍失敗：`Could not resolve host: github.com`。保留本機提交與 `backups/local/MusicPlayer-TestFlight-preparation.bundle` 全歷史備份；未核對遠端提交前不稱已同步。
 
 最終驗證：`archive_ios.sh` 完成 ARCHIVE SUCCEEDED；`check_archive.py` 通過版本／device family／背景播放／圖示／manifest／示範音源與完整日誌一致性檢查。流程驗證通過 25 節點、36 階段、90 改動與 14 PM 項目，JavaScript 語法通過。沒有執行 Apple 雲端 validation 或 upload。
+
+## 免費帳號朋友測試包
+
+使用者另要求可交朋友的原始碼ZIP，透過 `scripts/release/package_friend_source.py` 白名單製作，移除封裝內pbxproj的Development Team，不更動作者本機簽章。附安裝指南與逐檔SHA256；僅保留專案原創示範音源。這是朋友自行簽章的開發測試，不是TestFlight上傳完成。

@@ -44,6 +44,25 @@
               "label": "原創圖示來源"
             }
           ]
+        },
+        {
+          "id": "friend-source-package",
+          "title": "朋友免費帳號原始碼測試包",
+          "summary": "以白名單封裝必要Apple原始碼、原創資源與安裝指南，移除Development Team，不含本機簽章、帳號資料、私人曲庫與建置快取。",
+          "node_ids": [
+            "RELEASE-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "scripts/release/package_friend_source.py",
+              "label": "白名單封裝與完整性核對"
+            },
+            {
+              "path": "docs/release/朋友免費帳號安裝指南.md",
+              "label": "朋友自行簽章安裝"
+            }
+          ]
         }
       ]
     },
