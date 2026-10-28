@@ -42,6 +42,34 @@
               "label": "合成資料效能量測"
             }
           ]
+        },
+        {
+          "id": "v8-alert-publication",
+          "title": "修正提示視窗關閉時的狀態發布",
+          "summary": "依真機堆疊定位alert Binding同步修改message；延後清除並保留新錯誤，模型及反轉條件回歸通過。最終build21。",
+          "node_ids": [
+            "UI-01",
+            "PLAY-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "提示視窗"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "延後且有條件的清除"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "訊息生命週期回歸"
+            },
+            {
+              "path": "docs/zh-TW/問題追蹤日誌.md",
+              "label": "MP-028"
+            }
+          ]
         }
       ]
     },

@@ -66,6 +66,22 @@ private final class PreparationProbe: @unchecked Sendable {
         // Hold hardware activation to exercise user input while startup is in flight.
         let delayed = FakeAudioPlayer(); delayed.holdPreparation = true
         let pending = PlayerModel(audio: delayed, libraryRoot: work.appendingPathComponent("Pending"), demoURL: fixture)
+        var dismissalPublications = 0
+        let dismissalObserver = pending.objectWillChange.sink { dismissalPublications += 1 }
+        precondition(pending.dismissMessage() == nil && dismissalPublications == 0, "Empty alert reset must not publish during a view update")
+        pending.message = "Displayed error"
+        let dismissal = pending.dismissMessage()
+        precondition(pending.message == "Displayed error", "Alert binding must not synchronously publish")
+        await dismissal?.value
+        precondition(pending.message == nil, "Dismissal clears the displayed error after reconciliation")
+        pending.message = "Older error"
+        let staleDismissal = pending.dismissMessage()
+        pending.message = "New error"
+        await staleDismissal?.value
+        precondition(pending.message == "New error", "Deferred dismissal must retain a different newly arrived error")
+        await pending.dismissMessage()?.value
+        dismissalObserver.cancel()
+        print("PASS: alert dismissal does not publish synchronously or erase a newer message")
         pending.togglePlayback()
         precondition(delayed.loadCalls == 0 && !pending.isPlaying, "No graph/file work before session activation")
         pending.togglePlayback() // cancel a pending start

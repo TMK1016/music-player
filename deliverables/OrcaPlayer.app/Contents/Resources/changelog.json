@@ -3,6 +3,221 @@
   "updated_at": "2026-10-28",
   "entries": [
     {
+      "id": "release-v8-delivery",
+      "version": "v0.15.0",
+      "date": "2026-10-28",
+      "title": "V8整合驗收與交付",
+      "summary": "全庫、排序與排行榜原生驗收通過；統一播放政策、metadata與系統媒體發布，手機部署另列。",
+      "changes": [
+        {
+          "id": "v8-delivery-verification",
+          "title": "正式介面與千首曲庫驗收",
+          "summary": "1230首合成曲庫可直接捲到末首；喜好排序可反向，排行榜只在播放清單。真機音訊與藍牙聽測另列。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01",
+            "PLAY-01",
+            "ARCH-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V8實作與架構驗收.md",
+              "label": "V8驗收紀錄"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlaybackPolicy.swift",
+              "label": "模式與佇列"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/NowPlaying.swift",
+              "label": "系統媒體發布"
+            },
+            {
+              "path": "apps/apple/Tests/V8UIValidationApp.swift",
+              "label": "無聲原生介面驗證"
+            },
+            {
+              "path": "docs/technical/v8-production-index-release.json",
+              "label": "合成資料效能量測"
+            }
+          ]
+        },
+        {
+          "id": "v8-alert-publication",
+          "title": "修正提示視窗關閉時的狀態發布",
+          "summary": "依真機堆疊定位alert Binding同步修改message；延後清除並保留新錯誤，模型及反轉條件回歸通過。最終build21。",
+          "node_ids": [
+            "UI-01",
+            "PLAY-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "提示視窗"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "延後且有條件的清除"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "訊息生命週期回歸"
+            },
+            {
+              "path": "docs/zh-TW/問題追蹤日誌.md",
+              "label": "MP-028"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-stage3",
+      "version": "V8-3",
+      "date": "2026-10-28",
+      "title": "播放模式與佇列一致性",
+      "summary": "單一播放政策消除衝突旗標；佇列畫面、切歌及睡眠預估共用同一曲目集合。回歸通過。",
+      "changes": [
+        {
+          "id": "v8-playback-policy",
+          "title": "單一政策與真實佇列",
+          "summary": "保留模式循環與既有入口，佇列不再誤顯示全曲庫。",
+          "node_ids": [
+            "PLAY-01",
+            "UI-01",
+            "ARCH-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/PlaybackPolicy.swift",
+              "label": "PlaybackPolicy.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryView.swift",
+              "label": "LibraryView.swift"
+            },
+            {
+              "path": "apps/apple/Tests/LibraryIndexChecks.swift",
+              "label": "LibraryIndexChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/V8實作與架構驗收.md",
+              "label": "V8實作與架構驗收.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-stage2",
+      "version": "V8-2",
+      "date": "2026-10-28",
+      "title": "系統媒體與曲庫責任分離",
+      "summary": "全專案盤點；鎖屏資訊由獨立快照發布，避免分類變更透過封面重建索引。模型回歸通過。",
+      "changes": [
+        {
+          "id": "v8-media-boundary",
+          "title": "共用metadata與獨立Now Playing",
+          "summary": "統一歌名／歌手／封面優先序，保存Sendable回呼與過期圖片防護，導航狀態離開純索引。",
+          "node_ids": [
+            "ARCH-01",
+            "PLAY-01",
+            "LIB-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/NowPlaying.swift",
+              "label": "NowPlaying.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/TrackMetadata.swift",
+              "label": "TrackMetadata.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibraryState.swift",
+              "label": "HomeLibraryState.swift"
+            },
+            {
+              "path": "docs/zh-TW/V8實作與架構驗收.md",
+              "label": "V8實作與架構驗收.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-stage1",
+      "version": "V8-1",
+      "date": "2026-10-28",
+      "title": "排行榜範圍與全庫反向排序",
+      "summary": "已實作指定三項功能，模型回歸通過；原生與真機驗收進行中。",
+      "changes": [
+        {
+          "id": "v8-library-order",
+          "title": "全庫顯示與三種排序",
+          "summary": "取消50首續載，筆畫／喜好／新增可反轉並保存；保留舊順序及完整佇列。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01",
+            "QA-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "HomeLibrary.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryIndex.swift",
+              "label": "LibraryIndex.swift"
+            },
+            {
+              "path": "apps/apple/Tests/LibraryIndexChecks.swift",
+              "label": "LibraryIndexChecks.swift"
+            },
+            {
+              "path": "docs/zh-TW/V8實作與架構驗收.md",
+              "label": "V8實作與架構驗收.md"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "plan-v8",
+      "version": "V8-planned",
+      "date": "2026-10-28",
+      "title": "V8需求與06:30 Astra架構整理待辦",
+      "summary": "保存排行榜顯示範圍、全部歌曲無50首限制與三種可反向排序；App尚未改版。",
+      "changes": [
+        {
+          "id": "v8-planned-scope",
+          "title": "V8驗收與Astra重構計畫",
+          "summary": "為保留額度先建立可追蹤待辦；06:30延續V8實作與架構一致性整理，排程啟動不等於完成驗收。",
+          "node_ids": [
+            "UI-01",
+            "LIB-01",
+            "PLAY-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V8待辦與架構整理.md",
+              "label": "V8待辦與驗收"
+            },
+            {
+              "path": "docs/en/v8-requirements.md",
+              "label": "完整英文需求"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-0-14-1",
       "version": "v0.14.1",
       "date": "2026-10-28",

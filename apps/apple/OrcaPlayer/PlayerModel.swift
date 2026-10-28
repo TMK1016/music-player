@@ -119,6 +119,15 @@ private struct SavedSettings: Codable {
     @Published var gains = EQPreset.flat.gains { didSet { syncAudio(); save() } }
     @Published var favorites: Set<String> = [] { didSet { invalidateLibraryIndex(); save() } }
     @Published var message: String?
+    /// SwiftUI can reset an alert binding during reconciliation. Publish only
+    /// after that stack unwinds, and never dismiss a newer, different message.
+    @discardableResult func dismissMessage() -> Task<Void, Never>? {
+        guard let displayed = message else { return nil }
+        return Task { @MainActor [weak self] in
+            guard let self, self.message == displayed else { return }
+            self.message = nil
+        }
+    }
     @Published var showQueue = false
     @Published var bassBoost = 0.0 { didSet { syncAudio(); save() } }
     @Published var ambience: Ambience = .off { didSet { syncAudio(); save() } }

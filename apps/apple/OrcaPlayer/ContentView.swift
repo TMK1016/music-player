@@ -39,8 +39,8 @@ struct ContentView: View {
             case .failure(let error): model.message = error.localizedDescription
             }
         }
-        .alert("Music Player", isPresented: Binding(get: { model.message != nil }, set: { if !$0 { model.message = nil } })) {
-            Button("了解", role: .cancel) { model.message = nil }
+        .alert("Music Player", isPresented: Binding(get: { model.message != nil }, set: { if !$0 { model.dismissMessage() } })) {
+            Button("了解", role: .cancel) { model.dismissMessage() }
         } message: { Text(model.message ?? "") }
         .modifier(PresetEditorPresentation(model: model))
         .sheet(isPresented: $model.showQueue) { QueueView(model: model) }

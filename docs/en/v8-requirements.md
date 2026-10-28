@@ -14,3 +14,9 @@ The run must execute once, write a timestamp to backups/local/v8-0630-started, a
 Use PM and engineering skills; complete the three V8 features first, inventory the entire project, then refactor in tested stages. Preserve user data, existing features, AudioPlayback isolation, seven-band EQ/headroom and v0.14.1 asynchronous session/Sendable artwork fixes. Update flow/journal at each stage, build, update the connected phone, commit/push the project repository and verify the remote SHA.
 
 Stroke means Traditional Chinese per-character zh_Hant_TW stroke collation, with numeric comparison, empty titles first and stable ID ties. Rating and date ties use title/ID order; reversal reverses the complete order. Optional songSortAscending preserves collection-v1 compatibility. Legacy title sorting maps to stroke; legacy artist/custom ordering remains until a new choice is made. The old songOrder is never erased by the menu. Execution evidence is maintained in docs/zh-TW/V8實作與架構驗收.md.
+
+## Delivery verification
+
+Astra produced the feature and architectural stages; Sol continued review and delivery. Native production-view QA reached the last of 1230 synthetic tracks plus demo without pagination. Repeated rating selection changed five-star-first to unrated-first. Rankings appeared only under Playlists. Shared metadata, independent system publication, exclusive playback policy and the actual queue projection replace duplicate state.
+
+Device build20 exposed a further SwiftUI publication warning. The captured stack points to the ContentView alert binding and PlayerModel.message. Shared deferred dismissal now ignores empty resets and retains a different newly arrived message. A regression and inverted-guard mutation validate the fix. Final delivery is v0.15.0/build21; precise build, device and remote evidence is recorded in the Traditional Chinese report. Hardware noise and lock-screen/Bluetooth operation remain live-validation items.
