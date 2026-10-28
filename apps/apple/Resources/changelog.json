@@ -3,6 +3,51 @@
   "updated_at": "2026-10-28",
   "entries": [
     {
+      "id": "release-testflight-preparation",
+      "version": "v0.15.0 / build22",
+      "date": "2026-10-28",
+      "title": "Apple TestFlight發佈準備",
+      "summary": "加入原創App圖示、必要API隱私宣告與Release封存核對；帳號登入、發佈簽章與外部審核尚待完成。",
+      "changes": [
+        {
+          "id": "testflight-release-materials",
+          "title": "封存素材與封測說明",
+          "summary": "科技藍1024px不透明App Icon、UserDefaults與經過時間宣告、測試文案／已知限制；不代表已上傳或取得邀請連結。",
+          "node_ids": [
+            "RELEASE-01",
+            "STORE-01"
+          ],
+          "target_page": "developmentLog",
+          "locations": [
+            {
+              "path": "docs/zh-TW/TestFlight發佈準備.md",
+              "label": "發佈狀態與資料邊界"
+            },
+            {
+              "path": "docs/release/TestFlight測試資料.md",
+              "label": "封測文案與審核操作"
+            },
+            {
+              "path": "scripts/release/archive_ios.sh",
+              "label": "可重現未簽章封存"
+            },
+            {
+              "path": "scripts/release/check_archive.py",
+              "label": "封存內容驗證"
+            },
+            {
+              "path": "apps/apple/Resources/PrivacyInfo.xcprivacy",
+              "label": "必要API宣告"
+            },
+            {
+              "path": "scripts/generate_app_icon.swift",
+              "label": "原創圖示來源"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-v8-delivery",
       "version": "v0.15.0",
       "date": "2026-10-28",

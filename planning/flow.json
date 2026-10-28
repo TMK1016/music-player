@@ -634,11 +634,11 @@
       "id": "RELEASE-01",
       "title": "可重現打包與封測",
       "stage": 6,
-      "status": "規劃中",
+      "status": "部分實作",
       "depends_on": [
         "QA-02"
       ],
-      "task": "依平台建立簽章與封測管線；Mac 直接發佈需公證。",
+      "task": "Apple TestFlight封測：已建立Release封存與素材；待帳號登入、付費會員確認、發佈簽章、上傳及外部審核。Mac公證仍另列。",
       "input": "通過驗收的 build 與開發者資格",
       "output": "Mac 下載包或 iOS TestFlight 版本",
       "planned_paths": [
@@ -650,7 +650,17 @@
         "iOS 與 macOS 發佈流程分離",
         "權限／授權／依賴清冊完整"
       ],
-      "evidence": []
+      "evidence": [
+        "docs/zh-TW/TestFlight發佈準備.md",
+        "docs/release/TestFlight測試資料.md",
+        "scripts/release/archive_ios.sh",
+        "scripts/release/check_archive.py"
+      ],
+      "implemented_paths": [
+        "scripts/release/",
+        "apps/apple/Resources/Assets.xcassets/",
+        "apps/apple/Resources/PrivacyInfo.xcprivacy"
+      ]
     },
     {
       "id": "STORE-01",

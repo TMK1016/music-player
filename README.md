@@ -1,3 +1,5 @@
+**Apple 試用準備（0.15.0／22）**：[TestFlight發佈狀態](docs/zh-TW/TestFlight發佈準備.md)／[測試文案](docs/release/TestFlight測試資料.md)。未簽章Release封存可重現，尚未上傳／開放邀請；手機仍為build21。
+
 **V8 v0.15.0／build21**：[功能、架構與交付驗收](docs/zh-TW/V8實作與架構驗收.md)。排行榜僅在播放清單、全庫無50首限制、三種可反向排序；統一metadata、系統媒體與播放政策。build21已安裝iPhone並確認Running、載入1230首，啟動觀察未重現提示視窗狀態警告。模型與原生UI驗收通過，實際音訊／藍牙聽測另列；GitHub推送狀態見驗收紀錄。
 
 **v0.14.1／build19**：[Session主執行緒警告與鎖屏封面崩潰修復](docs/zh-TW/音訊Session與鎖屏封面崩潰修復-v0141.md)。已更新iPhone並確認Running；模型與雙平台編譯通過，播放／鎖屏與藍牙聽測待回饋。

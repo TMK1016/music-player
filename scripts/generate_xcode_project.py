@@ -26,6 +26,9 @@ for source in sources:
 obj("demo-audio", 'isa = PBXFileReference; lastKnownFileType = audio.wav; path = "Resources/Orca-Soundcheck.wav"; sourceTree = "<group>";')
 obj("journal-data", 'isa = PBXFileReference; lastKnownFileType = text.json; path = "Resources/changelog.json"; sourceTree = "<group>";')
 
+obj("app-assets", 'isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Resources/Assets.xcassets"; sourceTree = "<group>";')
+obj("privacy-manifest", 'isa = PBXFileReference; lastKnownFileType = text.xml; path = "Resources/PrivacyInfo.xcprivacy"; sourceTree = "<group>";')
+
 checks = []  # Vehicle identification tones retired; not shipped in the app.
 for check in checks:
     obj(check, f'isa = PBXFileReference; lastKnownFileType = audio.wav; path = "Resources/{check}"; sourceTree = "<group>";')
@@ -42,14 +45,19 @@ for platform in ["macOS", "iOS"]:
     obj(platform + "-frameworks", "isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;")
     obj(platform + "-demo-build", f'isa = PBXBuildFile; fileRef = {uid("demo-audio")};')
     obj(platform + "-journal-build", f'isa = PBXBuildFile; fileRef = {uid("journal-data")};')
+    obj(platform + "-privacy-build", f'isa = PBXBuildFile; fileRef = {uid("privacy-manifest")};')
+    platform_resources = [platform + "-privacy-build"]
+    if platform == "iOS":
+        obj(platform + "-assets-build", f'isa = PBXBuildFile; fileRef = {uid("app-assets")};')
+        platform_resources.append(platform + "-assets-build")
     for check in checks:
         obj(platform + check, f'isa = PBXBuildFile; fileRef = {uid(check)};')
-    obj(platform + "-resources", f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {refs([platform + "-demo-build", platform + "-journal-build"] + [platform + c for c in checks])}; runOnlyForDeploymentPostprocessing = 0;')
+    obj(platform + "-resources", f'isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {refs([platform + "-demo-build", platform + "-journal-build"] + platform_resources + [platform + c for c in checks])}; runOnlyForDeploymentPostprocessing = 0;')
     for config in ["Debug", "Release"]:
         settings = {
             "PRODUCT_NAME": "OrcaPlayer", "PRODUCT_BUNDLE_IDENTIFIER": "com.orca.player.preview" + (".mac" if platform == "macOS" else ".ios"),
             "SWIFT_VERSION": "6.0", "GENERATE_INFOPLIST_FILE": "YES", "INFOPLIST_KEY_CFBundleDisplayName": "Music Player",
-            "MARKETING_VERSION": "0.15.0", "CURRENT_PROJECT_VERSION": "21", "CODE_SIGN_STYLE": "Automatic",
+            "MARKETING_VERSION": "0.15.0", "CURRENT_PROJECT_VERSION": "22", "CODE_SIGN_STYLE": "Automatic",
             "SWIFT_OPTIMIZATION_LEVEL": "-Onone" if config == "Debug" else "-O",
             "ENABLE_USER_SCRIPT_SANDBOXING": "YES", "ENABLE_HARDENED_RUNTIME": "YES",
             "SDKROOT": "macosx" if platform == "macOS" else "iphoneos",
@@ -59,6 +67,7 @@ for platform in ["macOS", "iOS"]:
             settings.update(MACOSX_DEPLOYMENT_TARGET="14.0", INFOPLIST_KEY_LSApplicationCategoryType="public.app-category.music")
         else:
             settings["INFOPLIST_FILE"] = "Resources/iOS-Info.plist"
+            settings["ASSETCATALOG_COMPILER_APPICON_NAME"] = "AppIcon"
             settings.update(IPHONEOS_DEPLOYMENT_TARGET="17.0", TARGETED_DEVICE_FAMILY="1,2", INFOPLIST_KEY_UILaunchScreen_Generation="YES", INFOPLIST_KEY_UIApplicationSceneManifest_Generation="YES", SUPPORTS_MACCATALYST="NO")
             if signing.get("development_team"):
                 settings["DEVELOPMENT_TEAM"] = signing["development_team"]
@@ -79,7 +88,7 @@ for platform in ["macOS", "iOS"]:
 
 obj("sources", f'isa = PBXGroup; children = {refs(["file-" + s.name for s in sources])}; path = OrcaPlayer; sourceTree = "<group>";')
 obj("products", f'isa = PBXGroup; children = {refs(products)}; name = Products; sourceTree = "<group>";')
-obj("main", f'isa = PBXGroup; children = {refs(["sources", "demo-audio", "journal-data", "products"] + checks)}; sourceTree = "<group>";')
+obj("main", f'isa = PBXGroup; children = {refs(["sources", "demo-audio", "journal-data", "app-assets", "privacy-manifest", "products"] + checks)}; sourceTree = "<group>";')
 for config in ["Debug", "Release"]:
     obj("project-" + config, f'isa = XCBuildConfiguration; buildSettings = {{ CLANG_ENABLE_MODULES = YES; SWIFT_STRICT_CONCURRENCY = complete; }}; name = {config};')
 obj("project-configs", f'isa = XCConfigurationList; buildConfigurations = {refs(["project-Debug", "project-Release"])}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
