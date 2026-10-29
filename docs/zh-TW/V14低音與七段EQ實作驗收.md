@@ -72,4 +72,6 @@ CoreDevice原位安裝成功；直接讀取已安裝App清單為 **0.21.0／31**
 
 朋友來源包 `deliverables/MusicPlayer-0.21.0-build31-Friend-Source.zip`：48個白名單檔案、36份Swift來源；ZIP完整性與每檔SHA-256 manifest驗證通過，不含簽章帳號、憑證、私人媒體與可重建快取。包SHA-256 `ce9457d6c51f5e1acf0634fd8257007226ed4bb51b727c235d2a62ccae80f679`。
 
-Git備份以本輪實際推送與遠端核對另記；若網路／認證阻塞保留本機提交和離線bundle。
+### Git備份
+
+核心實作提交 `41240036c9f9768fb58a65c23af297ce3b7cfae8` 已推送至既有私人GitHub `TMK1016/music-player` 的main，並以 `git ls-remote origin refs/heads/main` 核對相同SHA；沒有force push。另保存 `backups/local/music-player-v14-0.21.0-build31.bundle`，`git bundle verify`確認完整歷史可還原。交付紀錄的後續提交亦依同樣方式推送／核對，最後SHA保存於本機 `backups/local/v14-handoff.json`。遠端不含私人曲庫、手機偏好副本、簽章與憑證。
