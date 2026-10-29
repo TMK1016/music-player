@@ -33,6 +33,8 @@ struct MusicCollection: Codable, Equatable, Sendable {
     var searches: [String] = []
     var plays: [ListeningEvent] = []
     var playlistOrder: [String] = []
+    var playlistSort: String?
+    var playlistSortAscending: Bool?
     var playlistAppearance: [String: PlaylistAppearance]?
     var hiddenPlaylists: Set<String>?
     var artistOrder: [String]?
@@ -175,7 +177,19 @@ enum RatingInteraction {
         let available = Self.systemPlaylistIDs.filter { !(index.playlistIDs[$0] ?? []).isEmpty } + collection.playlists.map(\.id)
         let ordered = collection.playlistOrder.filter { available.contains($0) } + available.filter { !collection.playlistOrder.contains($0) }
         var seen = Set<String>()
-        return ordered.filter { !(collection.hiddenPlaylists ?? []).contains($0) && seen.insert($0).inserted }
+        let visible = ordered.filter { !(collection.hiddenPlaylists ?? []).contains($0) && seen.insert($0).inserted }
+        let mode = collection.playlistSort ?? "自訂順序"
+        guard mode != "自訂順序" else { return visible }
+        let ascending = collection.playlistSortAscending ?? (mode != "歌曲數目")
+        return visible.sorted { a, b in
+            if mode == "歌曲數目" {
+                let ca = index.playlistIDs[a]?.count ?? 0, cb = index.playlistIDs[b]?.count ?? 0
+                if ca != cb { return ascending ? ca < cb : ca > cb }
+            }
+            let order = playlistTitle(a).compare(playlistTitle(b), options: [.numeric], locale: Locale(identifier: "zh_Hant_TW@collation=stroke"))
+            if order != .orderedSame { return ascending ? order == .orderedAscending : order == .orderedDescending }
+            return a < b
+        }
     }
     func hidePlaylist(_ id: String, hidden: Bool) {
         var state = collection; var values = state.hiddenPlaylists ?? []
@@ -188,6 +202,7 @@ enum RatingInteraction {
         ids.remove(at: from); ids.insert(id, at: to)
         var state = collection
         state.playlistOrder = ids + state.playlistOrder.filter { !ids.contains($0) }
+        state.playlistSort = "自訂順序"
         collection = state
     }
     func updatePlaylist(_ id: String, name: String, artwork: Data?, replaceArtwork: Bool = false) -> Bool {
@@ -297,6 +312,19 @@ extension PlayerModel {
         var state = collection
         let existing = Set(state.playlists[index].trackIDs)
         state.playlists[index].trackIDs += sortedSongs.map(\.id).filter { valid.contains($0) && !existing.contains($0) }
+        collection = state
+    }
+}
+
+
+extension PlayerModel {
+    func selectPlaylistSort(_ mode: String) {
+        guard ["自訂順序", "名稱筆畫", "歌曲數目"].contains(mode) else { return }
+        var state = collection
+        let defaultAscending = mode != "歌曲數目"
+        if mode != "自訂順序", state.playlistSort == mode {
+            state.playlistSortAscending = !(state.playlistSortAscending ?? defaultAscending)
+        } else { state.playlistSort = mode; state.playlistSortAscending = defaultAscending }
         collection = state
     }
 }

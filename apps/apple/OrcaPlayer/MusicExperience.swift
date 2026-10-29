@@ -18,7 +18,7 @@ struct CollectionSongRow: View {
     @ScaledMetric(relativeTo: .body) private var rowHeight: CGFloat = 88
     var body: some View {
         HStack(spacing: 10) {
-            Button { model.play(track, queue: queue.isEmpty ? model.tracks : queue, contextName: queueName, playlistID: model.isSystemPlaylist(playlistID) || model.collection.playlists.contains(where: { $0.id == playlistID }) ? playlistID : nil) } label: {
+            Button { guard model.homeState.canActivateContent() else { return }; model.play(track, queue: queue.isEmpty ? model.tracks : queue, contextName: queueName, playlistID: model.isSystemPlaylist(playlistID) || model.collection.playlists.contains(where: { $0.id == playlistID }) ? playlistID : nil) } label: {
                 HStack(spacing: 10) {
                     SongArtwork(model: model, track: track, compact: true).frame(width: 42, height: 42)
                     VStack(alignment: .leading, spacing: 3) {
@@ -29,7 +29,7 @@ struct CollectionSongRow: View {
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
             }.buttonStyle(.plain)
-            Button { actions = true } label: { Image(systemName: "ellipsis").foregroundStyle(OrcaTheme.muted).frame(width: 44, height: 44) }.buttonStyle(.plain).accessibilityLabel("管理 \(model.title(track))")
+            Button { if model.homeState.canActivateContent() { actions = true } } label: { Image(systemName: "ellipsis").foregroundStyle(OrcaTheme.muted).frame(width: 44, height: 44) }.buttonStyle(.plain).accessibilityLabel("管理 \(model.title(track))")
         }.padding(.horizontal, 12).frame(height: rowHeight).background(OrcaTheme.panel, in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(model.selectedID == track.id ? OrcaTheme.cyan.opacity(0.5) : OrcaTheme.line.opacity(0.4)))
             .sheet(isPresented: $actions) { SongActionsSheet(model: model, track: track, playlistID: playlistID) }

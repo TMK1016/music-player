@@ -417,10 +417,9 @@ private final class PreparationProbe: @unchecked Sendable {
         model.bindSong(to: "") // Keep later independent binding scenarios isolated.
         let home = model.homeState
         home.section = "播放清單"
-        home.allPlaylistsExpanded = false
         let audioCallsBeforeSwipe = audio.configurationCalls
         home.handleSwipe(horizontal: 5, vertical: 90)
-        precondition(home.allPlaylistsExpanded, "Downward swipe expands playlists without a show-all button")
+        precondition(home.section == "播放清單", "Vertical scrolling must not change category or reveal a different subset")
         home.handleSwipe(horizontal: -90, vertical: 10)
         precondition(home.section == "歌手列表", "Left swipe selects the next Home category")
         home.handleSwipe(horizontal: -90, vertical: 10)
@@ -432,7 +431,17 @@ private final class PreparationProbe: @unchecked Sendable {
         home.handleSwipe(horizontal: 40, vertical: 45)
         precondition(home.section == "歌手列表" && audio.configurationCalls == audioCallsBeforeSwipe, "Short diagonal swipes do not navigate or configure audio")
         model.openHome()
-        precondition(!home.allPlaylistsExpanded, "Home returns to collapsed playlist preview")
+        precondition(home.section == "歌手列表", "Home preserves the category without truncating its contents")
+        let input = HomeLibraryState()
+        precondition(input.canActivateContent(now: 10), "Stationary taps are allowed before any drag")
+        input.noteContentDrag(now: 10)
+        precondition(!input.canActivateContent(now: 10.1) && input.canActivateContent(now: 10.3), "A drag suppresses its release tap, then expires without a timer")
+        input.setScrollActive(true, now: 11)
+        precondition(!input.canActivateContent(now: 20), "Deceleration remains blocked even after the short drag guard expires")
+        input.setScrollActive(false, now: 20)
+        precondition(!input.canActivateContent(now: 20.1) && input.canActivateContent(now: 20.3), "Idle releases the gate after the settling interval")
+        input.setScrollActive(false, now: 21)
+        precondition(input.canActivateContent(now: 21), "An already-idle stationary tap does not renew the guard")
         home.selectDetail("list.test", artist: false)
         precondition(home.isShowingDetail && home.selectedArtist == nil, "Selecting a list opens only its own detail")
         home.selectDetail("artist.test", artist: true)
@@ -444,6 +453,15 @@ private final class PreparationProbe: @unchecked Sendable {
         let created = model.createPlaylist("V10測試清單", artwork: cover)!
         precondition(model.collection.playlistAppearance?[created]?.artwork == cover, "New playlist atomically saves its chosen cover")
         precondition(model.updatePlaylist(created, name: "V10測試清單", artwork: nil, replaceArtwork: true) && model.collection.playlistAppearance?[created]?.artwork == nil, "Removing a playlist photo restores its default cover")
+        model.selectPlaylistSort("歌曲數目")
+        let countsDescending = model.visiblePlaylistIDs.map { model.songs(in: $0).count }
+        precondition(countsDescending == countsDescending.sorted(by: >), "Playlist count sorting defaults to descending across the full visible set")
+        model.selectPlaylistSort("歌曲數目")
+        let countsAscending = model.visiblePlaylistIDs.map { model.songs(in: $0).count }
+        precondition(countsAscending == countsAscending.sorted(), "Repeated playlist sort reverses its direction")
+        let savedSort = try! JSONDecoder().decode(MusicCollection.self, from: JSONEncoder().encode(model.collection))
+        precondition(savedSort.playlistSort == "歌曲數目" && savedSort.playlistSortAscending == true, "Playlist sorting persists without a schema version break")
+        model.selectPlaylistSort("自訂順序")
         let selection: Set<String> = [model.tracks[0].id, model.tracks[1].id, "not-in-library"]
         model.addSongs(selection, toPlaylist: created)
         model.addSongs(selection, toPlaylist: created)
@@ -460,6 +478,11 @@ private final class PreparationProbe: @unchecked Sendable {
         model.editSong(model.tracks[0], title: model.title(model.tracks[0]), artistName: oldArtist)
         model.collection.artists.removeAll { $0.id == target }
         model.deletePlaylist(created)
+        var scrollPublications = 0
+        let scrollSubscription = home.objectWillChange.sink { scrollPublications += 1 }
+        for position in 0..<1000 { home.recordScrollPosition("all-song:test.\(position)", in: "全部歌曲") }
+        precondition(scrollPublications == 0, "Scroll bookkeeping must not republish the entire Home view")
+        scrollSubscription.cancel()
         home.recordScrollPosition("playlist-header:favorites", in: "播放清單")
         home.recordScrollPosition("ranking:month:last", in: "播放清單")
         precondition(home.scrollPositions["播放清單"] == "ranking:month:last", "Ranking position must replace stale playlist header")

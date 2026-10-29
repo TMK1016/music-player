@@ -3,6 +3,59 @@
   "updated_at": "2026-10-29",
   "entries": [
     {
+      "id": "release-home-scroll",
+      "version": "v0.19.0",
+      "date": "2026-10-29",
+      "title": "首頁連續捲動與防誤觸",
+      "summary": "移除清單突然展開，統一數量排序列，降低捲動重繪與誤點。",
+      "changes": [
+        {
+          "id": "home-continuous-grid",
+          "title": "完整清單自然捲動與統一資訊列",
+          "summary": "全部清單連續懶載入，新增按鈕最後；三分類共用數量與排序列，清單排序可持久化。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "共用資訊列與連續網格"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "相容舊資料的清單排序"
+            }
+          ]
+        },
+        {
+          "id": "home-scroll-guard",
+          "title": "捲動防誤觸與位置回寫隔離",
+          "summary": "拖曳／減速期間阻擋誤啟動，靜止點按保留；1000次位置寫入無首頁發布。",
+          "node_ids": [
+            "LIB-01",
+            "QA-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibraryState.swift",
+              "label": "非發布位置與互動保護"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "時序／排序／發布次數回歸"
+            },
+            {
+              "path": "docs/zh-TW/首頁連續捲動與防誤觸.md",
+              "label": "修正與驗收"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-v11",
       "version": "v0.18.0",
       "date": "2026-10-29",

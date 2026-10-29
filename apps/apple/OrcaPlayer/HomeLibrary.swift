@@ -17,6 +17,7 @@ struct MusicHomeView: View {
     @ViewState private var draggedArtist: String?
     @ViewState private var hiddenLists = false
     @ViewState private var sortingArtists = false
+    @ViewState private var sortingPlaylists = false
     @ViewState private var draggedSong: String?
     @ViewState private var sortingSongs = false
     private var selectedPlaylist: String? { get { navigation.selectedPlaylist } nonmutating set { navigation.selectedPlaylist = newValue } }
@@ -33,6 +34,7 @@ struct MusicHomeView: View {
             Picker("曲庫", selection: Binding(get: { section }, set: { section = $0 })) {
                 ForEach(["播放清單", "歌手列表", "全部歌曲"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented).labelsHidden().padding(.horizontal, 20).frame(height: 56)
+            libraryInfoRow.frame(height: 44).padding(.horizontal, 20).padding(.bottom, 8)
         ScrollViewReader { reader in
         ScrollView { LazyVStack(alignment: .leading, spacing: 12) {
             if !model.importSummary.isEmpty { Text(model.importSummary).font(.caption).foregroundStyle(OrcaTheme.cyan) }
@@ -50,12 +52,14 @@ struct MusicHomeView: View {
             rankingRows
             }
         }.padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 20).scrollTargetLayout() }
-        .simultaneousGesture(DragGesture(minimumDistance: 24).onEnded { value in
-            guard draggedPlaylist == nil, draggedArtist == nil, draggedSong == nil else { return }
-            navigation.handleSwipe(horizontal: value.translation.width, vertical: value.translation.height)
-        })
-        .accessibilityAction(named: "展開全部播放清單") { navigation.allPlaylistsExpanded = true }
-        .accessibilityAction(named: "收合播放清單") { navigation.allPlaylistsExpanded = false }
+        .modifier(HomeScrollActivity(navigation: navigation))
+        .simultaneousGesture(DragGesture(minimumDistance: 12)
+            .onChanged { _ in navigation.noteContentDrag() }
+            .onEnded { value in
+                navigation.noteContentDrag()
+                guard draggedPlaylist == nil, draggedArtist == nil, draggedSong == nil else { return }
+                navigation.handleSwipe(horizontal: value.translation.width, vertical: value.translation.height)
+            })
         .scrollPosition(id: Binding(get: { navigation.scrollPositions[section] }, set: { value in
             navigation.recordScrollPosition(value, in: section)
         }))
@@ -87,16 +91,73 @@ struct MusicHomeView: View {
             Button("刪除清單", role: .destructive) { if let id = deletingPlaylist { model.deletePlaylist(id) }; deletingPlaylist = nil }
         }
     }
+    @ViewBuilder private var libraryInfoRow: some View {
+        if section == "全部歌曲" { songInfoRow }
+        else if section == "歌手列表" { artistInfoRow }
+        else {
+            HStack {
+                Text("\(model.visiblePlaylistIDs.count) 個清單").font(.caption).foregroundStyle(OrcaTheme.muted)
+                Spacer()
+                Button { if navigation.canActivateContent() { sortingPlaylists = true } } label: {
+                    Label(model.collection.playlistSort ?? "自訂順序", systemImage: "arrow.up.arrow.down").font(.subheadline).frame(minHeight: 44)
+                }.buttonStyle(.plain).accessibilityLabel("播放清單排序")
+                .popover(isPresented: $sortingPlaylists, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                    VStack(spacing: 4) {
+                        ForEach(["自訂順序", "名稱筆畫", "歌曲數目"], id: \.self) { value in
+                            Button { model.selectPlaylistSort(value); sortingPlaylists = false } label: {
+                                HStack { Text(value); Spacer(); if (model.collection.playlistSort ?? "自訂順序") == value { Image(systemName: "checkmark") } }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                        }
+                    }.padding(12).frame(width: 180).foregroundStyle(.white).presentationCompactAdaptation(.popover).presentationBackground(OrcaTheme.sheet)
+                }
+            }
+        }
+    }
+    private var songInfoRow: some View {
+        let songs = model.sortedSongs
+        return HStack {
+                Text("\(songs.count) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
+                Spacer()
+                Button { if navigation.canActivateContent() { sortingSongs = true } } label: { Label(model.collection.effectiveSongSort, systemImage: model.collection.isSongSortAscending ? "arrow.up" : "arrow.down").font(.subheadline).frame(minHeight: 44) }.buttonStyle(.plain)
+                    .accessibilityLabel("全部歌曲排序")
+                    .popover(isPresented: $sortingSongs, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                        VStack(spacing: 4) { ForEach(SongSortMode.allCases, id: \.self) { option in
+                            Button { model.selectSongSort(option); sortingSongs = false } label: {
+                                HStack { Text(option.rawValue); Spacer(); if model.collection.effectiveSongSort == option.rawValue { Image(systemName: model.collection.isSongSortAscending ? "arrow.up" : "arrow.down") } }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                            }.buttonStyle(.plain)
+                        } }.padding(12).frame(width: 180).foregroundStyle(.white).presentationCompactAdaptation(.popover).presentationBackground(OrcaTheme.sheet)
+                    }
+            }
+    }
+    private var artistInfoRow: some View {
+        HStack {
+                Text("\(groups.count) 位歌手").font(.caption).foregroundStyle(OrcaTheme.muted)
+                Spacer()
+                Button { if navigation.canActivateContent() { sortingArtists = true } } label: {
+                    Label(artistSort, systemImage: "arrow.up.arrow.down").font(.subheadline).foregroundStyle(.white).frame(minHeight: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel("歌手排序：\(artistSort)")
+                    .popover(isPresented: $sortingArtists, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(["歌曲數目", "名字筆畫", "喜好高低", "自訂順序"], id: \.self) { value in
+                                Button { model.collection.artistSort = value; sortingArtists = false } label: {
+                                    HStack { Text(value); Spacer(); if artistSort == value { Image(systemName: "checkmark") } }
+                                        .font(.subheadline).foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
+                                }.buttonStyle(.plain)
+                            }
+                        }.padding(12).frame(width: 180).presentationCompactAdaptation(.popover).presentationBackground(OrcaTheme.sheet)
+                    }
+            }
+    }
     private var playlistRows: some View {
         LazyVGrid(columns: [GridItem(.flexible(), alignment: .top), GridItem(.flexible(), alignment: .top)], alignment: .leading, spacing: 20) {
-            ForEach(navigation.allPlaylistsExpanded ? model.visiblePlaylistIDs : Array(model.visiblePlaylistIDs.prefix(3)), id: \.self) { id in
-                Button { selectedPlaylist = id } label: {
+            ForEach(model.visiblePlaylistIDs, id: \.self) { id in
+                Button { if navigation.canActivateContent() { selectedPlaylist = id } } label: {
                     VStack(alignment: .leading, spacing: 8) {
                         GeometryReader { geo in
                             DecodedArtwork(data: model.collection.playlistAppearance?[id]?.artwork, symbol: id == "favorites" ? "heart.fill" : "music.note.list")
                                 .padding(model.collection.playlistAppearance?[id]?.artwork == nil ? geo.size.width * 0.1 : 0)
                                 .frame(width: geo.size.width, height: geo.size.height).background(OrcaTheme.panel).clipped()
-                        }.aspectRatio(1, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 18))
+                        }.aspectRatio(1.4, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 18))
                         Text(model.playlistTitle(id)).foregroundStyle(id.hasPrefix("stars") ? OrcaTheme.star : .white).lineLimit(1)
                         Text("\(model.libraryIndex.playlistIDs[id]?.count ?? 0) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
                     }.contentShape(Rectangle())
@@ -113,11 +174,11 @@ struct MusicHomeView: View {
                 .onDrag { draggedPlaylist = id; return NSItemProvider(object: id as NSString) }
                 .onDrop(of: [.text], delegate: LibraryReorderDrop(target: id, dragged: $draggedPlaylist) { source, target in model.movePlaylist(source, to: target) })
             }
-            Button { newList = true } label: {
+            Button { if navigation.canActivateContent() { newList = true } } label: {
                 GeometryReader { geo in
                     Image(systemName: "plus").font(.system(size: 40, weight: .light))
                         .frame(width: geo.size.width, height: geo.size.height).background(.white.opacity(0.2), in: RoundedRectangle(cornerRadius: 18))
-                }.aspectRatio(1, contentMode: .fit).foregroundStyle(.white).contentShape(Rectangle())
+                }.aspectRatio(1.4, contentMode: .fit).foregroundStyle(.white).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("新增播放清單")
             if !(model.collection.hiddenPlaylists ?? []).isEmpty {
                 Button { hiddenLists = true } label: { Label("管理隱藏清單", systemImage: "eye.slash").frame(minHeight: 44) }.buttonStyle(.plain)
@@ -126,19 +187,6 @@ struct MusicHomeView: View {
     }
     @ViewBuilder private var allSongRows: some View {
         let songs = model.sortedSongs
-            HStack {
-                Text("\(songs.count) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
-                Spacer()
-                Button { sortingSongs = true } label: { Label(model.collection.effectiveSongSort, systemImage: model.collection.isSongSortAscending ? "arrow.up" : "arrow.down").font(.subheadline).frame(minHeight: 44) }.buttonStyle(.plain)
-                    .accessibilityLabel("全部歌曲排序")
-                    .popover(isPresented: $sortingSongs, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-                        VStack(spacing: 4) { ForEach(SongSortMode.allCases, id: \.self) { option in
-                            Button { model.selectSongSort(option); sortingSongs = false } label: {
-                                HStack { Text(option.rawValue); Spacer(); if model.collection.effectiveSongSort == option.rawValue { Image(systemName: model.collection.isSongSortAscending ? "arrow.up" : "arrow.down") } }.frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
-                            }.buttonStyle(.plain)
-                        } }.padding(12).frame(width: 180).foregroundStyle(.white).presentationCompactAdaptation(.popover).presentationBackground(OrcaTheme.sheet)
-                    }
-            }
             ForEach(songs) { song in
                 CollectionSongRow(model: model, track: song, queue: songs).id("all-song:" + song.id)
                     .contextMenu {
@@ -167,27 +215,10 @@ struct MusicHomeView: View {
     }
     private var artistRows: some View {
         LazyVStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("\(groups.count) 位歌手").font(.caption).foregroundStyle(OrcaTheme.muted)
-                Spacer()
-                Button { sortingArtists = true } label: {
-                    Label(artistSort, systemImage: "arrow.up.arrow.down").font(.subheadline).foregroundStyle(.white).frame(minHeight: 44).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityLabel("歌手排序：\(artistSort)")
-                    .popover(isPresented: $sortingArtists, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            ForEach(["歌曲數目", "名字筆畫", "喜好高低", "自訂順序"], id: \.self) { value in
-                                Button { model.collection.artistSort = value; sortingArtists = false } label: {
-                                    HStack { Text(value); Spacer(); if artistSort == value { Image(systemName: "checkmark") } }
-                                        .font(.subheadline).foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle())
-                                }.buttonStyle(.plain)
-                            }
-                        }.padding(12).frame(width: 180).presentationCompactAdaptation(.popover).presentationBackground(OrcaTheme.sheet)
-                    }
-            }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .top), count: 3), spacing: 20) {
             ForEach(groups, id: \.self) { name in
                 let key = model.artistKey(name)
-                Button { selectedArtist = key } label: {
+                Button { if navigation.canActivateContent() { selectedArtist = key } } label: {
                     VStack(spacing: 8) {
                         GeometryReader { geo in
                             DecodedArtwork(data: model.libraryIndex.artists[key]?.avatar ?? model.collection.artists.first(where: { $0.name == name })?.avatar, symbol: "person.fill")
@@ -206,7 +237,7 @@ struct MusicHomeView: View {
                     model.moveArtist(source, to: target, in: groups.map { model.artistKey($0) }); model.collection.artistSort = "自訂順序"
                 })
             }
-            Button { newArtist = true } label: {
+            Button { if navigation.canActivateContent() { newArtist = true } } label: {
                 GeometryReader { geo in
                     Image(systemName: "plus").font(.system(size: 38, weight: .light))
                         .frame(width: geo.size.width, height: geo.size.height).background(.white.opacity(0.3), in: Circle())
@@ -228,7 +259,7 @@ struct MusicHomeView: View {
             ForEach(Array(ranked.prefix(10).enumerated()), id: \.element.id) { index, song in
                 HStack(spacing: 10) {
                     Text("\(index + 1)").monospacedDigit().frame(width: 24)
-                    Button { model.play(song, queue: ranked, contextName: monthly ? "當月排行榜" : "累計排行榜") } label: {
+                    Button { guard navigation.canActivateContent() else { return }; model.play(song, queue: ranked, contextName: monthly ? "當月排行榜" : "累計排行榜") } label: {
                         HStack(spacing: 10) {
                             SongArtwork(model: model, track: song, compact: true).frame(width: 38, height: 38)
                             VStack(alignment: .leading, spacing: 3) {
@@ -268,5 +299,23 @@ extension View {
         overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(selected ? 0.9 : 0), lineWidth: 1.5)
             .shadow(color: .white.opacity(selected ? 0.4 : 0), radius: 4))
         .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+}
+
+/// Scroll phase changes only update interaction guards, never observable library data.
+private struct HomeScrollActivity: ViewModifier {
+    let navigation: HomeLibraryState
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 18.0, macOS 15.0, *) {
+            content.onScrollPhaseChange { _, phase in
+                switch phase {
+                case .interacting, .decelerating, .animating: navigation.setScrollActive(true)
+                case .idle: navigation.setScrollActive(false)
+                case .tracking: break // A stationary tap must remain a tap.
+                @unknown default: break
+                }
+            }
+                .onDisappear { navigation.setScrollActive(false) }
+        } else { content }
     }
 }

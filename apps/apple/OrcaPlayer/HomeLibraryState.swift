@@ -7,7 +7,6 @@ import OSLog
     @Published var section = "播放清單" { didSet { PlayerDiagnostics.event("LibrarySection:" + section) } }
     @Published var selectedPlaylist: String?
     @Published var selectedArtist: String?
-    @Published var allPlaylistsExpanded = false
     @Published var expandedPlaylist: String?
     @Published var expandedArtist: String?
     @Published var monthly = true
@@ -22,12 +21,24 @@ import OSLog
         if abs(x) >= 60, abs(x) > abs(y) * 1.3, let index = Self.sections.firstIndex(of: section) {
             let next = min(Self.sections.count - 1, max(0, index + (x < 0 ? 1 : -1)))
             if next != index { section = Self.sections[next] }
-        } else if section == "播放清單", y >= 50, y > abs(x) * 1.3 {
-            allPlaylistsExpanded = true
         }
     }
     var showsRankings: Bool { section == "播放清單" }
-    @Published var scrollPositions: [String: String] = [:]
+    var scrollPositions: [String: String] = [:]
+    private var scrollActive = false
+    private var activationBlockedUntil: TimeInterval = 0
+    func noteContentDrag(now: TimeInterval = Date.timeIntervalSinceReferenceDate) {
+        guard now.isFinite else { return }
+        activationBlockedUntil = max(activationBlockedUntil, now + 0.25)
+    }
+    func setScrollActive(_ active: Bool, now: TimeInterval = Date.timeIntervalSinceReferenceDate) {
+        let wasActive = scrollActive
+        scrollActive = active
+        if wasActive && !active { noteContentDrag(now: now) }
+    }
+    func canActivateContent(now: TimeInterval = Date.timeIntervalSinceReferenceDate) -> Bool {
+        !scrollActive && now.isFinite && now >= activationBlockedUntil
+    }
     func recordScrollPosition(_ id: String?, in section: String) {
         // Keep every actual scroll target, including ranking and expanded song rows.
         // Returning a stale header to scrollPosition can fight the user's gesture.
