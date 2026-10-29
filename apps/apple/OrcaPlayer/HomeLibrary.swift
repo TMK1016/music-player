@@ -35,10 +35,11 @@ struct MusicHomeView: View {
                 ForEach(["播放清單", "歌手列表", "全部歌曲"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented).labelsHidden().padding(.horizontal, 20).frame(height: 56)
             libraryInfoRow.frame(height: 44).padding(.horizontal, 20).padding(.bottom, 8)
+        GeometryReader { viewport in
         ScrollViewReader { reader in
-        ScrollView { LazyVStack(alignment: .leading, spacing: 12) {
+        ScrollView(.vertical) { LazyVStack(alignment: .leading, spacing: 12) {
             if !model.importSummary.isEmpty { Text(model.importSummary).font(.caption).foregroundStyle(OrcaTheme.cyan) }
-            Color.clear.frame(height: 0).id("home-top")
+            Color.clear.frame(maxWidth: .infinity).frame(height: 0).id("home-top")
             if section == "播放清單" { playlistRows }
             else if section == "歌手列表" { artistRows }
             else {
@@ -51,7 +52,9 @@ struct MusicHomeView: View {
             Picker("排行榜範圍", selection: Binding(get: { monthly }, set: { monthly = $0 })) { Text("當月").tag(true); Text("累計").tag(false) }.pickerStyle(.segmented).labelsHidden()
             rankingRows
             }
-        }.padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 20).scrollTargetLayout() }
+        }.frame(width: max(0, viewport.size.width - 40), alignment: .leading)
+            .padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 20).scrollTargetLayout() }
+        .frame(width: viewport.size.width)
         .modifier(HomeScrollActivity(navigation: navigation))
         .simultaneousGesture(DragGesture(minimumDistance: 12)
             .onChanged { _ in navigation.noteContentDrag() }
@@ -62,9 +65,14 @@ struct MusicHomeView: View {
             })
         .scrollPosition(id: Binding(get: { navigation.scrollPositions[section] }, set: { value in
             navigation.recordScrollPosition(value, in: section)
-        }))
-        .onChange(of: section) { _, value in reader.scrollTo(navigation.scrollPositions[value] ?? "home-top", anchor: .top) }
-        .onAppear { if let id = navigation.scrollPositions[section] { reader.scrollTo(id, anchor: .top) } }
+        }), anchor: .topLeading)
+        .onChange(of: section) { _, value in reader.scrollTo(navigation.scrollPositions[value] ?? "home-top", anchor: .topLeading) }
+        .task(id: section) {
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+            reader.scrollTo(navigation.scrollPositions[section] ?? "home-top", anchor: .topLeading)
+        }
+        }
         }
         }
         }
@@ -99,8 +107,8 @@ struct MusicHomeView: View {
                 Text("\(model.visiblePlaylistIDs.count) 個清單").font(.caption).foregroundStyle(OrcaTheme.muted)
                 Spacer()
                 Button { if navigation.canActivateContent() { sortingPlaylists = true } } label: {
-                    Label(model.collection.playlistSort ?? "自訂順序", systemImage: "arrow.up.arrow.down").font(.subheadline).frame(minHeight: 44)
-                }.buttonStyle(.plain).accessibilityLabel("播放清單排序")
+                    Image(systemName: "arrow.up.arrow.down").font(.subheadline).frame(width: 44, height: 44)
+                }.buttonStyle(.plain).accessibilityLabel("播放清單排序").accessibilityValue(model.collection.playlistSort ?? "自訂順序")
                 .popover(isPresented: $sortingPlaylists, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                     VStack(spacing: 4) {
                         ForEach(["自訂順序", "名稱筆畫", "歌曲數目"], id: \.self) { value in
@@ -118,8 +126,8 @@ struct MusicHomeView: View {
         return HStack {
                 Text("\(songs.count) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
                 Spacer()
-                Button { if navigation.canActivateContent() { sortingSongs = true } } label: { Label(model.collection.effectiveSongSort, systemImage: model.collection.isSongSortAscending ? "arrow.up" : "arrow.down").font(.subheadline).frame(minHeight: 44) }.buttonStyle(.plain)
-                    .accessibilityLabel("全部歌曲排序")
+                Button { if navigation.canActivateContent() { sortingSongs = true } } label: { Image(systemName: "arrow.up.arrow.down").font(.subheadline).frame(width: 44, height: 44) }.buttonStyle(.plain)
+                    .accessibilityLabel("全部歌曲排序").accessibilityValue(model.collection.effectiveSongSort + (model.collection.isSongSortAscending ? "，升序" : "，降序"))
                     .popover(isPresented: $sortingSongs, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                         VStack(spacing: 4) { ForEach(SongSortMode.allCases, id: \.self) { option in
                             Button { model.selectSongSort(option); sortingSongs = false } label: {
@@ -134,7 +142,7 @@ struct MusicHomeView: View {
                 Text("\(groups.count) 位歌手").font(.caption).foregroundStyle(OrcaTheme.muted)
                 Spacer()
                 Button { if navigation.canActivateContent() { sortingArtists = true } } label: {
-                    Label(artistSort, systemImage: "arrow.up.arrow.down").font(.subheadline).foregroundStyle(.white).frame(minHeight: 44).contentShape(Rectangle())
+                    Image(systemName: "arrow.up.arrow.down").font(.subheadline).foregroundStyle(.white).frame(width: 44, height: 44).contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel("歌手排序：\(artistSort)")
                     .popover(isPresented: $sortingArtists, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -152,13 +160,13 @@ struct MusicHomeView: View {
         LazyVGrid(columns: [GridItem(.flexible(), alignment: .top), GridItem(.flexible(), alignment: .top)], alignment: .leading, spacing: 20) {
             ForEach(model.visiblePlaylistIDs, id: \.self) { id in
                 Button { if navigation.canActivateContent() { selectedPlaylist = id } } label: {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(spacing: 8) {
                         GeometryReader { geo in
                             DecodedArtwork(data: model.collection.playlistAppearance?[id]?.artwork, symbol: id == "favorites" ? "heart.fill" : "music.note.list")
                                 .padding(model.collection.playlistAppearance?[id]?.artwork == nil ? geo.size.width * 0.1 : 0)
                                 .frame(width: geo.size.width, height: geo.size.height).background(OrcaTheme.panel).clipped()
-                        }.aspectRatio(1.4, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 18))
-                        Text(model.playlistTitle(id)).foregroundStyle(id.hasPrefix("stars") ? OrcaTheme.star : .white).lineLimit(1)
+                        }.aspectRatio(1, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 18))
+                        Text(model.playlistTitle(id)).foregroundStyle(id.hasPrefix("stars") ? OrcaTheme.star : .white).lineLimit(1).frame(maxWidth: .infinity, alignment: .center)
                         Text("\(model.libraryIndex.playlistIDs[id]?.count ?? 0) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
                     }.contentShape(Rectangle())
                 }.buttonStyle(.plain).id("playlist-header:" + id)
@@ -178,7 +186,7 @@ struct MusicHomeView: View {
                 GeometryReader { geo in
                     Image(systemName: "plus").font(.system(size: 40, weight: .light))
                         .frame(width: geo.size.width, height: geo.size.height).background(.white.opacity(0.2), in: RoundedRectangle(cornerRadius: 18))
-                }.aspectRatio(1.4, contentMode: .fit).foregroundStyle(.white).contentShape(Rectangle())
+                }.aspectRatio(1, contentMode: .fit).foregroundStyle(.white).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("新增播放清單")
             if !(model.collection.hiddenPlaylists ?? []).isEmpty {
                 Button { hiddenLists = true } label: { Label("管理隱藏清單", systemImage: "eye.slash").frame(minHeight: 44) }.buttonStyle(.plain)

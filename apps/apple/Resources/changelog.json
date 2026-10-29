@@ -3,6 +3,59 @@
   "updated_at": "2026-10-29",
   "entries": [
     {
+      "id": "release-home-alignment",
+      "version": "v0.19.1",
+      "date": "2026-10-29",
+      "title": "首頁對齊與清單播放修正",
+      "summary": "依標註圖恢復正方形封面、置中名稱、圖示排序與清單暫停。",
+      "changes": [
+        {
+          "id": "home-width-and-square",
+          "title": "初始寬度與正方形封面",
+          "summary": "限制可視寬度與恢復錨點，排序圖示化、清單名稱置中。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "首頁寬度與卡片"
+            },
+            {
+              "path": "docs/zh-TW/首頁對齊與清單播放修正.md",
+              "label": "驗收"
+            }
+          ]
+        },
+        {
+          "id": "playlist-transport-state",
+          "title": "清單播放暫停同步",
+          "summary": "依來源清單識別目前播放；暫停後恢復同一首歌曲。",
+          "node_ids": [
+            "PLAY-01",
+            "QA-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryDetail.swift",
+              "label": "清單播放按鈕"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "清單控制"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "來源及暫停恢復測試"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-home-scroll",
       "version": "v0.19.0",
       "date": "2026-10-29",

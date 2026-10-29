@@ -43,9 +43,12 @@ struct LibraryDetailPage: View {
                             .accessibilityLabel("搜尋並加入歌曲").disabled(!canAdd)
                             .help(canAdd ? "從現有曲庫選擇歌曲" : "此清單依日期或評分自動分類")
                         Button { editing = true } label: { Image(systemName: "ellipsis").frame(width: 44, height: 44) }.accessibilityLabel(artist ? "編輯歌手資料" : "編輯播放清單")
-                        Button { if let first = songs.first { model.play(first, queue: songs, contextName: title(selectedID), playlistID: artist ? nil : selectedID) } } label: {
-                            Image(systemName: "play.fill").foregroundStyle(.black).frame(width: 48, height: 48).background(.green, in: Circle())
-                        }.accessibilityLabel("播放全部").disabled(songs.isEmpty)
+                        Button {
+                            if !artist { model.togglePlaylistPlayback(selectedID) }
+                            else if let first = songs.first { model.play(first, queue: songs, contextName: title(selectedID)) }
+                        } label: {
+                            Image(systemName: !artist && model.isCurrentPlaylist(selectedID) && model.isPlaying ? "pause.fill" : "play.fill").foregroundStyle(.black).frame(width: 48, height: 48).background(.green, in: Circle())
+                        }.accessibilityLabel(!artist && model.isCurrentPlaylist(selectedID) && model.isPlaying ? "暫停清單" : "播放全部").disabled(songs.isEmpty)
                     }.buttonStyle(.plain).padding(.horizontal, 20)
                     if !canAdd { Text("此清單依日期或評分自動分類；可透過收藏、評分或匯入歌曲調整內容。").font(.caption).foregroundStyle(OrcaTheme.muted).padding(.horizontal, 20) }
                     ForEach(songs) { song in

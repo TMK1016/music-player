@@ -395,6 +395,16 @@ private struct SavedSettings: Codable {
     func previous() {
         if currentTime > 3 { choose(track, autoplay: isPlaying || playbackRequest != nil) } else { advance(forward: false) }
     }
+    func isCurrentPlaylist(_ id: String) -> Bool {
+        playbackListID == id && songs(in: id).contains { $0.id == track.id }
+    }
+    func togglePlaylistPlayback(_ id: String) {
+        if isCurrentPlaylist(id) { togglePlayback() }
+        else {
+            let queue = songs(in: id)
+            if let first = queue.first { play(first, queue: queue, contextName: playlistTitle(id), playlistID: id) }
+        }
+    }
     func play(_ track: AudioTrack, queue: [AudioTrack], contextName: String = "全部歌曲", playlistID: String? = nil) {
         playbackListID = playlistID; playbackContextName = contextName
         playbackQueue = queue.map(\.id); choose(track)
