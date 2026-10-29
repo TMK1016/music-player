@@ -3,6 +3,7 @@
 </style>
 <details id="eq-technical" class="eq-tech">
 <summary>技術細節 · EQ 如何處理音訊與音量</summary>
+<p><strong>V13-A 更新：</strong>低音開啟時，背景完整歌曲量測完成後改採實際響度／峰值估計約束的單一增益，保留七段EQ。下列曲線是原估算器與安全備援的模型範例，不是新分析結果。詳見 <a href="../docs/zh-TW/V13-A低音增強實作與驗收.md">V13-A 實作與驗收</a>。</p>
 <p class="muted">v0.6.0 · 7 段 EQ，保留第一階段餘裕優化。此區說明專案實作，不是音訊即時監控。</p>
 <h3>1／先理解頻率、增益與餘裕</h3>
 <p>Hz 決定調整哪段頻率；dB 決定增減量；頻寬決定影響範圍。EQ 濾波器互相重疊：應在同一頻率把各濾波器的 dB 響應相加，再尋找最高點，不應直接把所有滑桿的正值相加。</p>
@@ -18,7 +19,7 @@
 <svg id="tech-chart" viewBox="0 0 700 290" role="img" aria-label="EQ 頻率響應與新舊補償的估算比較"></svg>
 <p class="tech-note"><span style="color:#8c9eb0">灰色：補償前 EQ 響應</span> ／ <span style="color:#e5b468">橘色：舊版補償後</span> ／ <span style="color:#6bc9ff">藍色：新版補償後</span><br>橫軸為對數頻率 Hz；縱軸為相對輸入的增益 dB。同一組 7 段參數比較兩種餘裕算法，不是 10 段與 7 段的音色等價比較。這是與正式 Swift 共用算法輸出的估算曲線，不是音樂波形或實車頻響，不包含殘響尾音的頻率響應。</p>
 <h3>5／第一階段的處理細節與限制</h3>
-<table><tbody><tr><th>舊版</th><td>−（3 dB ＋ 所有正 EQ 增益總和 ＋ 低音增強 ＋ 空間預留量）</td></tr><tr><th>新版</th><td>−（3 dB ＋ 合成頻率響應的最大正增益 ＋ 有效空間預留量）</td></tr><tr><th>合成方式</th><td>7 段約 1⅓ 倍頻程參數濾波 ＋ 90 Hz 低架濾波，使用 RBJ／W3C biquad 模型；包含鄰近頻段與低音增強的重疊。</td></tr><tr><th>頻率掃描</th><td>769 個對數點，加各中心頻率、90 Hz 與 DC；隨音檔取樣率重新估算，排除實際被旁通的高頻段。</td></tr><tr><th>殘響</th><td>啟用且混合量大於 0 時保留 6 dB；這仍是保守固定值，並非殘響峰值量測。</td></tr><tr><th>旁通</th><td>保留同一份前級衰減以比較濾波差異，並非回到未補償的原始電平。</td></tr><tr><th>尚未加入</th><td>自動響度補償、峰值限制器、true-peak 保護與歌曲正規化。任意音樂的瞬態與重建峰值仍可能超出估算，不保證完全不削波或等響。</td></tr></tbody></table>
+<table><tbody><tr><th>舊版</th><td>−（3 dB ＋ 所有正 EQ 增益總和 ＋ 低音增強 ＋ 空間預留量）</td></tr><tr><th>新版</th><td>−（3 dB ＋ 合成頻率響應的最大正增益 ＋ 有效空間預留量）</td></tr><tr><th>合成方式</th><td>7 段約 1⅓ 倍頻程參數濾波 ＋ 90 Hz 低架濾波，使用 RBJ／W3C biquad 模型；包含鄰近頻段與低音增強的重疊。</td></tr><tr><th>頻率掃描</th><td>769 個對數點，加各中心頻率、90 Hz 與 DC；隨音檔取樣率重新估算，排除實際被旁通的高頻段。</td></tr><tr><th>殘響</th><td>啟用且混合量大於 0 時保留 6 dB；這仍是保守固定值，並非殘響峰值量測。</td></tr><tr><th>旁通</th><td>保留同一份前級衰減以比較濾波差異，並非回到未補償的原始電平。</td></tr><tr><th>V13範圍</th><td>低音分析完成後已加入實測響度補償與峰值估計約束；未加入限制器或跨歌曲正規化。此表估算器仍是未分析時的備援，不保證所有音訊等響或所有輸出路徑零削波。</td></tr></tbody></table>
 <h3>6／證據與實作位置</h3>
 <p>Apple 原生離線 PCM：130 個響應探測點，涵蓋 16／44.1／48 kHz、相鄰提升、極端增益、正負交錯與低音增強。最大模型誤差 0.033 dB；最大低估 0.016 dB。這只涵蓋測試樣本，不是所有音訊的峰值保證。</p>
 <div class="tech-links"><a href="../docs/zh-TW/EQ音量處理技術.md" target="_blank" rel="noopener">設計與驗收紀錄 ↗</a><a href="../apps/apple/OrcaPlayer/EQHeadroom.swift" target="_blank" rel="noopener">共用估算算法 ↗</a><a href="../apps/apple/Tests/NativeEQChecks.swift" target="_blank" rel="noopener">原生音訊驗證 ↗</a></div><div id="tech-sources" class="tech-links"></div>

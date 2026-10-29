@@ -186,6 +186,7 @@ struct InlineTuningPanel: View {
             if let onBack {
                 Button(action: onBack) { Image(systemName: "chevron.left").frame(width: 44, height: 44) }.buttonStyle(.plain).accessibilityLabel("返回專輯封面")
             }
+            if let note = model.bassProcessingNote { Text(note).font(.system(size: 10)).foregroundStyle(OrcaTheme.muted).lineLimit(1).minimumScaleFactor(0.8) }
             Spacer(minLength: 4)
             Toggle("等化器", isOn: $model.eqEnabled).font(.caption).toggleStyle(.switch).fixedSize()
         }.frame(height: 44)
@@ -194,7 +195,7 @@ struct InlineTuningPanel: View {
         HStack(spacing: 8) {
             Text("低音增強").font(.caption).fixedSize()
             Slider(value: Binding(get: { model.bassBoost }, set: { model.adjustBass(to: $0) }), in: 0...9, step: 1)
-                .accessibilityLabel("低音增強，10段，0至9 dB")
+                .accessibilityLabel("低音增強，0至9 dB")
                 .accessibilityValue(String(format: "%.1f dB", model.bassBoost)).disabled(!model.eqEnabled)
             Text(String(format: "%.1f", model.bassBoost)).font(.caption.monospacedDigit()).frame(width: 28)
         }.padding(.horizontal, 10).frame(height: 44).background(OrcaTheme.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 12)).overlay(RoundedRectangle(cornerRadius: 12).stroke(OrcaTheme.line)).foregroundStyle(OrcaTheme.text).tint(OrcaTheme.cyan)

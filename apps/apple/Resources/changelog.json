@@ -3,6 +3,80 @@
   "updated_at": "2026-10-29",
   "entries": [
     {
+      "id": "release-v13-plan-a",
+      "version": "v0.20.0",
+      "date": "2026-10-29",
+      "title": "V13-A 低音實測音量補償",
+      "summary": "保留七段EQ，以完整歌曲實際音訊計算低音補償，減少全頻過度衰減。",
+      "changes": [
+        {
+          "id": "v13-a-analysis",
+          "title": "背景實際Apple路徑量測",
+          "summary": "K加權響度、重建峰值估計與完整EQ／低架／殘響；32筆快取及取消保護。",
+          "node_ids": [
+            "EQ-01",
+            "QA-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/BassAnalysis.swift",
+              "label": "完整歌曲分析與增益決策"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/AudioLevelMeter.swift",
+              "label": "響度與峰值估計"
+            }
+          ]
+        },
+        {
+          "id": "v13-a-playback",
+          "title": "播放端採用補償與漸變",
+          "summary": "參數過期結果不套用，80ms漸變；保留安全fallback與七段控制。",
+          "node_ids": [
+            "EQ-01",
+            "PROFILE-01",
+            "UI-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "背景工作與播放增益"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/EqualizerView.swift",
+              "label": "低音狀態提示"
+            }
+          ]
+        },
+        {
+          "id": "v13-a-pcm",
+          "title": "原生PCM與手機驗收",
+          "summary": "校正與實際輸出比較、取樣率／低音矩陣、峰值／取消及實際後端採用；聽測另列。",
+          "node_ids": [
+            "QA-01",
+            "QA-02"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "apps/apple/Tests/BassPlanChecks.swift",
+              "label": "低音增幅及音量驗收"
+            },
+            {
+              "path": "docs/zh-TW/V13-A低音增強實作與驗收.md",
+              "label": "結果與限制"
+            },
+            {
+              "path": "docs/verification/V13-A-bass-plan.csv",
+              "label": "實際音訊數據"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "research-v13-bass",
       "version": "V13 研究",
       "date": "2026-10-29",

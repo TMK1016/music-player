@@ -55,7 +55,7 @@ import AVFoundation
         return String(format: "PASS: native EQ offline PCM rendering; 800Hz boost = %.2f dB; bypass compensation delta = %.2f dB", difference, headroomDifference) + String(format: "; bass shelf at 32Hz = %.2f dB; reverb tail RMS = %.8f; bypass tail RMS = %.8f", bassDelta, tail, dryTail) + String(format: "; combined-response probes = %d; max model error = %.3f dB; max underestimate = %.3f dB", rows.count - 1, maxError, maxUnderestimate)
     }
 
-    @MainActor static func renderTone(frequency: Double, gains: [Double], enabled: Bool, bass: Double = 0, ambience: Ambience = .off, burst: Bool = false, sampleRate: Double = 44100) throws -> Double {
+    @MainActor static func renderTone(frequency: Double, gains: [Double], enabled: Bool, bass: Double = 0, ambience: Ambience = .off, burst: Bool = false, sampleRate: Double = 44100, outputGain: Float? = nil) throws -> Double {
         let engine = AVAudioEngine()
         let player = AVAudioPlayerNode()
         let equalizer = AVAudioUnitEQ(numberOfBands: EQBands.count)
@@ -76,6 +76,7 @@ import AVFoundation
         try AudioGraph.connect(engine, reverb, to: engine.mainMixerNode, format: format)
         EqualizerSettings.apply(to: equalizer, gains: gains, enabled: enabled, sampleRate: sampleRate)
         SoundEffectSettings.apply(equalizer: equalizer, bassUnit: bassUnit, reverb: reverb, gains: gains, bass: bass, ambience: ambience, mix: 25, enabled: enabled, sampleRate: sampleRate)
+        if let outputGain { equalizer.globalGain = outputGain }
         try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 1024)
         try engine.start()
         defer { player.stop(); engine.stop() }

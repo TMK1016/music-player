@@ -6,6 +6,8 @@ import OSLog
     var currentTime: Double { get }
     var onCompletion: (() -> Void)? { get set }
     var onInterruption: ((String) -> Void)? { get set }
+    var onProcessingGain: ((Float?) -> Void)? { get set }
+    var onBassAnalysisStatus: ((String?) -> Void)? { get set }
     func prepareForPlayback(completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void)
     func load(_ url: URL) throws
     func play() throws
@@ -18,6 +20,8 @@ import OSLog
 
 // Backends without a hardware session can complete immediately (including macOS).
 extension AudioPlayback {
+    var onProcessingGain: ((Float?) -> Void)? { get { nil } set {} }
+    var onBassAnalysisStatus: ((String?) -> Void)? { get { nil } set {} }
     func prepareForPlayback(completion: @escaping @MainActor @Sendable (Result<Void, Error>) -> Void) {
         completion(.success(()))
     }
@@ -70,7 +74,7 @@ enum EqualizerSettings {
     }
 }
 
-@MainActor enum AudioGraph {
+enum AudioGraph {
     static func connect(_ engine: AVAudioEngine, _ source: AVAudioNode, to destination: AVAudioNode, format: AVAudioFormat) throws {
         if #available(macOS 27.0, iOS 27.0, *) { try engine.connectNode(source, to: destination, format: format) }
         else { engine.connect(source, to: destination, format: format) }
@@ -92,6 +96,13 @@ enum EqualizerSettings {
     private var ambience: Ambience = .off
     private var ambienceMix = 15.0
     private var file: AVAudioFile?
+    private var loadedURL: URL?
+    private var analysisTask: Task<Void, Never>?
+    private var gainRampTask: Task<Void, Never>?
+    private var analysisRevision = 0
+    var onProcessingGain: ((Float?) -> Void)?
+    var onBassAnalysisStatus: ((String?) -> Void)?
+
     private var segmentStart: AVAudioFramePosition = 0
     private var scheduled = false
     private var generation = 0
@@ -165,6 +176,7 @@ enum EqualizerSettings {
         let candidate = try AVAudioFile(forReading: url)
         guard candidate.length > 0, candidate.length <= Int64(UInt32.max), (1...2).contains(candidate.processingFormat.channelCount), candidate.processingFormat.sampleRate > 0 else { throw PlaybackError.invalidAudio }
         file = candidate
+        loadedURL = url
         try reconnect()
         parametersApplied = false; preparedEQRate = nil
         configure(gains: gains, enabled: enabled, volume: volume)
@@ -222,6 +234,8 @@ enum EqualizerSettings {
         }
     }
     func stop() {
+        cancelBassAnalysis()
+        loadedURL = nil
         generation += 1
         player.stop()
         engine.stop()
@@ -275,13 +289,54 @@ enum EqualizerSettings {
         applyEffects()
     }
     private func applyEffects() {
+        cancelBassAnalysis()
         SoundEffectSettings.apply(equalizer: equalizer, bassUnit: bassUnit, reverb: reverb, gains: gains, bass: bass, ambience: ambience, mix: ambienceMix, enabled: enabled, sampleRate: file?.processingFormat.sampleRate ?? 44100)
+        guard enabled, bass > 0, let url = loadedURL else { return }
+        onBassAnalysisStatus?("低音分析中…")
+        let request = BassAnalysisRequest(url: url, gains: gains, bass: bass, ambience: ambience, mix: ambienceMix)
+        let revision = analysisRevision
+        analysisTask = Task(priority: .utility) { [weak self] in
+            do {
+                // Slider movement coalesces before expensive offline work begins.
+                try await Task.sleep(for: .milliseconds(300))
+                let result = try await BassAnalysisService.shared.analyze(request)
+                try Task.checkCancellation()
+                guard let self, self.analysisRevision == revision else { return }
+                self.logger.notice("Bass A ready: gain=\(result.gainDB, privacy: .public)dB peakLimited=\(result.peakLimited, privacy: .public)")
+                self.onBassAnalysisStatus?(result.peakLimited ? "已達峰值餘裕" : "音量已補償")
+                self.rampGain(to: result.gainDB, revision: revision)
+            } catch is CancellationError { }
+            catch {
+                guard let self, self.analysisRevision == revision else { return }
+                self.logger.notice("Bass A analysis unavailable; retaining conservative headroom")
+                self.onBassAnalysisStatus?("使用安全餘裕")
+            }
+        }
+    }
+    private func cancelBassAnalysis() {
+        analysisRevision += 1
+        analysisTask?.cancel(); analysisTask = nil
+        gainRampTask?.cancel(); gainRampTask = nil
+        onProcessingGain?(nil)
+        onBassAnalysisStatus?(nil)
+    }
+    private func rampGain(to target: Float, revision: Int) {
+        gainRampTask?.cancel()
+        let start = equalizer.globalGain
+        gainRampTask = Task { [weak self] in
+            for step in 1...16 {
+                do { try await Task.sleep(for: .milliseconds(5)) } catch { return }
+                guard let self, self.analysisRevision == revision else { return }
+                self.equalizer.globalGain = start + (target-start) * Float(step)/16
+            }
+            self?.onProcessingGain?(target)
+        }
     }
 
 }
 
 
-@MainActor enum SoundEffectSettings {
+enum SoundEffectSettings {
     static func apply(equalizer: AVAudioUnitEQ, bassUnit: AVAudioUnitEQ, reverb: AVAudioUnitReverb, gains: [Double], bass: Double, ambience: Ambience, mix: Double, enabled: Bool, sampleRate: Double = 44100) {
         let amount = bass.isFinite ? min(9, max(0, bass)) : 0
         let band = bassUnit.bands[0]

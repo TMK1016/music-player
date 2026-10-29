@@ -606,6 +606,7 @@ private final class PreparationProbe: @unchecked Sendable {
         print("PASS: factory/custom sound profiles, bindings and settings migration")
         print("PASS: transactional import, deduplication, invalid audio, offline copy, manifest recovery, playback commands, seek, EOF/repeat, interruption, settings and EQ wiring")
 
+        try BassPlanChecks.checkMeters()
         if !CommandLine.arguments.contains("--model-only") { print(try NativeEQChecks.run()) }
     }
 }

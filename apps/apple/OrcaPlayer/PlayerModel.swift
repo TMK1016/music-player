@@ -140,6 +140,8 @@ private struct SavedSettings: Codable {
         }
     }
     @Published var showQueue = false
+    @Published private(set) var measuredBassGain: Float?
+    @Published private(set) var bassProcessingNote: String?
     @Published var bassBoost = 0.0 { didSet { syncAudio(); save() } }
     @Published var ambience: Ambience = .off { didSet { syncAudio(); save() } }
     @Published var ambienceMix = 15.0 { didSet { syncAudio(); save() } }
@@ -227,6 +229,8 @@ private struct SavedSettings: Codable {
                 collection = decoded
             } catch { collectionWriteBlocked = true; message = "分類資料無法讀取，已保留原檔並停止覆寫。" }
         }
+        self.audio.onProcessingGain = { [weak self] gain in self?.measuredBassGain = gain }
+        self.audio.onBassAnalysisStatus = { [weak self] note in self?.bassProcessingNote = note }
         installRemoteCommands()
         applySongBinding()
         syncAudio()
@@ -266,7 +270,7 @@ private struct SavedSettings: Codable {
     }
     var elapsed: String { Self.time(currentTime) }
     var remaining: String { "−" + Self.time(max(0, track.duration - currentTime)) }
-    var headroomDB: Float { EQHeadroom.gain(gains: gains, bass: sound.bass, sampleRate: track.sampleRate, ambience: ambience, mix: sound.mix) }
+    var headroomDB: Float { measuredBassGain ?? EQHeadroom.gain(gains: gains, bass: sound.bass, sampleRate: track.sampleRate, ambience: ambience, mix: sound.mix) }
     var statusText: String { isPlaying ? "正在播放 · \(track.formatLabel)" : "本機離線播放器 · 匯入音檔後即可播放與調音" }
     var settingsData: Data? {
         let base = unboundSound ?? sound

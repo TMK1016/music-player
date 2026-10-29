@@ -1,6 +1,6 @@
 import Foundation
 
-enum Ambience: String, Codable, CaseIterable, Identifiable {
+enum Ambience: String, Codable, CaseIterable, Identifiable, Sendable {
     case off = "關閉", room = "錄音室", concert = "演唱會", hall = "音樂廳", spacious = "寬廣空間"
     var id: String { rawValue }
 }
