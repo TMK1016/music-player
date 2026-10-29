@@ -186,7 +186,8 @@
         "docs/zh-TW/V8實作與架構驗收.md",
         "docs/zh-TW/首頁連續捲動與防誤觸.md",
         "docs/zh-TW/首頁對齊與清單播放修正.md",
-        "docs/zh-TW/全部歌曲水平偏移修正.md"
+        "docs/zh-TW/全部歌曲水平偏移修正.md",
+        "docs/zh-TW/V13低音增強研究與方案.md"
       ],
       "implementation_scope": "已驗證檔案／狀態與原生 EQ 離線 PCM；尚無 Rust、回呼耗時、60 分鐘連播或實車證據。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；v0.7真機後續發現音訊actor崩潰，v0.7.1依堆疊修復並新增背景通知回歸，不以早期Running替代完整驗收。；V8分階段驗收以V8實作與架構驗收.md為準，功能模型通過，重構及真機仍進行中。",
       "implemented_paths": [
@@ -320,7 +321,8 @@
         "docs/zh-TW/背景播放與互動優化-v010.md",
         "docs/zh-TW/v4清單與抽屜播放頁-v011.md",
         "docs/zh-TW/V5介面修復與驗收-v012.md",
-        "docs/zh-TW/V9原聲與曲庫改版.md"
+        "docs/zh-TW/V9原聲與曲庫改版.md",
+        "docs/zh-TW/V13低音增強研究與方案.md"
       ],
       "implementation_scope": "v0.6：7 段固定中心（50～12.5k Hz）、約 1⅓ 倍頻程、合成響應餘裕與 13 預設；130 個 Apple PCM 探測點通過。未加入響度補償、限制器、true-peak 保護、完整平滑或 Rust。；v0.8依兩張參考圖加入封面右滑原位EQ、固定transport及五星評分；UI實機檢查與模型檢查分開記錄。",
       "implemented_paths": [
@@ -364,7 +366,8 @@
         "docs/zh-TW/背景播放與互動優化-v010.md",
         "docs/zh-TW/v4清單與抽屜播放頁-v011.md",
         "docs/zh-TW/V5介面修復與驗收-v012.md",
-        "docs/zh-TW/V7實作與手機驗收-v014.md"
+        "docs/zh-TW/V7實作與手機驗收-v014.md",
+        "docs/zh-TW/V13低音增強研究與方案.md"
       ],
       "implemented_paths": [
         "apps/apple/OrcaPlayer/SoundProfiles.swift",

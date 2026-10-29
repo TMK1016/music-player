@@ -3,6 +3,57 @@
   "updated_at": "2026-10-29",
   "entries": [
     {
+      "id": "research-v13-bass",
+      "version": "V13 研究",
+      "date": "2026-10-29",
+      "title": "低音增強專業研究與預計方案",
+      "summary": "比較市售低架、動態與諧波處理，稽核目前衰減策略；提出A優先驗證方案，未修改音訊。",
+      "changes": [
+        {
+          "id": "v13-bass-methods",
+          "title": "市場方法、公式及音量取捨",
+          "summary": "以第一手資料區分頻譜、響度、真峰值與喇叭限制；現有90Hz低架與全頻衰減分析。",
+          "node_ids": [
+            "EQ-01",
+            "QA-01",
+            "CAL-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "docs/zh-TW/V13低音增強研究與方案.md",
+              "label": "專業研究與候選公式"
+            },
+            {
+              "path": "docs/en/v13-bass-research-requirements.md",
+              "label": "完整英文需求"
+            }
+          ]
+        },
+        {
+          "id": "v13-bass-acceptance",
+          "title": "A方案與分階段驗收",
+          "summary": "先量測再原型，靜態等響受真峰值約束；B動態與C諧波僅候選，手機維持build29。",
+          "node_ids": [
+            "EQ-01",
+            "PROFILE-01",
+            "QA-02"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "docs/zh-TW/V13低音增強研究與方案.md",
+              "label": "方法／預期效果／驗收"
+            },
+            {
+              "path": "planning/pm-plan.json",
+              "label": "PM需求驗收"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-horizontal-offset",
       "version": "v0.19.3",
       "date": "2026-10-29",
