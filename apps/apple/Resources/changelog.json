@@ -3,6 +3,48 @@
   "updated_at": "2026-10-29",
   "entries": [
     {
+      "id": "release-horizontal-offset",
+      "version": "v0.19.3",
+      "date": "2026-10-29",
+      "title": "全部歌曲水平偏移修正",
+      "summary": "移除首頁列ID定位，改為水平0及獨立垂直位置恢復。",
+      "changes": [
+        {
+          "id": "home-vertical-point-position",
+          "title": "獨立垂直位置與水平原點",
+          "summary": "避免列錨點捲掉邊距，保留完整曲庫、回頂端及非發布捲動記錄。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01",
+            "QA-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "點位置恢復"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibraryState.swift",
+              "label": "分類偏移與重置"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "偏移與發布回歸"
+            },
+            {
+              "path": "apps/apple/Tests/V8UIValidationApp.swift",
+              "label": "長歌名及首末驗證"
+            },
+            {
+              "path": "docs/zh-TW/全部歌曲水平偏移修正.md",
+              "label": "驗收與限制"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-playlist-label",
       "version": "v0.19.2",
       "date": "2026-10-29",

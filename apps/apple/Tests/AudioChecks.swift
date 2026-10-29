@@ -487,9 +487,16 @@ private final class PreparationProbe: @unchecked Sendable {
         model.deletePlaylist(created)
         var scrollPublications = 0
         let scrollSubscription = home.objectWillChange.sink { scrollPublications += 1 }
-        for position in 0..<1000 { home.recordScrollPosition("all-song:test.\(position)", in: "全部歌曲") }
+        for position in 0..<1000 { home.recordScrollPosition("all-song:test.\(position)", in: "全部歌曲"); home.recordScrollOffset(Double(position), in: "全部歌曲") }
         precondition(scrollPublications == 0, "Scroll bookkeeping must not republish the entire Home view")
         scrollSubscription.cancel()
+        let oldRevision = home.scrollRevision
+        for y in 0..<1000 { home.recordScrollOffset(Double(y), in: "全部歌曲") }
+        home.recordScrollOffset(123, in: "歌手列表")
+        home.recordScrollOffset(.nan, in: "全部歌曲")
+        precondition(home.scrollOffsets["全部歌曲"] == 999 && home.scrollOffsets["歌手列表"] == 123 && home.scrollRevision == oldRevision, "Vertical offsets are finite, independent and do not request view updates")
+        home.requestScroll()
+        precondition(home.scrollOffsets[home.section] == 0 && home.scrollRevision == oldRevision + 1, "Home reset explicitly requests a vertical top restoration")
         home.recordScrollPosition("playlist-header:favorites", in: "播放清單")
         home.recordScrollPosition("ranking:month:last", in: "播放清單")
         precondition(home.scrollPositions["播放清單"] == "ranking:month:last", "Ranking position must replace stale playlist header")

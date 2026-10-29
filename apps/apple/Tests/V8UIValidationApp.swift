@@ -22,7 +22,7 @@ import UniformTypeIdentifiers
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("music-player-v8-ui-" + UUID().uuidString)
         try! FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let tracks = (0..<1230).map { i in
-            AudioTrack(id: "test.\(i)", title: String(format: "測試歌曲 %04d", i), artist: "歌手 \(i % 100)",
+            AudioTrack(id: "test.\(i)", title: i == 0 ? "超長歌曲名稱 Long English Title 日本語 한국어 " + String(repeating: "測試完整歌名 ", count: 12) : String(format: "測試歌曲 %04d", i), artist: "歌手 \(i % 100)",
                        collection: "Synthetic", duration: 18, artwork: 0, filename: "silent.wav", sampleRate: 44100, channels: 2, fileType: "WAV")
         }
         let encoded = try! JSONEncoder().encode(tracks)
@@ -55,8 +55,8 @@ import UniformTypeIdentifiers
         WindowGroup("Music Player V8 QA — synthetic/silent") {
             VStack(spacing: 0) {
                 HStack {
-                    Button("QA 首列") { model.page = .library; model.homeState.section = "全部歌曲"; model.homeState.scrollPositions["全部歌曲"] = "home-top" }
-                    Button("QA 末首") { model.page = .library; model.homeState.section = "全部歌曲"; model.homeState.scrollPositions["全部歌曲"] = "all-song:test.1229" }
+                    Button("QA 首列") { model.page = .library; model.homeState.section = "全部歌曲"; model.homeState.requestScroll() }
+                    Button("QA 末首") { model.page = .library; model.homeState.section = "全部歌曲"; model.homeState.requestScroll(to: 200_000) }
                 }.padding(6)
                 ContentView(model: model)
             }.frame(width: 390, height: 780).preferredColorScheme(.dark)

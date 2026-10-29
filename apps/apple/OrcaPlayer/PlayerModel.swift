@@ -254,7 +254,7 @@ private struct SavedSettings: Codable {
     var sound: SoundProfile { SoundProfile(gains: gains, enabled: eqEnabled, bass: bassBoost, ambience: ambience, mix: ambienceMix).sanitized }
     func openHome() {
         homeState.returnToRoot()
-        homeState.scrollPositions[homeState.section] = "home-top"
+        homeState.requestScroll()
         showLibrarySearch = false
         search = ""
         page = .library

@@ -63,15 +63,14 @@ struct MusicHomeView: View {
                 guard draggedPlaylist == nil, draggedArtist == nil, draggedSong == nil else { return }
                 navigation.handleSwipe(horizontal: value.translation.width, vertical: value.translation.height)
             })
-        .scrollPosition(id: Binding(get: { navigation.scrollPositions[section] }, set: { value in
-            navigation.recordScrollPosition(value, in: section)
-        }), anchor: .topLeading)
-        .onChange(of: section) { _, value in reader.scrollTo(navigation.scrollPositions[value] ?? "home-top", anchor: .topLeading) }
-        .task(id: section) {
-            await Task.yield()
-            guard !Task.isCancelled else { return }
-            reader.scrollTo(navigation.scrollPositions[section] ?? "home-top", anchor: .topLeading)
+        .modifier(HomeVerticalPosition(navigation: navigation, section: section))
+        .onChange(of: section) { _, value in
+            if #unavailable(iOS 18.0, macOS 15.0) { reader.scrollTo(navigation.scrollPositions[value] ?? "home-top", anchor: .top) }
         }
+        .onChange(of: navigation.scrollRevision) { _, _ in
+            if #unavailable(iOS 18.0, macOS 15.0) { reader.scrollTo("home-top", anchor: .top) }
+        }
+
         }
         }
         }
@@ -324,5 +323,44 @@ private struct HomeScrollActivity: ViewModifier {
             }
                 .onDisappear { navigation.setScrollActive(false) }
         } else { content }
+    }
+}
+
+/// Point restoration never aligns an inset row's horizontal edge to the viewport.
+private struct HomeVerticalPosition: ViewModifier {
+    @ObservedObject var navigation: HomeLibraryState
+    let section: String
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 18.0, macOS 15.0, *) {
+            content.modifier(HomePointPosition(navigation: navigation, section: section))
+        } else { content }
+    }
+}
+@available(iOS 18.0, macOS 15.0, *)
+private struct HomePointPosition: ViewModifier {
+    @ObservedObject var navigation: HomeLibraryState
+    let section: String
+    @ViewState private var position = ScrollPosition(edge: .top)
+    @ViewState private var restoring = true
+    @ViewState private var maximumOffset: CGFloat = 0
+    func body(content: Content) -> some View {
+        content.scrollPosition($position)
+            .onScrollGeometryChange(for: CGSize.self) { geometry in
+                CGSize(width: max(0, geometry.contentSize.height - geometry.containerSize.height + geometry.contentInsets.top + geometry.contentInsets.bottom),
+                       height: max(0, geometry.contentOffset.y + geometry.contentInsets.top))
+            } action: { _, metrics in
+                maximumOffset = metrics.width
+                if !restoring { navigation.recordScrollOffset(Double(metrics.height), in: section) }
+            }
+            .task(id: section + ":" + String(navigation.scrollRevision)) {
+                let target = navigation.scrollOffsets[section] ?? 0
+                restoring = true
+                await Task.yield()
+                guard !Task.isCancelled else { return }
+                position.scrollTo(x: 0, y: min(CGFloat(target), maximumOffset))
+                await Task.yield()
+                guard !Task.isCancelled else { return }
+                restoring = false
+            }
     }
 }

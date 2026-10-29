@@ -1,0 +1,3 @@
+# All Songs horizontal offset repair
+
+0.19.3 / build29. The user reports the All Songs layout remains broken. IMG_9902.PNG shows rows shifted left, with missing left inset and excess space at the right. Preserve uniform song rows, full lazy library, sorting and media. Replace continuous row-ID/leading-anchor alignment with vertical point restoration that explicitly sets horizontal offset to zero on supported OS versions. Keep category offsets independent without publishing whole-Home changes. Validate initial entry, sorting, category round trips, Home reset and long multilingual titles; distinguish desktop evidence from actual device reproduction.

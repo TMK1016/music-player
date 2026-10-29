@@ -24,7 +24,19 @@ import OSLog
         }
     }
     var showsRankings: Bool { section == "播放清單" }
-    var scrollPositions: [String: String] = [:]
+    var scrollPositions: [String: String] = [:] // Legacy row bookmarks; no live ID binding.
+    var scrollOffsets: [String: Double] = [:]
+    @Published private(set) var scrollRevision = 0
+    func recordScrollOffset(_ y: Double, in section: String) {
+        guard y.isFinite, y >= 0 else { return }
+        scrollOffsets[section] = y
+    }
+    func requestScroll(to y: Double = 0) {
+        guard y.isFinite, y >= 0 else { return }
+        scrollOffsets[section] = y
+        scrollPositions[section] = "home-top"
+        scrollRevision += 1
+    }
     private var scrollActive = false
     private var activationBlockedUntil: TimeInterval = 0
     func noteContentDrag(now: TimeInterval = Date.timeIntervalSinceReferenceDate) {
