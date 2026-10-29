@@ -1,7 +1,77 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-28",
+  "updated_at": "2026-10-29",
   "entries": [
+    {
+      "id": "release-v9",
+      "version": "v0.16.0",
+      "date": "2026-10-29",
+      "title": "V9原聲與曲庫介面改版",
+      "summary": "關閉EQ回原聲、移除中斷阻擋提示、修正捲動錨點，清單／歌手改封面網格與獨立詳情頁。",
+      "changes": [
+        {
+          "id": "v9-eq-interruption",
+          "title": "原聲重設與無阻擋中斷處理",
+          "summary": "關閉EQ清除當前調音及音場但保存模式；中斷維持必要暫停，回App可直接操作播放。",
+          "node_ids": [
+            "EQ-01",
+            "PLAY-01",
+            "IOS-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "原聲與中斷狀態"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "行為回歸"
+            }
+          ]
+        },
+        {
+          "id": "v9-library-layout",
+          "title": "清單與歌手網格／詳情頁",
+          "summary": "清單雙欄、下拉全部、歌手三欄圓圖、新增與長按管理，共用完整曲目詳情與播放全部；保留實際捲動錨點。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "網格／詳情／排行榜"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibraryState.swift",
+              "label": "頁面與捲動位置"
+            }
+          ]
+        },
+        {
+          "id": "v9-tools-touch",
+          "title": "工具列置中與封面觸控",
+          "summary": "右側箭頭與置中工具列分離，背景封面不接收觸控，迷你播放器播放鍵改白色；真機滑動待回歸。",
+          "node_ids": [
+            "UI-01",
+            "PLAY-01"
+          ],
+          "target_page": "player",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "工具列與迷你播放器"
+            },
+            {
+              "path": "docs/zh-TW/V9原聲與曲庫改版.md",
+              "label": "規格與驗收"
+            }
+          ]
+        }
+      ]
+    },
     {
       "id": "release-testflight-preparation",
       "version": "v0.15.0 / build22",

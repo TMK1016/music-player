@@ -7,7 +7,10 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[2]
 apple = root / 'apps/apple'
-output = root / 'deliverables/MusicPlayer-0.15.0-build22-Friend-Source.zip'
+settings = (apple / 'OrcaPlayer.xcodeproj/project.pbxproj').read_text()
+version = re.search(r'MARKETING_VERSION = "([^";]+)"', settings).group(1)
+build = re.search(r'CURRENT_PROJECT_VERSION = "([^";]+)"', settings).group(1)
+output = root / f'deliverables/MusicPlayer-{version}-build{build}-Friend-Source.zip'
 files = {}
 # Only tracked source and explicitly named original resources are eligible.
 for p in sorted((apple / 'OrcaPlayer').glob('*.swift')):

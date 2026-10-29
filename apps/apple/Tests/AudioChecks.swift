@@ -404,6 +404,24 @@ private final class PreparationProbe: @unchecked Sendable {
         precondition(audio.appliedGains == EQPreset.vocal.gains, "EQ controls reach backend")
         model.eqEnabled = false
         precondition(!audio.eqEnabled, "Bypass reaches backend")
+        precondition(model.gains == EQBands.flat && model.bassBoost == 0 && model.ambience == .off && model.presetName == "原聲", "Disabling EQ resets current sound and label to original")
+        model.eqEnabled = true
+        precondition(audio.appliedGains == EQBands.flat && model.presetName == "原聲", "Re-enabling EQ must not restore the old preset")
+        model.apply(.concert)
+        model.eqEnabled = false
+        precondition(model.ambience == .off && model.bassBoost == 0 && !model.hasManualEQChanges, "Master off also clears effects and manual-save prompt")
+        model.bindSong(to: EQPreset.pop.id)
+        precondition(!model.eqEnabled && model.presetName == "原聲", "A song binding must not override the master-off state")
+        let offRestored = PlayerModel(savedData: model.settingsData, audio: FakeAudioPlayer(), libraryRoot: root, demoURL: fixture)
+        precondition(!offRestored.eqEnabled && offRestored.gains == EQBands.flat && offRestored.presetName == "原聲", "Master off survives reload even with a saved song binding")
+        model.bindSong(to: "") // Keep later independent binding scenarios isolated.
+        let home = model.homeState
+        home.recordScrollPosition("playlist-header:favorites", in: "播放清單")
+        home.recordScrollPosition("ranking:month:last", in: "播放清單")
+        precondition(home.scrollPositions["播放清單"] == "ranking:month:last", "Ranking position must replace stale playlist header")
+        home.recordScrollPosition("playlist:favorites:first", in: "播放清單")
+        home.recordScrollPosition("all-song:last", in: "全部歌曲")
+        precondition(home.scrollPositions["播放清單"] == "playlist:favorites:first" && home.scrollPositions["全部歌曲"] == "all-song:last", "Expanded rows and independent tab positions persist")
         model.toggleFavorite(model.track)
         model.volume = 0.43
         let restored = PlayerModel(savedData: saved, audio: FakeAudioPlayer(), libraryRoot: root, demoURL: fixture)
@@ -423,7 +441,9 @@ private final class PreparationProbe: @unchecked Sendable {
         audio.onCompletion?()
         precondition(model.track.id == AudioTrack.demo.id && model.isPlaying, "Repeat wraps at natural completion")
         audio.onInterruption?("test interruption")
-        precondition(!model.isPlaying && model.message == "test interruption", "Interruptions update UI")
+        precondition(!model.isPlaying && model.message != "test interruption", "Interruptions pause without a blocking alert")
+        model.togglePlayback()
+        precondition(model.isPlaying, "Playback remains available after interruption")
         model.resetEQ()
         precondition(model.gains == EQPreset.flat.gains, "EQ reset")
         let allThree = Array(repeating: 3.0, count: EQBands.count)
@@ -433,7 +453,7 @@ private final class PreparationProbe: @unchecked Sendable {
         precondition(EQHeadroom.gain(gains: allThree, sampleRate: 16000) > -15, "Unavailable upper bands do not add headroom")
         precondition(EQHeadroom.gain(gains: allThree, ambience: .hall, mix: 0) == combinedGain, "Zero wet mix does not reserve reverb headroom")
         print("PASS: combined-response headroom, input sanitization, low-rate and zero-mix handling")
-        let invalid = Data(#"{"version":1,"gains":[99,-99,0,0,0,0,0,0,0,0],"eqEnabled":false,"volume":3,"favorites":[]}"#.utf8)
+        let invalid = Data(#"{"version":1,"gains":[99,-99,0,0,0,0,0,0,0,0],"eqEnabled":true,"volume":3,"favorites":[]}"#.utf8)
         let sanitized = PlayerModel(savedData: invalid, audio: FakeAudioPlayer(), libraryRoot: root)
         precondition(sanitized.gains == EQBands.migrate([99,-99,0,0,0,0,0,0,0,0]) && sanitized.gains.count == 7 && sanitized.volume == 1, "Legacy parameters are bounded before migration")
         precondition(EQBands.migrate(Array(repeating: 3, count: 10)) == Array(repeating: 3, count: 7), "Flat old control contour remains flat")

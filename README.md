@@ -1,3 +1,5 @@
+**V9 0.16.0／build23**：[原聲與曲庫改版](docs/zh-TW/V9原聲與曲庫改版.md)。關閉EQ回原聲、無阻擋中斷提示、清單／歌手網格與詳情頁；實際手機部署狀態見驗收文件。
+
 **Apple 試用準備（0.15.0／22）**：[TestFlight發佈狀態](docs/zh-TW/TestFlight發佈準備.md)／[測試文案](docs/release/TestFlight測試資料.md)。未簽章Release封存可重現，尚未上傳／開放邀請；手機仍為build21。
 
 **V8 v0.15.0／build21**：[功能、架構與交付驗收](docs/zh-TW/V8實作與架構驗收.md)。排行榜僅在播放清單、全庫無50首限制、三種可反向排序；統一metadata、系統媒體與播放政策。build21已安裝iPhone並確認Running、載入1230首，啟動觀察未重現提示視窗狀態警告。模型與原生UI驗收通過，實際音訊／藍牙聽測另列；GitHub推送狀態見驗收紀錄。

@@ -154,8 +154,7 @@ struct MusicPlayerPage: View {
         VStack(spacing: 6) {
             Text(model.title(model.track)).font(compact ? .headline : .title3.weight(.semibold)).lineLimit(compact ? 1 : 2).multilineTextAlignment(.center).offset(y: -4)
             Text(model.artist(model.track)).font(.caption).foregroundStyle(OrcaTheme.muted).lineLimit(1).offset(y: -4)
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
+            ZStack(alignment: .trailing) {
                 HStack(spacing: 0) {
                         Button { editingSong = true } label: { Image(systemName: "square.and.pencil").frame(width: 44, height: 44) }.accessibilityLabel("編輯歌曲資訊")
                         SleepMenu(model: model, compact: true)
@@ -165,11 +164,12 @@ struct MusicPlayerPage: View {
                         FavoriteRatingButton(model: model, track: model.track)
                     }.padding(.horizontal, 4).background(LinearGradient(colors: [Color.white.opacity(0.12), OrcaTheme.elevated.opacity(0.8)], startPoint: .top, endPoint: .bottom), in: RoundedRectangle(cornerRadius: 15))
                         .overlay(RoundedRectangle(cornerRadius: 15).stroke(.white.opacity(0.16), lineWidth: 0.75))
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .opacity(toolsExpanded ? 1 : 0).allowsHitTesting(toolsExpanded).accessibilityHidden(!toolsExpanded)
                 Button { withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { toolsExpanded.toggle() } } label: {
                     Image(systemName: toolsExpanded ? "chevron.right" : "chevron.left").frame(width: 44, height: 44)
                 }.accessibilityLabel(toolsExpanded ? "收合功能抽屜" : "展開六項播放功能")
-            }.buttonStyle(.plain).frame(height: 44).clipped()
+            }.buttonStyle(.plain).frame(maxWidth: .infinity).frame(height: 44).clipped()
         }
     }
     private func changeFace(_ equalizer: Bool) {
@@ -244,11 +244,13 @@ struct CompactMusicPlayer: View {
                 Button { model.page = .player } label: {
                     HStack { SongArtwork(model: model, track: model.track, compact: true).frame(width: 38); VStack(alignment: .leading) { Text(model.title(model.track)).font(.subheadline).lineLimit(1); Text(model.artist(model.track)).font(.caption).foregroundStyle(OrcaTheme.muted).lineLimit(1) }; Spacer(minLength: 0) }.contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel("展開正在播放")
-                IconButton(symbol: model.isPlaying ? "pause.fill" : "play.fill", label: model.isPlaying ? "暫停" : "播放", active: true) { model.togglePlayback() }
+                Button { model.togglePlayback() } label: {
+                    Image(systemName: model.isPlaying ? "pause.fill" : "play.fill").foregroundStyle(.white).frame(width: 42, height: 42).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel(model.isPlaying ? "暫停" : "播放")
                 IconButton(symbol: "forward.end.fill", label: "下一首") { model.next() }
             }.padding(.horizontal, 14).padding(.vertical, 8)
             PlaybackMiniProgress(model: model, clock: model.playbackClock)
-        }.background { MiniPlayerBackdrop(data: model.coverData(model.track)).equatable() }
+        }.background { MiniPlayerBackdrop(data: model.coverData(model.track)).equatable().allowsHitTesting(false) }
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.18), lineWidth: 0.75))
             .shadow(color: .black.opacity(0.24), radius: 10, y: 3)

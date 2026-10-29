@@ -115,7 +115,18 @@ private struct SavedSettings: Codable {
     @Published private(set) var isImporting = false
     @Published var showImporter = false
     @Published var volume = 0.5 { didSet { syncAudio(); save() } }
-    @Published var eqEnabled = true { didSet { syncAudio(); save() } }
+    @Published var eqEnabled = true {
+        didSet {
+            guard !applying else { return }
+            if !eqEnabled {
+                // The master switch discards the current adjustment, but not saved presets.
+                unboundSound = nil
+                var original = SoundProfile.flat
+                original.enabled = false
+                setSound(original)
+            } else { syncAudio(); save() }
+        }
+    }
     @Published var gains = EQPreset.flat.gains { didSet { syncAudio(); save() } }
     @Published var favorites: Set<String> = [] { didSet { invalidateLibraryIndex(); save() } }
     @Published var message: String?
@@ -170,6 +181,7 @@ private struct SavedSettings: Codable {
         self.libraryRoot = libraryRoot ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("OrcaPlayer/Library", isDirectory: true)
         library = LibraryStore(root: self.libraryRoot)
         self.demoURL = demoURL ?? Bundle.main.url(forResource: "Orca-Soundcheck", withExtension: "wav")
+        applying = true
         if let savedData, let settings = try? JSONDecoder().decode(SavedSettings.self, from: savedData), (1...3).contains(settings.version) {
             gains = EQBands.migrate(settings.gains)
             volume = settings.volume.isFinite ? min(1, max(0, settings.volume)) : 0.5
@@ -190,6 +202,10 @@ private struct SavedSettings: Codable {
             var seenOrder = Set<String>()
             modeOrder = (settings.modeOrder ?? []).filter { valid.contains($0) && seenOrder.insert($0).inserted }
         }
+        if !eqEnabled {
+            gains = EQBands.flat; bassBoost = 0; ambience = .off; ambienceMix = SoundProfile.flat.mix
+        }
+        applying = false
         self.audio.onCompletion = { [weak self] in self?.handleCompletion() }
         self.audio.onInterruption = { [weak self] message in
             guard let self else { return }
@@ -197,7 +213,7 @@ private struct SavedSettings: Codable {
             self.accountPlayback()
             self.currentTime = self.audio.currentTime
             self.isPlaying = false
-            self.message = message
+            PlayerDiagnostics.event("AudioInterrupted")
         }
         let collectionURL = self.libraryRoot.appendingPathComponent("collection-v1.json")
         if FileManager.default.fileExists(atPath: collectionURL.path) {
@@ -237,6 +253,7 @@ private struct SavedSettings: Codable {
     }
     var sound: SoundProfile { SoundProfile(gains: gains, enabled: eqEnabled, bass: bassBoost, ambience: ambience, mix: ambienceMix).sanitized }
     var presetName: String {
+        guard eqEnabled else { return EQPreset.flat.rawValue }
         if let custom = customPresets.first(where: { $0.sound == sound }) { return custom.name }
         return EQPreset.allCases.first { !hiddenPresets.contains($0.id) && profile(for: $0.id) == sound }?.rawValue ?? "手動調音"
     }
@@ -510,6 +527,7 @@ private struct SavedSettings: Codable {
         applySongBinding(); save()
     }
     private func applySongBinding() {
+        guard eqEnabled else { return }
         if useSongProfiles, let id = songBindings[selectedID], let value = profile(for: id) {
             if unboundSound == nil { unboundSound = sound }
             setSound(value)
