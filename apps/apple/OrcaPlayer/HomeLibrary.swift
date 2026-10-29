@@ -167,7 +167,6 @@ struct MusicHomeView: View {
                                 .frame(width: geo.size.width, height: geo.size.height).background(OrcaTheme.panel).clipped()
                         }.aspectRatio(1, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 18))
                         Text(model.playlistTitle(id)).foregroundStyle(id.hasPrefix("stars") ? OrcaTheme.star : .white).lineLimit(1).frame(maxWidth: .infinity, alignment: .center)
-                        Text("\(model.libraryIndex.playlistIDs[id]?.count ?? 0) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
                     }.contentShape(Rectangle())
                 }.buttonStyle(.plain).id("playlist-header:" + id)
                 .accessibilityLabel("開啟播放清單：\(model.playlistTitle(id))")

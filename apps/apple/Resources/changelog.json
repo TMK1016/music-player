@@ -3,6 +3,35 @@
   "updated_at": "2026-10-29",
   "entries": [
     {
+      "id": "release-playlist-label",
+      "version": "v0.19.2",
+      "date": "2026-10-29",
+      "title": "首頁清單名稱簡化",
+      "summary": "依更新標註圖移除清單卡片歌曲數，保留置中名稱。",
+      "changes": [
+        {
+          "id": "playlist-label-only",
+          "title": "封面下方只保留名稱",
+          "summary": "移除首頁卡片N首歌曲，詳情與頂端總數保留。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "清單名稱"
+            },
+            {
+              "path": "docs/zh-TW/首頁對齊與清單播放修正.md",
+              "label": "更新圖驗收"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-home-alignment",
       "version": "v0.19.1",
       "date": "2026-10-29",
