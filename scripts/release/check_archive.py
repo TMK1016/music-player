@@ -19,7 +19,7 @@ assert info['CFBundleIcons']['CFBundlePrimaryIcon']['CFBundleIconName'] == 'AppI
 assert 'audio' in info['UIBackgroundModes']
 assert (app / 'Assets.car').is_file()
 assert (app / 'Orca-Soundcheck.wav').is_file()
-assert json.loads((app / 'changelog.json').read_text()) == json.loads((root / 'planning/changelog.json').read_text())
+assert not (app / 'changelog.json').exists(), 'Developer journal must not ship in the user app'
 privacy = plistlib.loads((app / 'PrivacyInfo.xcprivacy').read_bytes())
 assert privacy['NSPrivacyTracking'] is False
 assert privacy['NSPrivacyCollectedDataTypes'] == []
@@ -31,5 +31,5 @@ png = (root / 'apps/apple/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.p
 assert png[:8] == b'\x89PNG\r\n\x1a\n'
 w, h, depth, color = struct.unpack('>IIBB', png[16:26])
 assert (w, h, depth, color) == (1024, 1024, 8, 2), 'Icon must be opaque RGB PNG'
-print(f'PASS: Release {version}/{build}, iPhone+iPad, background audio, opaque icon, privacy manifest, bundled journal and demo.')
+print(f'PASS: Release {version}/{build}, iPhone+iPad, background audio, opaque icon, privacy manifest, developer journal excluded and demo present.')
 print('Signing:', 'present; requires Apple validation' if (app / '_CodeSignature').exists() else 'UNSIGNED — not installable/distributed via TestFlight')

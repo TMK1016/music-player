@@ -225,7 +225,8 @@
         "docs/zh-TW/V7效能與音訊架構評估.md",
         "docs/zh-TW/V7實作與手機驗收-v014.md",
         "docs/zh-TW/V8實作與架構驗收.md",
-        "docs/zh-TW/V9原聲與曲庫改版.md"
+        "docs/zh-TW/V9原聲與曲庫改版.md",
+        "docs/zh-TW/V10詳情輪播與首頁統一.md"
       ],
       "implementation_scope": "已實作複製、去重、原子索引與收藏；命名歌單、標籤／封面與大量曲庫待完成。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；V6照片背景處理、FIFO存檔、排序封面與授權資料夾掃描已接入，噪音真機驗收以V6文件為準。；2026-10-28 V7僅完成效能／架構評估及隔離計算探針，千首卡頓與持續雜音尚未修正，下一步設計見V7文件。；V7經使用者授權接入正式索引／批次／表單與系統封面，驗證與真機限制見v014實作文件。；V8分階段驗收以V8實作與架構驗收.md為準，功能模型通過，重構及真機仍進行中。",
       "implemented_paths": [
@@ -593,7 +594,8 @@
         "docs/zh-TW/流程圖縮放與節點註解.md",
         "docs/zh-TW/專案更名與檔案分類.md",
         "docs/product/PRD-music-player.md",
-        "docs/product/PM流程與驗收.md"
+        "docs/product/PM流程與驗收.md",
+        "docs/zh-TW/V10詳情輪播與首頁統一.md"
       ],
       "implementation_scope": "已建立共用開發日誌、改動到節點／實作位置的定位與反查；仍為人工維護，尚未串接自動執行／測試事件。",
       "implemented_paths": [
@@ -657,7 +659,8 @@
         "docs/zh-TW/TestFlight發佈準備.md",
         "docs/release/TestFlight測試資料.md",
         "scripts/release/archive_ios.sh",
-        "scripts/release/check_archive.py"
+        "scripts/release/check_archive.py",
+        "docs/zh-TW/V10詳情輪播與首頁統一.md"
       ],
       "implemented_paths": [
         "scripts/release/",
@@ -749,10 +752,11 @@
         "docs/zh-TW/V7實作與手機驗收-v014.md",
         "docs/zh-TW/音訊Session與鎖屏封面崩潰修復-v0141.md",
         "docs/zh-TW/V8實作與架構驗收.md",
-        "docs/zh-TW/V9原聲與曲庫改版.md"
+        "docs/zh-TW/V9原聲與曲庫改版.md",
+        "docs/zh-TW/V10詳情輪播與首頁統一.md"
       ],
       "implementation_scope": "v0.6 七段無橫移調整區、單列模式與完整選擇面板；360 點寬預覽驗證。橫向手勢自動展開已接入，手機手勢實測待確認。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；2026-10-26車輛設定及試音已撤除，歷史記錄保留，不再是App能力。；v0.8依兩張參考圖加入封面右滑原位EQ、固定transport及五星評分；UI實機檢查與模型檢查分開記錄。；V6照片背景處理、FIFO存檔、排序封面與授權資料夾掃描已接入，噪音真機驗收以V6文件為準。；2026-10-28 V7僅完成效能／架構評估及隔離計算探針，千首卡頓與持續雜音尚未修正，下一步設計見V7文件。；V7經使用者授權接入正式索引／批次／表單與系統封面，驗證與真機限制見v014實作文件。；V8分階段驗收以V8實作與架構驗收.md為準，功能模型通過，重構及真機仍進行中。"
     }
   ],
-  "progress_summary": "25 節點 · V9原聲重設／網格詳情／無阻擋中斷 · 驗證分項紀錄"
+  "progress_summary": "25 節點 · V10詳情輪播／加歌編輯／固定分類列 · 日誌留在專案管理介面"
 }

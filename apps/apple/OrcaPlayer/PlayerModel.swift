@@ -252,6 +252,12 @@ private struct SavedSettings: Codable {
         }
     }
     var sound: SoundProfile { SoundProfile(gains: gains, enabled: eqEnabled, bass: bassBoost, ambience: ambience, mix: ambienceMix).sanitized }
+    func openHome() {
+        homeState.returnToRoot()
+        showLibrarySearch = false
+        search = ""
+        page = .library
+    }
     var presetName: String {
         guard eqEnabled else { return EQPreset.flat.rawValue }
         if let custom = customPresets.first(where: { $0.sound == sound }) { return custom.name }

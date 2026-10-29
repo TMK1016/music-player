@@ -19,6 +19,8 @@ struct ArtworkChooser: View {
     var circular = false
     var compactEditor = false
     var fallback: Data? = nil
+    var removalLabel = "移除照片，使用預設圖片"
+    var useDefaultCover = false
     @ViewState private var photos = false
     @ViewState private var files = false
     @ViewState private var selectedPhoto: PhotosPickerItem?
@@ -28,12 +30,16 @@ struct ArtworkChooser: View {
     var body: some View {
         VStack(spacing: 8) {
             if compactEditor {
-                LibraryArtwork(data: data ?? fallback, size: 144)
+                Group {
+                    if useDefaultCover && data == nil && fallback == nil {
+                        AlbumArtwork(variant: 0, compact: true).equatable().frame(width: 144, height: 144).clipShape(RoundedRectangle(cornerRadius: 12))
+                    } else { LibraryArtwork(data: data ?? fallback, size: 144) }
+                }
                     .overlay(alignment: .topTrailing) {
                         Menu {
                             Button("選擇照片") { photos = true }
                             Button("匯入圖片檔") { files = true }
-                            Button("移除照片，使用歌手頭貼", role: .destructive) { data = nil }.disabled(data == nil)
+                            Button(removalLabel, role: .destructive) { data = nil }.disabled(data == nil)
                         } label: { Image(systemName: "camera.fill").frame(width: 44, height: 44).background(OrcaTheme.sheet.opacity(0.9), in: Circle()) }.menuStyle(.borderlessButton).menuIndicator(.hidden).accessibilityLabel("封面照片選項")
                     }
             } else {
@@ -97,6 +103,7 @@ struct PlaylistDetailsEditor: View {
 struct ArtistDetailsEditor: View {
     @ObservedObject var model: PlayerModel
     let artist: MusicArtist
+    var onSaved: ((String) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @ViewState private var name = ""
     @ViewState private var artwork: Data?
@@ -114,7 +121,7 @@ struct ArtistDetailsEditor: View {
                     let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !title.isEmpty, title.count <= 100, !model.collection.artists.contains(where: { $0.id != artist.id && $0.name.localizedCaseInsensitiveCompare(title) == .orderedSame }) else { error = "名稱須為1～100字，且不可與其他歌手重複。"; return }
                     let id = artist.id.hasPrefix("native:") ? model.editableArtist(named: artist.name).id : artist.id
-                    model.updateArtist(id, name: title, avatar: artwork); dismiss()
+                    model.updateArtist(id, name: title, avatar: artwork); onSaved?(id); dismiss()
                 }.frame(minHeight: 44)
             }
         }.padding(24).frame(minWidth: 300).themedSheet().onAppear { name = artist.name; artwork = artist.avatar }

@@ -3,13 +3,16 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @ObservedObject var model: PlayerModel
+    @ObservedObject private var navigation: HomeLibraryState
+    @ViewState private var localScan = false
+    init(model: PlayerModel) { self.model = model; self.navigation = model.homeState }
     var body: some View {
         GeometryReader { geometry in
             let wide = geometry.size.width >= 850
             HStack(spacing: 0) {
                 if wide { sidebar.frame(width: 210) }
                 VStack(spacing: 0) {
-                    if model.page != .player && !(model.page == .library && model.showLibrarySearch) { header(wide: wide) }
+                    if model.page != .player && !(model.page == .library && (model.showLibrarySearch || navigation.isShowingDetail)) { header(wide: wide) }
                     if model.page == .player {
                         MusicPlayerPage(model: model)
                     } else if model.page == .equalizer {
@@ -23,7 +26,7 @@ struct ContentView: View {
                             case .player: MusicPlayerPage(model: model)
                             case .library: if model.showLibrarySearch { LibrarySearchView(model: model) } else { MusicHomeView(model: model) }
                             case .equalizer: EqualizerPage(model: model)
-                            case .developmentLog: DevelopmentLogView(model: model)
+                            case .developmentLog: MusicHomeView(model: model)
                             }
                         }.padding(wide ? 28 : (model.page == .equalizer ? 12 : 20))
                     } }
@@ -33,6 +36,7 @@ struct ContentView: View {
             }.background(OrcaTheme.background).foregroundStyle(OrcaTheme.text)
         }
         .task { await model.loadLibrary() }
+        .sheet(isPresented: $localScan) { LocalMusicSearchView(model: model) }
         .fileImporter(isPresented: $model.showImporter, allowedContentTypes: [.audio], allowsMultipleSelection: true) { result in
             switch result {
             case .success(let urls): Task { await model.importFiles(urls) }
@@ -54,9 +58,9 @@ struct ContentView: View {
             }.padding(.top, 38)
             Text("PLAY YOUR SOUND").font(.system(size: 8, weight: .medium, design: .monospaced)).tracking(2.1).foregroundStyle(OrcaTheme.muted).padding(.top, 8)
             Eyebrow(text: "WORKSPACE").padding(.top, 53).padding(.bottom, 15)
-            ForEach(PlayerPage.allCases) { page in
+            ForEach(PlayerPage.allCases.filter { $0 != .developmentLog }) { page in
                 Button {
-                    model.page = page
+                    if page == .library { model.openHome() } else { model.page = page }
                 } label: {
                     HStack(spacing: 13) {
                         Image(systemName: page.symbol).frame(width: 20)
@@ -97,11 +101,8 @@ struct ContentView: View {
                 }
                 Spacer()
                 if model.page == .library {
-                    Menu {
-                        Button("開發日誌") { model.page = .developmentLog }
-                    } label: { Image(systemName: "sidebar.left").frame(width: 44, height: 44) }.menuStyle(.borderlessButton).menuIndicator(.hidden).accessibilityLabel("專案側邊欄")
                     Button { model.showLibrarySearch.toggle(); if !model.showLibrarySearch { model.search = "" } } label: { Image(systemName: "magnifyingglass").frame(width: 44, height: 44) }.accessibilityLabel("搜尋歌曲")
-                    Button { model.showImporter = true } label: { Image(systemName: "plus").frame(width: 44, height: 44) }.disabled(model.isImporting).accessibilityLabel("匯入音樂")
+                    Button { localScan = true } label: { Image(systemName: "plus").frame(width: 44, height: 44) }.disabled(model.isImporting).accessibilityLabel("搜尋本機歌曲")
                 } else if wide { Tag(text: "本機播放", symbol: "waveform") }
             }.padding(.horizontal, wide ? 28 : 20).padding(.top, wide ? 26 : 16).padding(.bottom, 15)
             if model.page == .developmentLog { HStack(spacing: 6) {
@@ -117,7 +118,7 @@ struct ContentView: View {
     private var mobileNavigation: some View {
         HStack(spacing: 0) {
             ForEach([PlayerPage.library, .player, .settings]) { page in
-                Button { model.page = page } label: {
+                Button { if page == .library { model.openHome() } else { model.page = page } } label: {
                     VStack(spacing: 6) {
                         Image(systemName: page.symbol).font(.system(size: 18))
                         Text(page.rawValue).font(.system(size: 10))

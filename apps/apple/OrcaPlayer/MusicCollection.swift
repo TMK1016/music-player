@@ -71,11 +71,13 @@ extension PlayerModel {
         if let avatar { guard avatar.count <= 5_000_000 else { message = "頭貼請小於5 MB。"; return }; state.artists[index].avatar = avatar }
         collection = state
     }
-    func createPlaylist(_ name: String) {
+    @discardableResult func createPlaylist(_ name: String, artwork: Data? = nil) -> String? {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty, name.count <= 60 else { message = "清單名稱須為1～60字。"; return }
-        guard !collection.playlists.contains(where: { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }) else { message = "已有相同名稱的清單。"; return }
-        let list = MusicPlaylist(name: name); var state = collection; state.playlists.append(list); state.playlistOrder.append(list.id); collection = state
+        guard !name.isEmpty, name.count <= 60, artwork == nil || artwork!.count <= 5_000_000 else { message = "清單名稱須為1～60字，圖片須小於5 MB。"; return nil }
+        guard !(Self.systemPlaylistIDs + collection.playlists.map(\.id)).contains(where: { playlistTitle($0).localizedCaseInsensitiveCompare(name) == .orderedSame }) else { message = "已有相同名稱的清單。"; return nil }
+        let list = MusicPlaylist(name: name); var state = collection; state.playlists.append(list); state.playlistOrder.append(list.id)
+        if let artwork { var appearances = state.playlistAppearance ?? [:]; appearances[list.id] = PlaylistAppearance(name: name, artwork: artwork); state.playlistAppearance = appearances }
+        collection = state; return list.id
     }
     func addToPlaylist(_ trackID: String, _ playlistID: String) {
         guard let index = collection.playlists.firstIndex(where: { $0.id == playlistID }), !collection.playlists[index].trackIDs.contains(trackID) else { return }
@@ -271,5 +273,29 @@ enum RatingInteraction {
         let index = await Task.detached(priority: .utility) { LibraryIndex.build(tracks: tracks, collection: state, favorites: favorites) }.value
         guard revision == indexRevision else { return }
         cachedLibraryIndex = index
+    }
+}
+
+
+extension PlayerModel {
+    /// The song's artist is a single classification; assigning it moves it from its old group.
+    @discardableResult func assignSongs(_ ids: Set<String>, toArtistNamed name: String) -> String? {
+        let valid = ids.intersection(Set(tracks.map(\.id)))
+        guard !valid.isEmpty else { return nil }
+        let target = editableArtist(named: name)
+        var state = collection
+        for id in valid { var info = state.songs[id] ?? SongDetails(); info.artistID = target.id; state.songs[id] = info }
+        collection = state
+        return target.id
+    }
+    func addSongs(_ ids: Set<String>, toPlaylist id: String) {
+        let valid = ids.intersection(Set(tracks.map(\.id)))
+        guard !valid.isEmpty else { return }
+        if id == "favorites" { favorites.formUnion(valid); return }
+        guard !isSystemPlaylist(id), let index = collection.playlists.firstIndex(where: { $0.id == id }) else { return }
+        var state = collection
+        let existing = Set(state.playlists[index].trackIDs)
+        state.playlists[index].trackIDs += sortedSongs.map(\.id).filter { valid.contains($0) && !existing.contains($0) }
+        collection = state
     }
 }

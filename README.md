@@ -1,3 +1,5 @@
+**V10 0.17.0／build24**：[詳情輪播與首頁統一](docs/zh-TW/V10詳情輪播與首頁統一.md)。App移除開發日誌入口，紀錄保留於專案互動圖；部署狀態與測試證據見文件。
+
 **V9 0.16.0／build23**：[原聲與曲庫改版](docs/zh-TW/V9原聲與曲庫改版.md)。關閉EQ回原聲、無阻擋中斷提示、清單／歌手網格與詳情頁；實際手機部署狀態見驗收文件。
 
 **Apple 試用準備（0.15.0／22）**：[TestFlight發佈狀態](docs/zh-TW/TestFlight發佈準備.md)／[測試文案](docs/release/TestFlight測試資料.md)。未簽章Release封存可重現，尚未上傳／開放邀請；手機仍為build21。

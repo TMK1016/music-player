@@ -416,6 +416,29 @@ private final class PreparationProbe: @unchecked Sendable {
         precondition(!offRestored.eqEnabled && offRestored.gains == EQBands.flat && offRestored.presetName == "原聲", "Master off survives reload even with a saved song binding")
         model.bindSong(to: "") // Keep later independent binding scenarios isolated.
         let home = model.homeState
+        home.selectDetail("list.test", artist: false)
+        precondition(home.isShowingDetail && home.selectedArtist == nil, "Selecting a list opens only its own detail")
+        home.selectDetail("artist.test", artist: true)
+        precondition(home.selectedPlaylist == nil && home.selectedArtist == "artist.test", "Carousel selection switches collection kind exclusively")
+        model.showLibrarySearch = true; model.search = "test"
+        model.openHome()
+        precondition(!home.isShowingDetail && !model.showLibrarySearch && model.search.isEmpty && model.page == .library, "Home tab always returns to the library root")
+        let cover = Data([1, 2, 3])
+        let created = model.createPlaylist("V10測試清單", artwork: cover)!
+        precondition(model.collection.playlistAppearance?[created]?.artwork == cover, "New playlist atomically saves its chosen cover")
+        let selection: Set<String> = [model.tracks[0].id, model.tracks[1].id, "not-in-library"]
+        model.addSongs(selection, toPlaylist: created)
+        model.addSongs(selection, toPlaylist: created)
+        precondition(model.songs(in: created).count == 2, "Search selection adds real songs once and ignores unknown IDs")
+        let ratingsBefore = model.collection.songs
+        model.addSongs(selection, toPlaylist: "stars5")
+        precondition(model.collection.songs == ratingsBefore, "Automatic playlist additions must not silently change ratings")
+        let oldArtist = model.artist(model.tracks[0])
+        let target = model.assignSongs([model.tracks[0].id], toArtistNamed: "V10測試歌手")!
+        precondition(model.artist(model.tracks[0]) == "V10測試歌手" && model.collection.songs[model.tracks[0].id]?.artistID == target, "Artist picker assigns the selected song to its target artist")
+        model.editSong(model.tracks[0], title: model.title(model.tracks[0]), artistName: oldArtist)
+        model.collection.artists.removeAll { $0.id == target }
+        model.deletePlaylist(created)
         home.recordScrollPosition("playlist-header:favorites", in: "播放清單")
         home.recordScrollPosition("ranking:month:last", in: "播放清單")
         precondition(home.scrollPositions["播放清單"] == "ranking:month:last", "Ranking position must replace stale playlist header")

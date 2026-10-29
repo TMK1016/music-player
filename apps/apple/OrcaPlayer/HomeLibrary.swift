@@ -6,13 +6,12 @@ struct MusicHomeView: View {
     @ObservedObject var navigation: HomeLibraryState
     init(model: PlayerModel) { self.model = model; self.navigation = model.homeState }
     private var section: String { get { navigation.section } nonmutating set { navigation.section = newValue } }
-    private var expandedPlaylist: String? { get { navigation.expandedPlaylist } nonmutating set { navigation.expandedPlaylist = newValue } }
-    private var expandedArtist: String? { get { navigation.expandedArtist } nonmutating set { navigation.expandedArtist = newValue } }
     private var artistSort: String { model.collection.artistSort ?? ((model.collection.artistOrder ?? []).isEmpty ? "歌曲數目" : "自訂順序") }
     private var monthly: Bool { get { navigation.monthly } nonmutating set { navigation.monthly = newValue } }
     @ViewState private var newList = false
     @ViewState private var name = ""
     @ViewState private var listError: String?
+    @ViewState private var newPlaylistArtwork: Data?
     @ViewState private var editingPlaylist: String?
     @ViewState private var editingSongs: String?
     @ViewState private var deletingPlaylist: String?
@@ -29,19 +28,19 @@ struct MusicHomeView: View {
     @ViewState private var artistName = ""
     var body: some View {
         Group {
-        if let id = selectedPlaylist {
-            LibraryDetailPage(model: model, title: model.playlistTitle(id), artwork: model.collection.playlistAppearance?[id]?.artwork, songs: model.songs(in: id), playlistID: id) { selectedPlaylist = nil }
-        } else if let key = selectedArtist {
-            let index = model.libraryIndex
-            let artist = model.collection.artists.first { model.artistKey($0.name) == key }
-            LibraryDetailPage(model: model, title: index.groups[key]?.name ?? artist?.name ?? "歌手", artwork: index.artists[key]?.avatar ?? artist?.avatar, songs: (index.groups[key]?.songIDs ?? []).compactMap { index.tracks[$0] }, playlistID: nil) { selectedArtist = nil }
+        if selectedPlaylist != nil {
+            LibraryDetailPage(model: model, ids: model.visiblePlaylistIDs, artist: false)
+        } else if selectedArtist != nil {
+            LibraryDetailPage(model: model, ids: groups.map { model.artistKey($0) }, artist: true)
         } else {
+        VStack(spacing: 0) {
+            Picker("曲庫", selection: Binding(get: { section }, set: { section = $0 })) {
+                ForEach(["播放清單", "歌手列表", "全部歌曲"], id: \.self) { Text($0) }
+            }.pickerStyle(.segmented).labelsHidden().padding(.horizontal, 20).frame(height: 56)
         ScrollViewReader { reader in
         ScrollView { LazyVStack(alignment: .leading, spacing: 18) {
             if !model.importSummary.isEmpty { Text(model.importSummary).font(.caption).foregroundStyle(OrcaTheme.cyan) }
-            Picker("曲庫", selection: Binding(get: { section }, set: { section = $0 })) {
-                ForEach(["播放清單", "歌手列表", "全部歌曲"], id: \.self) { Text($0) }
-            }.pickerStyle(.segmented).labelsHidden().id("home-top")
+            Color.clear.frame(height: 1).id("home-top")
             if section == "播放清單" { playlistRows }
             else if section == "歌手列表" { artistRows }
             else {
@@ -61,6 +60,7 @@ struct MusicHomeView: View {
         }))
         .onChange(of: section) { _, value in reader.scrollTo(navigation.scrollPositions[value] ?? "home-top", anchor: .top) }
         .onAppear { if let id = navigation.scrollPositions[section] { reader.scrollTo(id, anchor: .top) } }
+        }
         }
         }
         }
@@ -92,13 +92,14 @@ struct MusicHomeView: View {
         }
     }
     private var playlistRows: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 20) {
+        LazyVGrid(columns: [GridItem(.flexible(), alignment: .top), GridItem(.flexible(), alignment: .top)], alignment: .leading, spacing: 20) {
             ForEach(navigation.allPlaylistsExpanded ? model.visiblePlaylistIDs : Array(model.visiblePlaylistIDs.prefix(3)), id: \.self) { id in
                 Button { selectedPlaylist = id } label: {
                     VStack(alignment: .leading, spacing: 8) {
                         GeometryReader { geo in
                             DecodedArtwork(data: model.collection.playlistAppearance?[id]?.artwork, symbol: id == "favorites" ? "heart.fill" : "music.note.list")
-                                .frame(width: geo.size.width, height: geo.size.height).clipped()
+                                .padding(model.collection.playlistAppearance?[id]?.artwork == nil ? geo.size.width * 0.1 : 0)
+                                .frame(width: geo.size.width, height: geo.size.height).background(OrcaTheme.panel).clipped()
                         }.aspectRatio(1, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 18))
                         Text(model.playlistTitle(id)).foregroundStyle(id.hasPrefix("stars") ? OrcaTheme.star : .white).lineLimit(1)
                         Text("\(model.libraryIndex.playlistIDs[id]?.count ?? 0) 首歌曲").font(.caption).foregroundStyle(OrcaTheme.muted)
@@ -116,12 +117,12 @@ struct MusicHomeView: View {
                 .onDrag { draggedPlaylist = id; return NSItemProvider(object: id as NSString) }
                 .onDrop(of: [.text], delegate: LibraryReorderDrop(target: id, dragged: $draggedPlaylist) { source, target in model.movePlaylist(source, to: target) })
             }
-            Button { name = ""; listError = nil; newList = true } label: {
-                VStack(alignment: .leading, spacing: 8) {
-                    Image(systemName: "plus").font(.largeTitle).frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit).background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 18))
-                    Text("新增播放清單").font(.subheadline)
-                }.foregroundStyle(.white).contentShape(Rectangle())
-            }.buttonStyle(.plain)
+            Button { name = ""; newPlaylistArtwork = nil; listError = nil; newList = true } label: {
+                GeometryReader { geo in
+                    Image(systemName: "plus").font(.system(size: 40, weight: .light))
+                        .frame(width: geo.size.width, height: geo.size.height).background(.white.opacity(0.2), in: RoundedRectangle(cornerRadius: 18))
+                }.aspectRatio(1, contentMode: .fit).foregroundStyle(.white).contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityLabel("新增播放清單")
             if model.visiblePlaylistIDs.count > 3 {
                 Button(navigation.allPlaylistsExpanded ? "收合播放清單" : "顯示全部播放清單") { navigation.allPlaylistsExpanded.toggle() }.buttonStyle(.plain).frame(minHeight: 44)
             }
@@ -189,7 +190,7 @@ struct MusicHomeView: View {
                         }.padding(12).frame(width: 180).presentationCompactAdaptation(.popover).presentationBackground(OrcaTheme.sheet)
                     }
             }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 20) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .top), count: 3), spacing: 20) {
             ForEach(groups, id: \.self) { name in
                 let key = model.artistKey(name)
                 Button { selectedArtist = key } label: {
@@ -212,11 +213,11 @@ struct MusicHomeView: View {
                 })
             }
             Button { artistName = ""; newArtist = true } label: {
-                VStack(spacing: 8) {
-                    Image(systemName: "plus").font(.largeTitle).frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit).background(.white.opacity(0.15), in: Circle())
-                    Text("新增歌手").font(.caption)
-                }.foregroundStyle(.white).contentShape(Rectangle())
-            }.buttonStyle(.plain)
+                GeometryReader { geo in
+                    Image(systemName: "plus").font(.system(size: 38, weight: .light))
+                        .frame(width: geo.size.width, height: geo.size.height).background(.white.opacity(0.3), in: Circle())
+                }.aspectRatio(1, contentMode: .fit).foregroundStyle(.white).contentShape(Circle())
+            }.buttonStyle(.plain).accessibilityLabel("新增歌手")
             }
         }.scrollTargetLayout()
     }
@@ -251,19 +252,21 @@ struct MusicHomeView: View {
     private var newPlaylist: some View {
         VStack(spacing: 20) {
             Text("新增播放清單").font(.title2)
-            TextField("清單名稱", text: $name).textFieldStyle(.roundedBorder)
+            ArtworkChooser(data: $newPlaylistArtwork, compactEditor: true, useDefaultCover: true)
+                .frame(maxWidth: .infinity).padding(.vertical, 16)
+            TextField("清單名稱", text: $name).songEditorField().accessibilityLabel("清單名稱")
             if let listError { Text(listError).font(.caption).foregroundStyle(.orange) }
             HStack {
                 Button("取消") { newList = false }.frame(minHeight: 44)
                 Spacer()
-                Button("建立") {
+                Button("儲存") {
                     let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !title.isEmpty, title.count <= 60 else { listError = "名稱須為1～60字。"; return }
                     guard !(PlayerModel.systemPlaylistIDs + model.collection.playlists.map(\.id)).contains(where: { model.playlistTitle($0).localizedCaseInsensitiveCompare(title) == .orderedSame }) else { listError = "已有相同名稱。"; return }
-                    model.createPlaylist(title); newList = false
+                    if model.createPlaylist(title, artwork: newPlaylistArtwork) != nil { newList = false }
                 }.frame(minHeight: 44)
             }
-        }.padding(24).frame(minWidth: 280).themedSheet()
+        }.padding(24).frame(minWidth: 280).themedSheet().presentationDetents([.height(480), .large])
     }
 }
 
@@ -281,45 +284,5 @@ extension View {
         overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(selected ? 0.9 : 0), lineWidth: 1.5)
             .shadow(color: .white.opacity(selected ? 0.4 : 0), radius: 4))
         .accessibilityAddTraits(selected ? [.isSelected] : [])
-    }
-}
-
-
-private struct LibraryDetailPage: View {
-    @ObservedObject var model: PlayerModel
-    let title: String
-    let artwork: Data?
-    let songs: [AudioTrack]
-    let playlistID: String?
-    let back: () -> Void
-    var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
-                Button(action: back) { Label("返回曲庫", systemImage: "chevron.left").frame(minHeight: 44).contentShape(Rectangle()) }.buttonStyle(.plain)
-                DecodedArtwork(data: artwork ?? songs.first.flatMap { model.coverData($0) }, symbol: playlistID == nil ? "person.fill" : "music.note.list")
-                    .frame(width: 220, height: 220).clipShape(RoundedRectangle(cornerRadius: 20)).frame(maxWidth: .infinity)
-                Text(title).font(.title.bold())
-                HStack {
-                    Text("\(songs.count) 首歌曲").foregroundStyle(OrcaTheme.muted)
-                    Spacer()
-                    Button { if let first = songs.first { model.play(first, queue: songs, contextName: title, playlistID: playlistID) } } label: {
-                        Label("播放全部", systemImage: "play.fill").foregroundStyle(.black).padding(12).background(.green, in: Capsule())
-                    }.buttonStyle(.plain).disabled(songs.isEmpty)
-                }
-                ForEach(songs) { song in
-                    CollectionSongRow(model: model, track: song, queue: songs, playlistID: playlistID ?? "all", queueName: title)
-                }
-            }.padding(20)
-        }.background {
-            GeometryReader { geo in
-                ZStack(alignment: .top) {
-                    OrcaTheme.background
-                    if let data = artwork ?? songs.first.flatMap({ model.coverData($0) }) {
-                        DecodedArtwork(data: data, maxPixelSize: 128).frame(width: geo.size.width, height: 350).clipped().blur(radius: 30).opacity(0.5)
-                    } else { OrcaTheme.blue.opacity(0.25).frame(height: 350) }
-                    LinearGradient(colors: [.clear, OrcaTheme.background], startPoint: .top, endPoint: .bottom).frame(height: 380)
-                }.clipped()
-            }.allowsHitTesting(false)
-        }
     }
 }

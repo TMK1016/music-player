@@ -3,6 +3,83 @@
   "updated_at": "2026-10-29",
   "entries": [
     {
+      "id": "release-v10",
+      "version": "v0.17.0",
+      "date": "2026-10-29",
+      "title": "V10詳情輪播與首頁統一",
+      "summary": "清單／歌手詳情封面輪播、編輯與搜尋加歌，分類列固定高度；新增封面清單與公開App移除開發日誌。",
+      "changes": [
+        {
+          "id": "v10-detail-carousel",
+          "title": "輪播詳情與搜尋加入歌曲",
+          "summary": "相鄰封面暗化、選定置中，圖示播放／編輯／加歌；歌手歸類先提示，自動分類清單維持規則。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryDetail.swift",
+              "label": "共用輪播與選歌頁"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "批次加入與封面建立"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "資料與導航回歸"
+            }
+          ]
+        },
+        {
+          "id": "v10-home-consistency",
+          "title": "首頁固定分類列與新增卡片",
+          "summary": "統一分類高度、首頁回根頁、新增清單帶封面與白色輸入欄；首頁＋接本機搜尋。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "卡片與建立視窗"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/ContentView.swift",
+              "label": "標頭與首頁行為"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryManagement.swift",
+              "label": "照片選單與編輯"
+            }
+          ]
+        },
+        {
+          "id": "v10-external-journal",
+          "title": "開發紀錄留在專案管理介面",
+          "summary": "依新要求移除App開發入口及日誌資源，專案流程圖與日誌繼續維護。",
+          "node_ids": [
+            "FLOW-01",
+            "RELEASE-01"
+          ],
+          "target_page": null,
+          "locations": [
+            {
+              "path": "scripts/generate_xcode_project.py",
+              "label": "公開App資源範圍"
+            },
+            {
+              "path": "docs/zh-TW/V10詳情輪播與首頁統一.md",
+              "label": "規格與驗收"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-v9",
       "version": "v0.16.0",
       "date": "2026-10-29",

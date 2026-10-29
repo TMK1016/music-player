@@ -11,6 +11,12 @@ import OSLog
     @Published var expandedPlaylist: String?
     @Published var expandedArtist: String?
     @Published var monthly = true
+    var isShowingDetail: Bool { selectedPlaylist != nil || selectedArtist != nil }
+    func returnToRoot() { selectedPlaylist = nil; selectedArtist = nil }
+    func selectDetail(_ id: String, artist: Bool) {
+        if artist { selectedPlaylist = nil; selectedArtist = id }
+        else { selectedArtist = nil; selectedPlaylist = id }
+    }
     var showsRankings: Bool { section == "播放清單" }
     @Published var scrollPositions: [String: String] = [:]
     func recordScrollPosition(_ id: String?, in section: String) {
