@@ -3,7 +3,8 @@
 </style>
 <details id="eq-technical" class="eq-tech">
 <summary>技術細節 · EQ 如何處理音訊與音量</summary>
-<p><strong>V13-A 更新：</strong>低音開啟時，背景完整歌曲量測完成後改採實際響度／峰值估計約束的單一增益，保留七段EQ。下列曲線是原估算器與安全備援的模型範例，不是新分析結果。詳見 <a href="../docs/zh-TW/V13-A低音增強實作與驗收.md">V13-A 實作與驗收</a>。</p>
+<p><strong>V14／0.21.0：</strong>正式路徑改為七段EQ（前級0dB）＋獨立低架＋殘響＋即時峰值控制＋單一1dB預留，不再等待或採用整曲分析增益。<a href="../docs/zh-TW/V14低音與七段EQ實作驗收.md">實作／實際PCM與限制</a> · <a href="../apps/apple/OrcaPlayer/PeakControl.swift">峰值控制程式</a>。</p>
+<p><strong>以下保留歷史教學：</strong>曲線與路徑為v0.6靜態估算器／V13備援，不是V14播放增益、監控或動態限制器模擬。</p>
 <p class="muted">v0.6.0 · 7 段 EQ，保留第一階段餘裕優化。此區說明專案實作，不是音訊即時監控。</p>
 <h3>1／先理解頻率、增益與餘裕</h3>
 <p>Hz 決定調整哪段頻率；dB 決定增減量；頻寬決定影響範圍。EQ 濾波器互相重疊：應在同一頻率把各濾波器的 dB 響應相加，再尋找最高點，不應直接把所有滑桿的正值相加。</p>

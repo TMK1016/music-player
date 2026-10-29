@@ -113,27 +113,9 @@ enum BassCheckError: Error { case failed(String) }
         do { _ = try await cancelled.value; throw BassCheckError.failed("Cancelled analysis returned output") }
         catch is CancellationError { }
 
-        // Actual backend integration, without starting hardware/speaker output.
-        let native = NativeAudioPlayer()
-        var applied: Float?
-        native.onProcessingGain = { applied = $0 }
-        native.configure(gains: EQBands.flat, enabled: true, volume: 0.5)
-        try native.load(dense)
-        native.configureEffects(bass: 6, ambience: .off, mix: 0, enabled: true)
-        for _ in 0..<200 where applied == nil { try await Task.sleep(for: .milliseconds(100)) }
-        try require(applied != nil, "Live backend adopts measured gain")
-        let measured = applied
-        native.configure(gains: EQBands.flat, enabled: true, volume: 0.4)
-        native.configureEffects(bass: 6, ambience: .off, mix: 0, enabled: true)
-        try require(applied == measured, "Volume and duplicate settings do not reset measured compensation")
-        native.configureEffects(bass: 9, ambience: .off, mix: 0, enabled: true)
-        native.configureEffects(bass: 0, ambience: .off, mix: 0, enabled: true)
-        try await Task.sleep(for: .milliseconds(500))
-        try require(applied == nil, "Old analysis cannot override bass-off")
-        native.stop()
         if let path = Bundle.main.object(forInfoDictionaryKey: "ReportPath") as? String {
             try rows.joined(separator: "\n").write(to: URL(fileURLWithPath: path).deletingLastPathComponent().appendingPathComponent("bass-plan-a.csv"), atomically: true, encoding: .utf8)
         }
-        return "PASS: V13 Plan A actual Apple offline output, 9 rate/bass combinations, AAC decode, reverb tail, peak stress, cancellation and live-backend adoption\n" + rows.joined(separator: "\n")
+        return "PASS: V13 Plan A historical reference. Sparse pulse analysis completed: peakLimited=\(pulse.peakLimited), absoluteGain=\(pulse.gainDB)dB, referenceGain=\(pulse.referenceGainDB)dB, wetPeak=\(pulse.wet.truePeakDB)dB. 9 rate/bass combinations, AAC decode, reverb tail, peak stress, cancellation.\n" + rows.joined(separator: "\n")
     }
 }

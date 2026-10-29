@@ -565,22 +565,36 @@ private final class PreparationProbe: @unchecked Sendable {
         model.presetInput = "通勤"; precondition(model.savePresetName())
         let commute = model.customPresets[0].id
         model.resetEQ(); model.applyPreset(id: commute)
-        precondition(model.bassBoost == 5 && model.ambience == .hall && model.ambienceMix == 23, "Custom preset captures all effects")
+        precondition(model.bassBoost == 0 && model.customPresets[0].sound.bass == 5 && model.ambience == .hall && model.ambienceMix == 23, "Legacy custom data retained while EQ selection preserves independent bass")
         model.editPreset(commute); model.presetInput = "早上通勤"; precondition(model.savePresetName())
         precondition(model.customPresets[0].id == commute, "Rename preserves binding identity")
         model.bassBoost = 4; model.updatePreset(commute)
         model.resetEQ(); model.applyPreset(id: commute)
-        precondition(model.bassBoost == 4, "Overwrite stores current sound")
+        precondition(model.bassBoost == 0 && model.customPresets[0].sound.bass == 4, "Overwrite stores legacy snapshot without forcing independent bass on selection")
         model.resetEQ(); model.apply(.jazz)
+        model.bassBoost = 3
+        model.apply(.rock)
+        precondition(model.gains == EQPreset.rock.gains && model.bassBoost == 3 && model.presetName == "搖滾" && audio.appliedBass == 3, "V14 rock + bass 3 keeps mode identity and backend stacking")
+        model.apply(.jazz)
+        precondition(model.bassBoost == 3, "V14 cross-mode bass persists")
+        model.bassBoost = 4
         let global = model.sound
         model.bindSong(to: commute)
-        precondition(model.bassBoost == 4, "Binding immediately applies")
+        precondition(model.bassBoost == 4, "Binding applies EQ and preserves global bass")
         model.choose(model.tracks[1], autoplay: false)
         precondition(model.sound == global, "Unbound next track restores global sound")
         model.choose(model.tracks[0], autoplay: false)
         precondition(model.bassBoost == 4, "Returning to bound track applies automatically")
         let roundTrip = PlayerModel(savedData: model.settingsData, audio: FakeAudioPlayer(), libraryRoot: root)
         precondition(roundTrip.customPresets[0].name == "早上通勤" && roundTrip.bassBoost == 4 && roundTrip.songBindings[model.tracks[0].id] == commute, "v3 preset and binding restore")
+        model.bassBoost = 6
+        model.choose(model.tracks[1], autoplay: false)
+        precondition(model.bassBoost == 6, "V14 unbound restoration preserves newly edited global bass")
+        model.choose(model.tracks[0], autoplay: false)
+        precondition(model.bassBoost == 6, "V14 binding never overwrites global bass")
+        let boundReload = PlayerModel(savedData: model.settingsData, audio: FakeAudioPlayer(), libraryRoot: root)
+        precondition(boundReload.bassBoost == 6 && boundReload.customPresets[0].sound.bass == 4, "V14 save while bound persists global bass and legacy snapshot separately")
+        model.bassBoost = 4
         model.editPreset(); model.presetInput = "早上通勤"; precondition(!model.savePresetName(), "Reject duplicate names")
         model.presetInput = " "; precondition(!model.savePresetName(), "Reject blank names")
         for index in 1..<20 { model.editPreset(); model.presetInput = "模式 \(index)"; precondition(model.savePresetName()) }

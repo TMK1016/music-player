@@ -29,44 +29,6 @@ enum PlayerPage: String, CaseIterable, Identifiable {
     }
 }
 
-enum EQPreset: String, CaseIterable, Identifiable {
-    case flat = "原聲", bass = "低頻", vocal = "人聲", night = "夜間", pop = "流行", rock = "搖滾", jazz = "爵士", classical = "古典", electronic = "電子", acoustic = "木吉他", podcast = "語音", warm = "溫暖", concert = "演唱會"
-    var id: String {
-        switch self {
-        case .flat: "builtin.flat"
-        case .bass: "builtin.bass"
-        case .vocal: "builtin.vocal"
-        case .night: "builtin.night"
-        case .pop: "builtin.pop"
-        case .rock: "builtin.rock"
-        case .jazz: "builtin.jazz"
-        case .classical: "builtin.classical"
-        case .electronic: "builtin.electronic"
-        case .acoustic: "builtin.acoustic"
-        case .podcast: "builtin.podcast"
-        case .warm: "builtin.warm"
-        case .concert: "builtin.concert"
-        }
-    }
-    var gains: [Double] {
-        switch self {
-        case .flat: EQBands.flat
-        case .bass: [3.5, 2, 0, -1, 0, 1, 1]
-        case .vocal: [-1, 0, 1, 2, 2.5, 0, -1]
-        case .night: [-3, -1, 0, 1, 0, -1, -2]
-        case .pop: [1, 1, -1, 0.5, 2, 1, 0]
-        case .rock: [2, 1, -1, 0, 2, 1.5, 0]
-        case .jazz: [0.5, 1, 0, 0.5, 1, 0, 1]
-        case .classical: [0, 0, -0.5, 0, 0.5, 1, 0.5]
-        case .electronic: [3, 1, -1, 0, 1, 2, 1]
-        case .acoustic: [-1.5, 0, 1, 1.5, 1.5, 0.5, -0.5]
-        case .podcast: [-3, -1, 1, 2, 1.5, -1, -2]
-        case .warm: [1.5, 2, 0.5, 0, -0.5, -1, -2]
-        case .concert: [0.5, 0, -1, 0, 1, 0.5, 0]
-        }
-    }
-}
-
 private struct SavedSettings: Codable {
     var version = 3
     var gains: [Double]
@@ -265,15 +227,16 @@ private struct SavedSettings: Codable {
     }
     var presetName: String {
         guard eqEnabled else { return EQPreset.flat.rawValue }
-        if let custom = customPresets.first(where: { $0.sound == sound }) { return custom.name }
-        return EQPreset.allCases.first { !hiddenPresets.contains($0.id) && profile(for: $0.id) == sound }?.rawValue ?? "手動調音"
+        if let custom = customPresets.first(where: { $0.sound.matchesEQ(sound) }) { return custom.name }
+        return EQPreset.allCases.first { !hiddenPresets.contains($0.id) && profile(for: $0.id)?.matchesEQ(sound) == true }?.rawValue ?? "手動調音"
     }
     var elapsed: String { Self.time(currentTime) }
     var remaining: String { "−" + Self.time(max(0, track.duration - currentTime)) }
-    var headroomDB: Float { measuredBassGain ?? EQHeadroom.gain(gains: gains, bass: sound.bass, sampleRate: track.sampleRate, ambience: ambience, mix: sound.mix) }
+    var headroomDB: Float { 0 }
     var statusText: String { isPlaying ? "正在播放 · \(track.formatLabel)" : "本機離線播放器 · 匯入音檔後即可播放與調音" }
     var settingsData: Data? {
-        let base = unboundSound ?? sound
+        var base = unboundSound ?? sound
+        base.bass = bassBoost
         return try? JSONEncoder().encode(SavedSettings(gains: base.gains, eqEnabled: base.enabled, volume: volume, favorites: favorites, bass: base.bass, ambience: base.ambience, mix: base.mix, customs: customPresets, bindings: songBindings, hiddenPresets: hiddenPresets, useSongProfiles: useSongProfiles, modeOrder: modeOrder))
     }
 
@@ -522,7 +485,7 @@ private struct SavedSettings: Codable {
     func applyPreset(id: String) {
         guard let value = profile(for: id) else { return }
         unboundSound = nil
-        setSound(value)
+        setSound(value, preserveBass: true)
     }
     func resetEQ() { unboundSound = nil; setSound(.flat) }
     func adjustBand(_ index: Int, to value: Double) {
@@ -534,11 +497,11 @@ private struct SavedSettings: Codable {
         updateManualChanges()
     }
     private func clearManualEQChanges() { manualEQBaseline = nil; hasManualEQChanges = false }
-    private func setSound(_ value: SoundProfile) {
+    private func setSound(_ value: SoundProfile, preserveBass: Bool = false) {
         clearManualEQChanges()
         applying = true
         let p = value.sanitized
-        gains = p.gains; eqEnabled = p.enabled; bassBoost = p.bass; ambience = p.ambience; ambienceMix = p.mix
+        gains = p.gains; eqEnabled = p.enabled; bassBoost = preserveBass ? bassBoost : p.bass; ambience = p.ambience; ambienceMix = p.mix
         applying = false; syncAudio(); save()
     }
     func setSongProfilePolicy(_ enabled: Bool) { useSongProfiles = enabled; applySongBinding(); save() }
@@ -551,9 +514,9 @@ private struct SavedSettings: Codable {
         guard eqEnabled else { return }
         if useSongProfiles, let id = songBindings[selectedID], let value = profile(for: id) {
             if unboundSound == nil { unboundSound = sound }
-            setSound(value)
+            setSound(value, preserveBass: true)
         } else if let base = unboundSound {
-            unboundSound = nil; setSound(base)
+            unboundSound = nil; setSound(base, preserveBass: true)
         }
     }
     func editPreset(_ id: String? = nil) {

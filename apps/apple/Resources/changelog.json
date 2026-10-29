@@ -1,7 +1,109 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-29",
+  "updated_at": "2026-10-30",
   "entries": [
+    {
+      "id": "release-v14",
+      "version": "v0.21.0",
+      "date": "2026-10-30",
+      "title": "V14 低音與七段EQ改善",
+      "summary": "即時峰值控制取代整曲固定衰減；EQ模式與低音可獨立疊加。",
+      "changes": [
+        {
+          "id": "v14-dynamic-bass",
+          "title": "即時低音增益與峰值控制",
+          "summary": "移除整曲分析／舊headroom播放增益，前級0與單一1dB預留；保留七段及90Hz低架。",
+          "node_ids": [
+            "EQ-01",
+            "QA-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/AudioPlayback.swift",
+              "label": "AudioPlayback.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/PeakControl.swift",
+              "label": "PeakControl.swift"
+            },
+            {
+              "path": "docs/zh-TW/V14低音與七段EQ實作驗收.md",
+              "label": "V14低音與七段EQ實作驗收.md"
+            }
+          ]
+        },
+        {
+          "id": "v14-independent-bass",
+          "title": "模式與獨立低音疊加",
+          "summary": "搖滾＋低音3及跨模式／歌曲綁定保持低音，舊快照／ID與存檔相容。",
+          "node_ids": [
+            "PROFILE-01",
+            "EQ-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/PlayerModel.swift",
+              "label": "PlayerModel.swift"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/SoundProfiles.swift",
+              "label": "SoundProfiles.swift"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "AudioChecks.swift"
+            }
+          ]
+        },
+        {
+          "id": "v14-ramp-pcm",
+          "title": "參數漸變與原生PCM",
+          "summary": "七段頻響稽核、80ms漸變、單聲道正規化；真unity比較、失真／連動及靜音隱藏播放測試。",
+          "node_ids": [
+            "EQ-01",
+            "QA-01",
+            "IOS-01"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "apps/apple/Tests/V14Checks.swift",
+              "label": "V14Checks.swift"
+            },
+            {
+              "path": "docs/verification/V14-native-result.txt",
+              "label": "V14-native-result.txt"
+            },
+            {
+              "path": "docs/verification/V14-native-pcm.csv",
+              "label": "V14-native-pcm.csv"
+            }
+          ]
+        },
+        {
+          "id": "v14-delivery",
+          "title": "V14交付與可還原備份",
+          "summary": "雙平台建置、手機版本／曲庫與備份分項核對，實車／鎖屏藍牙仍待聽測。",
+          "node_ids": [
+            "RELEASE-01",
+            "QA-02"
+          ],
+          "target_page": "equalizer",
+          "locations": [
+            {
+              "path": "docs/zh-TW/V14低音與七段EQ實作驗收.md",
+              "label": "V14低音與七段EQ實作驗收.md"
+            },
+            {
+              "path": "docs/en/v14-requirements.md",
+              "label": "v14-requirements.md"
+            }
+          ]
+        }
+      ]
+    },
     {
       "id": "release-v13-plan-a",
       "version": "v0.20.0",

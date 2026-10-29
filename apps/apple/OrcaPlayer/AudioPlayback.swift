@@ -89,17 +89,16 @@ enum AudioGraph {
 @MainActor final class NativeAudioPlayer: AudioPlayback {
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
+    private let inputMixer = AVAudioMixerNode()
     private let equalizer = AVAudioUnitEQ(numberOfBands: EQBands.count)
     private let bassUnit = AVAudioUnitEQ(numberOfBands: 1)
     private let reverb = AVAudioUnitReverb()
+    private let peakControl = PeakControl()
     private var bass = 0.0
     private var ambience: Ambience = .off
     private var ambienceMix = 15.0
     private var file: AVAudioFile?
-    private var loadedURL: URL?
-    private var analysisTask: Task<Void, Never>?
     private var gainRampTask: Task<Void, Never>?
-    private var analysisRevision = 0
     var onProcessingGain: ((Float?) -> Void)?
     var onBassAnalysisStatus: ((String?) -> Void)?
 
@@ -132,9 +131,11 @@ enum AudioGraph {
 
     init() {
         engine.attach(player)
+        engine.attach(inputMixer)
         engine.attach(equalizer)
         engine.attach(bassUnit)
         engine.attach(reverb)
+        peakControl.attach(to: engine)
         AudioNotificationBridge.observe(.AVAudioEngineConfigurationChange, object: engine) { [weak self] in
             guard let self, self.file != nil, !self.engine.isRunning else { return }
             self.logger.notice("Engine configuration changed while stopped; pausing for explicit reconnect")
@@ -162,6 +163,10 @@ enum AudioGraph {
             }.store(in: &observers)
         #endif
     }
+    // Read-only native parameter evidence for integration checks; no render tap.
+    var processingParameters: (gains: [Float], bass: Float, preamp: Float) {
+        (equalizer.bands.map(\.gain), bassUnit.bands[0].gain, equalizer.globalGain)
+    }
     var currentTime: Double {
         guard let file else { return 0 }
         var frames = segmentStart
@@ -176,7 +181,6 @@ enum AudioGraph {
         let candidate = try AVAudioFile(forReading: url)
         guard candidate.length > 0, candidate.length <= Int64(UInt32.max), (1...2).contains(candidate.processingFormat.channelCount), candidate.processingFormat.sampleRate > 0 else { throw PlaybackError.invalidAudio }
         file = candidate
-        loadedURL = url
         try reconnect()
         parametersApplied = false; preparedEQRate = nil
         configure(gains: gains, enabled: enabled, volume: volume)
@@ -184,13 +188,19 @@ enum AudioGraph {
     private func reconnect() throws {
         guard let file else { return }
         engine.disconnectNodeOutput(player)
+        engine.disconnectNodeOutput(inputMixer)
         engine.disconnectNodeOutput(equalizer)
         engine.disconnectNodeOutput(bassUnit)
         engine.disconnectNodeOutput(reverb)
-        try AudioGraph.connect(engine, player, to: equalizer, format: file.processingFormat)
-        try AudioGraph.connect(engine, equalizer, to: bassUnit, format: file.processingFormat)
-        try AudioGraph.connect(engine, bassUnit, to: reverb, format: file.processingFormat)
-        try AudioGraph.connect(engine, reverb, to: engine.mainMixerNode, format: file.processingFormat)
+        peakControl.disconnect(from: engine)
+        // Normalize mono to dual mono before effects: Apple's reverb/limiter
+        // graph must not inherit an unsupported mono bus configuration.
+        let processing = AVAudioFormat(standardFormatWithSampleRate: file.processingFormat.sampleRate, channels: 2)!
+        try AudioGraph.connect(engine, player, to: inputMixer, format: file.processingFormat)
+        try AudioGraph.connect(engine, inputMixer, to: equalizer, format: processing)
+        try AudioGraph.connect(engine, equalizer, to: bassUnit, format: processing)
+        try AudioGraph.connect(engine, bassUnit, to: reverb, format: processing)
+        try peakControl.connect(engine, from: reverb, to: engine.mainMixerNode, format: processing)
         engine.prepare()
         needsReconnect = false
     }
@@ -234,12 +244,11 @@ enum AudioGraph {
         }
     }
     func stop() {
-        cancelBassAnalysis()
-        loadedURL = nil
+        gainRampTask?.cancel(); gainRampTask = nil
         generation += 1
         player.stop()
         engine.stop()
-        equalizer.reset(); bassUnit.reset(); reverb.reset()
+        inputMixer.reset(); equalizer.reset(); bassUnit.reset(); reverb.reset(); peakControl.reset()
         scheduled = false
         segmentStart = 0
         file = nil
@@ -256,13 +265,6 @@ enum AudioGraph {
                 // volume update or opening an editor.
                 EqualizerSettings.apply(to: equalizer, gains: gains, enabled: enabled, sampleRate: rate)
                 preparedEQRate = rate
-            } else {
-                for (index, band) in equalizer.bands.enumerated() {
-                    let gain = Float(index < gains.count && gains[index].isFinite ? min(12, max(-12, gains[index])) : 0)
-                    if band.gain != gain { band.gain = gain }
-                    let bypass = !enabled || Double(EqualizerSettings.frequencies[index]) >= rate * 0.45
-                    if band.bypass != bypass { band.bypass = bypass }
-                }
             }
             applyEffects()
         }
@@ -289,47 +291,41 @@ enum AudioGraph {
         applyEffects()
     }
     private func applyEffects() {
-        cancelBassAnalysis()
-        SoundEffectSettings.apply(equalizer: equalizer, bassUnit: bassUnit, reverb: reverb, gains: gains, bass: bass, ambience: ambience, mix: ambienceMix, enabled: enabled, sampleRate: file?.processingFormat.sampleRate ?? 44100)
-        guard enabled, bass > 0, let url = loadedURL else { return }
-        onBassAnalysisStatus?("低音分析中…")
-        let request = BassAnalysisRequest(url: url, gains: gains, bass: bass, ambience: ambience, mix: ambienceMix)
-        let revision = analysisRevision
-        analysisTask = Task(priority: .utility) { [weak self] in
-            do {
-                // Slider movement coalesces before expensive offline work begins.
-                try await Task.sleep(for: .milliseconds(300))
-                let result = try await BassAnalysisService.shared.analyze(request)
-                try Task.checkCancellation()
-                guard let self, self.analysisRevision == revision else { return }
-                self.logger.notice("Bass A ready: gain=\(result.gainDB, privacy: .public)dB peakLimited=\(result.peakLimited, privacy: .public)")
-                self.onBassAnalysisStatus?(result.peakLimited ? "已達峰值餘裕" : "音量已補償")
-                self.rampGain(to: result.gainDB, revision: revision)
-            } catch is CancellationError { }
-            catch {
-                guard let self, self.analysisRevision == revision else { return }
-                self.logger.notice("Bass A analysis unavailable; retaining conservative headroom")
-                self.onBassAnalysisStatus?("使用安全餘裕")
-            }
-        }
-    }
-    private func cancelBassAnalysis() {
-        analysisRevision += 1
-        analysisTask?.cancel(); analysisTask = nil
-        gainRampTask?.cancel(); gainRampTask = nil
-        onProcessingGain?(nil)
-        onBassAnalysisStatus?(nil)
-    }
-    private func rampGain(to target: Float, revision: Int) {
         gainRampTask?.cancel()
-        let start = equalizer.globalGain
+        let start = equalizer.bands.map(\.gain)
+        let startBass = bassUnit.bands[0].gain
+        // One gain policy: unity EQ preamp, then dynamic peak control. No
+        // content-analysis gain or static summed/headroom attenuation is added.
+        SoundEffectSettings.apply(equalizer: equalizer, bassUnit: bassUnit, reverb: reverb, gains: gains, bass: parametersApplied && enabled ? Double(startBass) : bass, ambience: ambience, mix: ambienceMix, enabled: enabled, sampleRate: file?.processingFormat.sampleRate ?? 44100, preamp: 0)
+        peakControl.setEnabled(enabled)
+        for (index, band) in equalizer.bands.enumerated() {
+            band.bypass = !enabled || Double(EqualizerSettings.frequencies[index]) >= (file?.processingFormat.sampleRate ?? 44100) * 0.45
+        }
+        // Keep a zero-gain shelf in circuit, avoiding a bypass transition during
+        // a bass ramp. New files/disabled master use immediate deterministic state.
+        bassUnit.bands[0].bypass = !enabled
+        onProcessingGain?(0)
+        onBassAnalysisStatus?(enabled ? "即時峰值控制" : nil)
+        let targets = gains.map { Float($0.isFinite ? min(12, max(-12, $0)) : 0) }
+        guard parametersApplied, enabled else {
+            for (i, band) in equalizer.bands.enumerated() { band.gain = i < targets.count ? targets[i] : 0 }
+            return
+        }
+        bassUnit.bands[0].gain = startBass
+        let targetBass = Float(bass)
+        // Bounded control work only; Apple owns rendering. Latest edit cancels
+        // the previous ramp and begins at its actual intermediate values.
         gainRampTask = Task { [weak self] in
             for step in 1...16 {
                 do { try await Task.sleep(for: .milliseconds(5)) } catch { return }
-                guard let self, self.analysisRevision == revision else { return }
-                self.equalizer.globalGain = start + (target-start) * Float(step)/16
+                guard let self else { return }
+                let fraction = Float(step) / 16
+                for (i, band) in self.equalizer.bands.enumerated() {
+                    let target = i < targets.count ? targets[i] : 0
+                    band.gain = start[i] + (target - start[i]) * fraction
+                }
+                self.bassUnit.bands[0].gain = startBass + (targetBass - startBass) * fraction
             }
-            self?.onProcessingGain?(target)
         }
     }
 
@@ -337,7 +333,7 @@ enum AudioGraph {
 
 
 enum SoundEffectSettings {
-    static func apply(equalizer: AVAudioUnitEQ, bassUnit: AVAudioUnitEQ, reverb: AVAudioUnitReverb, gains: [Double], bass: Double, ambience: Ambience, mix: Double, enabled: Bool, sampleRate: Double = 44100) {
+    static func apply(equalizer: AVAudioUnitEQ, bassUnit: AVAudioUnitEQ, reverb: AVAudioUnitReverb, gains: [Double], bass: Double, ambience: Ambience, mix: Double, enabled: Bool, sampleRate: Double = 44100, preamp: Float? = nil) {
         let amount = bass.isFinite ? min(9, max(0, bass)) : 0
         let band = bassUnit.bands[0]
         if band.filterType != .lowShelf { band.filterType = .lowShelf }
@@ -345,7 +341,7 @@ enum SoundEffectSettings {
         if band.gain != Float(amount) { band.gain = Float(amount) }
         let bypassBass = !enabled || amount == 0
         if band.bypass != bypassBass { band.bypass = bypassBass }
-        let headroom = EQHeadroom.gain(gains: gains, bass: amount, sampleRate: sampleRate, ambience: ambience, mix: mix)
+        let headroom = preamp ?? EQHeadroom.gain(gains: gains, bass: amount, sampleRate: sampleRate, ambience: ambience, mix: mix)
         if equalizer.globalGain != headroom { equalizer.globalGain = headroom }
         let wet = enabled && ambience != .off ? Float(mix.isFinite ? min(35, max(0, mix)) : 0) : 0
         if reverb.wetDryMix != wet { reverb.wetDryMix = wet }

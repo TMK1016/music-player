@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-29",
+  "updated_at": "2026-10-30",
   "title": "Music Player 開發流程",
   "mode": "development-with-manual-evidence",
   "platform_assumption": "Mac M2／Xcode 開發已確認；最終車用播放端待確認；UI 可於 macOS 操作並支援 iOS 編譯",
@@ -188,13 +188,15 @@
         "docs/zh-TW/首頁對齊與清單播放修正.md",
         "docs/zh-TW/全部歌曲水平偏移修正.md",
         "docs/zh-TW/V13低音增強研究與方案.md",
-        "docs/zh-TW/V13-A低音增強實作與驗收.md"
+        "docs/zh-TW/V13-A低音增強實作與驗收.md",
+        "docs/zh-TW/V14低音與七段EQ實作驗收.md"
       ],
-      "implementation_scope": "已驗證檔案／狀態與原生 EQ 離線 PCM；尚無 Rust、回呼耗時、60 分鐘連播或實車證據。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；v0.7真機後續發現音訊actor崩潰，v0.7.1依堆疊修復並新增背景通知回歸，不以早期Running替代完整驗收。；V8分階段驗收以V8實作與架構驗收.md為準，功能模型通過，重構及真機仍進行中。",
+      "implementation_scope": "已驗證檔案／狀態與原生 EQ 離線 PCM；尚無 Rust、回呼耗時、60 分鐘連播或實車證據。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；v0.7真機後續發現音訊actor崩潰，v0.7.1依堆疊修復並新增背景通知回歸，不以早期Running替代完整驗收。；V8分階段驗收以V8實作與架構驗收.md為準，功能模型通過，重構及真機仍進行中。；V14原生PCM：真正unity原聲對照、44.1/48/96kHz、低音0/3/6/9、搖滾疊加、密集／稀疏峰值、左右連動、THD、低率單聲道與極端EQ／殘響；Mac隱藏時靜音實際render及快速操作通過。非手機callback／實車保證。",
       "implemented_paths": [
         "apps/apple/Tests/AudioChecks.swift",
         "apps/apple/Tests/NativeEQChecks.swift",
-        "scripts/check_audio.py"
+        "scripts/check_audio.py",
+        "apps/apple/Tests/V14Checks.swift"
       ]
     },
     {
@@ -324,16 +326,18 @@
         "docs/zh-TW/V5介面修復與驗收-v012.md",
         "docs/zh-TW/V9原聲與曲庫改版.md",
         "docs/zh-TW/V13低音增強研究與方案.md",
-        "docs/zh-TW/V13-A低音增強實作與驗收.md"
+        "docs/zh-TW/V13-A低音增強實作與驗收.md",
+        "docs/zh-TW/V14低音與七段EQ實作驗收.md"
       ],
-      "implementation_scope": "v0.6：7 段固定中心（50～12.5k Hz）、約 1⅓ 倍頻程、合成響應餘裕與 13 預設；130 個 Apple PCM 探測點通過。未加入響度補償、限制器、true-peak 保護、完整平滑或 Rust。；v0.8依兩張參考圖加入封面右滑原位EQ、固定transport及五星評分；UI實機檢查與模型檢查分開記錄。",
+      "implementation_scope": "v0.6：7 段固定中心（50～12.5k Hz）、約 1⅓ 倍頻程、合成響應餘裕與 13 預設；130 個 Apple PCM 探測點通過。未加入響度補償、限制器、true-peak 保護、完整平滑或 Rust。；v0.8依兩張參考圖加入封面右滑原位EQ、固定transport及五星評分；UI實機檢查與模型檢查分開記錄。；V14／0.21：七段頻響保留並經130點PCM稽核；前級0、獨立低架與動態峰值控制，僅單一1dB預留，80ms參數漸變；不再採用整曲分析增益。密集低頻仍會壓低中頻，詳V14實測。",
       "implemented_paths": [
         "apps/apple/OrcaPlayer/EqualizerView.swift",
         "apps/apple/OrcaPlayer/AudioPlayback.swift",
         "apps/apple/OrcaPlayer/ProfileControls.swift",
         "apps/apple/OrcaPlayer/EQHeadroom.swift",
         "apps/apple/OrcaPlayer/EQBands.swift",
-        "apps/apple/OrcaPlayer/ModeSelectionView.swift"
+        "apps/apple/OrcaPlayer/ModeSelectionView.swift",
+        "apps/apple/OrcaPlayer/PeakControl.swift"
       ]
     },
     {
@@ -370,14 +374,16 @@
         "docs/zh-TW/V5介面修復與驗收-v012.md",
         "docs/zh-TW/V7實作與手機驗收-v014.md",
         "docs/zh-TW/V13低音增強研究與方案.md",
-        "docs/zh-TW/V13-A低音增強實作與驗收.md"
+        "docs/zh-TW/V13-A低音增強實作與驗收.md",
+        "docs/zh-TW/V14低音與七段EQ實作驗收.md"
       ],
       "implemented_paths": [
         "apps/apple/OrcaPlayer/SoundProfiles.swift",
         "apps/apple/OrcaPlayer/PlayerModel.swift",
-        "archive/retired-vehicle/VehicleCalibration.swift.txt"
+        "archive/retired-vehicle/VehicleCalibration.swift.txt",
+        "apps/apple/Tests/AudioChecks.swift"
       ],
-      "implementation_scope": "v3 七段自訂音效與歌曲綁定，v1／v2 對數頻率轉換及原始偏好備份；模式列表可移除／還原內建，最多 20 自訂。車輛仍為立體聲配置預覽，不含距離或獨立路由。；2026-10-26車輛設定及試音已撤除，歷史記錄保留，不再是App能力。；V7經使用者授權接入正式索引／批次／表單與系統封面，驗證與真機限制見v014實作文件。"
+      "implementation_scope": "v3 七段自訂音效與歌曲綁定，v1／v2 對數頻率轉換及原始偏好備份；模式列表可移除／還原內建，最多 20 自訂。車輛仍為立體聲配置預覽，不含距離或獨立路由。；2026-10-26車輛設定及試音已撤除，歷史記錄保留，不再是App能力。；V7經使用者授權接入正式索引／批次／表單與系統封面，驗證與真機限制見v014實作文件。；V14：內建／自訂EQ選取、歌曲綁定及返回全域都保留獨立低音；綁定中修改低音正確存檔，模式名稱不受獨立低音干擾；舊快照、ID、模式及v3資料相容。"
     },
     {
       "id": "CLOUD-01",
@@ -472,14 +478,15 @@
         "docs/zh-TW/三頁曲庫與定時實作.md",
         "docs/zh-TW/v0.7.1音訊回呼崩潰修復.md",
         "docs/zh-TW/背景播放與互動優化-v010.md",
-        "docs/zh-TW/V9原聲與曲庫改版.md"
+        "docs/zh-TW/V9原聲與曲庫改版.md",
+        "docs/zh-TW/V14低音與七段EQ實作驗收.md"
       ],
-      "deployment_note": "2026-10-24：v0.6.0／7 已更新並顯示正在實體 iPhone 執行；七段模式與 v3 設定已接入。手機橫向手勢、完整播放／中斷及 Fiesta 實車驗收仍待確認。",
+      "deployment_note": "V14：CoreDevice原位安裝後清單核對0.21.0／31；曲庫manifest及17筆綁定完整保留。啟動遭Locked拒絕，待使用者解鎖；未確認Running或手機背景／實車聽測。",
       "implemented_paths": [
         "apps/apple/OrcaPlayer.xcodeproj/project.pbxproj",
         "apps/apple/OrcaPlayer/AudioPlayback.swift"
       ],
-      "implementation_scope": "共用原生 iOS target 已編譯、簽章、安裝與啟動；完整手機功能、背景播放及實車驗證待完成。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；2026-10-26 v0.7.0／9 已由新路徑Clean後部署實體iPhone並確認Running；播放與背景仍待驗收。；v0.7真機後續發現音訊actor崩潰，v0.7.1依堆疊修復並新增背景通知回歸，不以早期Running替代完整驗收。"
+      "implementation_scope": "共用原生 iOS target 已編譯、簽章、安裝與啟動；完整手機功能、背景播放及實車驗證待完成。；v0.7新增三頁曲庫、迷你播放器、聆聽限制等，模型及建置檢查分別記錄，真機／背景驗收仍待完成。；2026-10-26 v0.7.0／9 已由新路徑Clean後部署實體iPhone並確認Running；播放與背景仍待驗收。；v0.7真機後續發現音訊actor崩潰，v0.7.1依堆疊修復並新增背景通知回歸，不以早期Running替代完整驗收。；V14：保留iOS背景audio與非主執行緒session／中斷策略；Mac隱藏驗證不能取代iPhone背景聽測。"
     },
     {
       "id": "CAR-01",
@@ -626,7 +633,7 @@
       "id": "QA-02",
       "title": "真機與實車驗收",
       "stage": 6,
-      "status": "規劃中",
+      "status": "部分實作",
       "depends_on": [
         "EQ-01",
         "PROFILE-01",
@@ -646,8 +653,13 @@
         "已納入版本的可選功能另附證據",
         "沒有實車證據不宣稱實車通過"
       ],
-      "evidence": [],
-      "implementation_scope": ""
+      "evidence": [
+        "docs/zh-TW/V14低音與七段EQ實作驗收.md"
+      ],
+      "implementation_scope": "；V14：原生合成音訊及Mac隱藏靜音播放通過，手機部署另列；未執行iPhone鎖屏藍牙長時與實車聽測。",
+      "implemented_paths": [
+        "apps/apple/Tests/V14Checks.swift"
+      ]
     },
     {
       "id": "RELEASE-01",
@@ -674,13 +686,15 @@
         "docs/release/TestFlight測試資料.md",
         "scripts/release/archive_ios.sh",
         "scripts/release/check_archive.py",
-        "docs/zh-TW/V10詳情輪播與首頁統一.md"
+        "docs/zh-TW/V10詳情輪播與首頁統一.md",
+        "docs/zh-TW/V14低音與七段EQ實作驗收.md"
       ],
       "implemented_paths": [
         "scripts/release/",
         "apps/apple/Resources/Assets.xcassets/",
         "apps/apple/Resources/PrivacyInfo.xcprivacy"
-      ]
+      ],
+      "implementation_scope": "；V14／0.21.0 build31雙平台Debug建置；朋友來源包、手機及Git備份以V14驗收文件記錄。"
     },
     {
       "id": "STORE-01",

@@ -13,7 +13,7 @@ import Combine
                 VStack(alignment: .leading, spacing: 20) {
                     Text("原生音訊驗證").font(.title2.bold())
                     Text(state.result).font(.system(.body, design: .monospaced)).textSelection(.enabled)
-                    Text("只在記憶體中產生與處理音訊，不會播放至喇叭。")
+                    Text("使用合成訊號與靜音實際播放驗證，不會播放私人歌曲或輸出聲音。")
                         .font(.caption).foregroundStyle(.secondary)
                 }.padding(28)
             }.frame(width: 650, height: 260)
@@ -21,8 +21,10 @@ import Combine
                     let activity = ProcessInfo.processInfo.beginActivity(options: .userInitiatedAllowingIdleSystemSleep, reason: "Offline audio validation")
                     defer { ProcessInfo.processInfo.endActivity(activity) }
                     do {
+                        FileHandle.standardError.write(Data("Stage: legacy EQ\n".utf8))
                         let legacy = try NativeEQChecks.run()
-                        state.result = legacy + "\n" + (try await BassPlanChecks.run())
+                        FileHandle.standardError.write(Data("Stage: legacy Bass A\n".utf8))
+                        state.result = legacy + "\n" + (try await BassPlanChecks.run()) + "\n" + (try await V14Checks.run())
                     }
                     catch { state.result = "FAILED: " + String(describing: error) }
                     // Test-owned evidence path injected at compile time in the bundle plist.

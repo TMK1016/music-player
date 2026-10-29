@@ -34,7 +34,7 @@ struct EqualizerCard: View {
                 }
                 ModeSelectionStrip(model: model, useSongPolicy: isPlaybackPanel)
                 HStack {
-                    Text(String(format: "前級餘裕 %+.1f dB", model.headroomDB)).font(.system(size: 10)).foregroundStyle(OrcaTheme.muted)
+                    Text("低音與模式可同時疊加").font(.system(size: 10)).foregroundStyle(OrcaTheme.muted)
                     Spacer()
                     if condensed {
                         Button { model.page = .equalizer } label: { Label("細緻調音", systemImage: "arrow.up.right").font(.system(size: 11, weight: .medium)) }

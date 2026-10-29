@@ -1,0 +1,35 @@
+PASS: real notification bridge accepts a background callback and executes its handler on MainActor
+PASS: alert dismissal does not publish synchronously or erase a newer message
+PASS: serial off-main session preparation, MainActor completion, cancellation/selection/interruption/sleep/error and latest-start guards
+PASS: V8 stroke/rating/date, reversal/reset, stable ties, legacy migration, persistence and ranking scope
+V7 INDEX TIMING [
+  {
+    "cold_build_ms" : 20.837625022977591,
+    "hot_100_reads_ms" : 0.10329164797440171,
+    "tracks" : 1230
+  },
+  {
+    "cold_build_ms" : 75.395583349745721,
+    "hot_100_reads_ms" : 0.11904165148735046,
+    "tracks" : 5000
+  },
+  {
+    "cold_build_ms" : 149.38691665884107,
+    "hot_100_reads_ms" : 0.11800002539530396,
+    "tracks" : 10000
+  }
+]
+PASS: V7 1230/5000/10000 track indexes, cache invalidation, unlimited full library, navigation/audio isolation, background warm, sort/reorder and coalesced persistence
+HASH MEMORY peak bytes before=51216384 after=52281344 growth=1064960
+PASS: 512 MiB streaming hash twice with per-chunk autorelease pool
+PASS: conditional system lists, seven-day window, hide/restore, mixed reorder, membership, artwork/name persistence, artist linking, queue context and legacy compatibility
+PASS: V6 background persistence, song order/cover/avatar fallback, bounded crop and local scan deduplication
+PASS: isolated playback ticks, uninterrupted tab navigation and three-mode cycle
+PASS: ten-position bass/manual prompt, default display, mode-order persistence and sleep bounds
+PASS: ratings, playlist uniqueness/removal, artist edits, half-duration/replay/seek counting, sleep limits, collection restore and file deletion
+PASS: combined-response headroom, input sanitization, low-rate and zero-mix handling
+PASS: seven-band presets, logarithmic v1/v2 migration, custom identity/binding retention, v3 persistence and shared mode list removal/restore
+PASS: retired vehicle preference cleanup, EQ preservation and removed destination
+PASS: factory/custom sound profiles, bindings and settings migration
+PASS: transactional import, deduplication, invalid audio, offline copy, manifest recovery, playback commands, seek, EOF/repeat, interruption, settings and EQ wiring
+PASS: V13 K-weighted stereo loudness, streaming oversampled peak calibration and silence

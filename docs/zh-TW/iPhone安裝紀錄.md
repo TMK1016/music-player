@@ -51,3 +51,7 @@ Xcode 回報：“The application could not be launched because the Developer Ap
 由搬移後的 projects/music-player/apps/apple/OrcaPlayer.xcodeproj 執行 Clean Build Folder，選擇 OrcaPlayer-iOS／已連接iPhone，Run完成後Xcode顯示Running與程序。核對簽章產物版本0.7.0／9、canonical開發日誌一致且無3份已撤除試音WAV。
 
 已確認安裝與程序啟動，啟動程式含舊車輛欄位清理；未從手機容器直接讀取UserDefaults，因此不冒稱已逐項讀回清理結果。播放、背景定時與藍牙操作仍需實機驗收。控制台出現AURemoteIO初始化診斷，沒有以此證明實際音訊播放通過。
+
+## V14／2026-10-30／0.21.0 build31
+
+CoreDevice原位安裝成功，已安裝App清單讀回0.21.0／31。啟動遭SpringBoard `Locked`拒絕，已請使用者解鎖，尚未確認Running。安裝前後曲庫manifest逐位元相同（1229筆匯入＋內建曲目共1230首），音效偏好與17筆綁定語意相同，不刪App。完整測試／手機後續／備份見[V14驗收](V14低音與七段EQ實作驗收.md)。
