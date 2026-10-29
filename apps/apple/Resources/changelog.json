@@ -3,6 +3,87 @@
   "updated_at": "2026-10-29",
   "entries": [
     {
+      "id": "release-v11",
+      "version": "v0.18.0",
+      "date": "2026-10-29",
+      "title": "V11視窗統一與封面定位修復",
+      "summary": "修復直接進入非首項封面錯位，統一資料編輯與照片選單、歌手數量和首頁手勢。",
+      "changes": [
+        {
+          "id": "v11-carousel-entry",
+          "title": "非首項封面初始置中",
+          "summary": "局部捲動位置與選定項分離，版面完成後定位再接受位置回寫；藍／橘封面驗證第二歌手及第二清單。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryDetail.swift",
+              "label": "初始定位與同步"
+            },
+            {
+              "path": "apps/apple/Tests/V8UIValidationApp.swift",
+              "label": "隔離色塊封面回歸"
+            }
+          ]
+        },
+        {
+          "id": "v11-metadata-forms",
+          "title": "統一新增／編輯視窗及照片移除",
+          "summary": "左上標題、相機選單、白色欄位、無底色按鈕；明確儲存預設照片，原有nil保留呼叫不變。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/LibraryManagement.swift",
+              "label": "共用表單與相機"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicCollection.swift",
+              "label": "照片替換語意"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/MusicExperience.swift",
+              "label": "歌曲編輯按鈕"
+            }
+          ]
+        },
+        {
+          "id": "v11-home-swipes",
+          "title": "歌手數量與首頁滑動",
+          "summary": "減少歌手頁留白，清單下拉展開／首頁回預覽；左右滑切分類並保護斜向與排序，不顯示全部清單文字按鈕。",
+          "node_ids": [
+            "LIB-01",
+            "UI-01"
+          ],
+          "target_page": "library",
+          "locations": [
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibrary.swift",
+              "label": "間距與手勢"
+            },
+            {
+              "path": "apps/apple/OrcaPlayer/HomeLibraryState.swift",
+              "label": "手勢分類與邊界"
+            },
+            {
+              "path": "apps/apple/Tests/AudioChecks.swift",
+              "label": "手勢與保存回歸"
+            },
+            {
+              "path": "docs/zh-TW/V11視窗統一與封面定位修復.md",
+              "label": "需求與驗收"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "release-v10",
       "version": "v0.17.0",
       "date": "2026-10-29",

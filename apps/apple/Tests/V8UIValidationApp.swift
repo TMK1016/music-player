@@ -1,4 +1,6 @@
 import SwiftUI
+import ImageIO
+import UniformTypeIdentifiers
 
 /// A separate bundle, temporary library and silent backend; never opens private user media.
 @MainActor final class ValidationAudio: AudioPlayback {
@@ -31,11 +33,23 @@ import SwiftUI
             var detail = SongDetails(); detail.rating = i % 6 == 0 ? nil : i % 6
             detail.addedAt = Date(timeIntervalSince1970: Double(i)); collection.songs[track.id] = detail
         }
+        let blue = Self.cover(red: 0.05, green: 0.4, blue: 0.95)
+        let orange = Self.cover(red: 1, green: 0.42, blue: 0.05)
+        collection.artists = [MusicArtist(id: "qa.blue", name: "歌手 0", avatar: blue), MusicArtist(id: "qa.orange", name: "歌手 1", avatar: orange)]
+        collection.playlistAppearance = ["stars5": PlaylistAppearance(name: nil, artwork: blue), "stars4": PlaylistAppearance(name: nil, artwork: orange)]
         collection.plays = [ListeningEvent(trackID: "test.1229", date: Date())]
         try! JSONEncoder().encode(collection).write(to: root.appendingPathComponent("collection-v1.json"))
         let value = PlayerModel(audio: ValidationAudio(), libraryRoot: root)
         value.homeState.section = "全部歌曲"
         _model = StateObject(wrappedValue: value)
+    }
+    private static func cover(red: CGFloat, green: CGFloat, blue: CGFloat) -> Data {
+        let context = CGContext(data: nil, width: 128, height: 128, bitsPerComponent: 8, bytesPerRow: 512, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        context.setFillColor(CGColor(red: red, green: green, blue: blue, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 128, height: 128))
+        let bytes = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(bytes, UTType.png.identifier as CFString, 1, nil)!
+        CGImageDestinationAddImage(destination, context.makeImage()!, nil); precondition(CGImageDestinationFinalize(destination))
+        return bytes as Data
     }
     var body: some Scene {
         WindowGroup("Music Player V8 QA — synthetic/silent") {

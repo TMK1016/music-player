@@ -33,7 +33,7 @@ struct ArtworkChooser: View {
                 Group {
                     if useDefaultCover && data == nil && fallback == nil {
                         AlbumArtwork(variant: 0, compact: true).equatable().frame(width: 144, height: 144).clipShape(RoundedRectangle(cornerRadius: 12))
-                    } else { LibraryArtwork(data: data ?? fallback, size: 144) }
+                    } else { LibraryArtwork(data: data ?? fallback, symbol: circular ? "person.fill" : "music.note.list", size: 144, circular: circular) }
                 }
                     .overlay(alignment: .topTrailing) {
                         Menu {
@@ -78,53 +78,63 @@ struct ArtworkChooser: View {
 }
 private struct CropSelection: Identifiable { let id = UUID(); let bitmap: ArtworkBitmap }
 
+/// Shared sheet geometry for create/edit artist and playlist metadata.
+struct EntityDetailsForm: View {
+    let title: String
+    let placeholder: String
+    let circular: Bool
+    let useDefaultCover: Bool
+    let save: (String, Data?) -> String?
+    @Environment(\.dismiss) private var dismiss
+    @ViewState private var name: String
+    @ViewState private var artwork: Data?
+    @ViewState private var error: String?
+    init(title: String, placeholder: String, initialName: String = "", initialArtwork: Data? = nil, circular: Bool = false, useDefaultCover: Bool = false, save: @escaping (String, Data?) -> String?) {
+        self.title = title; self.placeholder = placeholder; self.circular = circular; self.useDefaultCover = useDefaultCover; self.save = save
+        _name = State(initialValue: initialName); _artwork = State(initialValue: initialArtwork)
+    }
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                Text(title).font(.headline).frame(maxWidth: .infinity, alignment: .leading)
+                ArtworkChooser(data: $artwork, circular: circular, compactEditor: true, useDefaultCover: useDefaultCover)
+                    .frame(maxWidth: .infinity).padding(.vertical, 8)
+                TextField(placeholder, text: $name).songEditorField().accessibilityLabel(placeholder)
+                if let error { Text(error).font(.caption).foregroundStyle(.orange) }
+                HStack {
+                    Button("取消") { dismiss() }.foregroundStyle(.white).frame(minWidth: 44, minHeight: 44)
+                    Spacer()
+                    Button("儲存") {
+                        error = save(name, artwork)
+                        if error == nil { dismiss() }
+                    }.foregroundStyle(.white).frame(minWidth: 44, minHeight: 44).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }.buttonStyle(.plain)
+            }.padding(24)
+        }.frame(minWidth: 280, maxWidth: 500).themedSheet().presentationDetents([.height(480), .large])
+    }
+}
 struct PlaylistDetailsEditor: View {
     @ObservedObject var model: PlayerModel
     let playlistID: String
-    @Environment(\.dismiss) private var dismiss
-    @ViewState private var name = ""
-    @ViewState private var artwork: Data?
-    @ViewState private var error: String?
     var body: some View {
-        VStack(spacing: 20) {
-            Text("編輯播放清單").font(.headline)
-            ArtworkChooser(data: $artwork)
-            TextField("清單名稱", text: $name).textFieldStyle(.roundedBorder).accessibilityLabel("清單名稱")
-            if let error { Text(error).font(.caption).foregroundStyle(.orange) }
-            HStack {
-                Button("取消") { dismiss() }.frame(minHeight: 44)
-                Spacer()
-                Button("儲存") { if model.updatePlaylist(playlistID, name: name, artwork: artwork) { dismiss() } else { error = "名稱須為1～60字，且不可與其他清單重複。" } }.frame(minHeight: 44)
-            }
-        }.padding(24).frame(minWidth: 300).themedSheet()
-            .onAppear { name = model.playlistTitle(playlistID); artwork = model.collection.playlistAppearance?[playlistID]?.artwork }
+        EntityDetailsForm(title: "編輯播放清單", placeholder: "清單名稱", initialName: model.playlistTitle(playlistID), initialArtwork: model.collection.playlistAppearance?[playlistID]?.artwork, useDefaultCover: true) { name, artwork in
+            model.updatePlaylist(playlistID, name: name, artwork: artwork, replaceArtwork: true) ? nil : "名稱須為1～60字，且不可與其他清單重複。"
+        }
     }
 }
 struct ArtistDetailsEditor: View {
     @ObservedObject var model: PlayerModel
     let artist: MusicArtist
     var onSaved: ((String) -> Void)? = nil
-    @Environment(\.dismiss) private var dismiss
-    @ViewState private var name = ""
-    @ViewState private var artwork: Data?
-    @ViewState private var error: String?
     var body: some View {
-        VStack(spacing: 20) {
-            Text("編輯歌手資料").font(.headline)
-            ArtworkChooser(data: $artwork, circular: true)
-            TextField("歌手名稱", text: $name).textFieldStyle(.roundedBorder).accessibilityLabel("歌手名稱")
-            if let error { Text(error).font(.caption).foregroundStyle(.orange) }
-            HStack {
-                Button("取消") { dismiss() }.frame(minHeight: 44)
-                Spacer()
-                Button("儲存") {
-                    let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !title.isEmpty, title.count <= 100, !model.collection.artists.contains(where: { $0.id != artist.id && $0.name.localizedCaseInsensitiveCompare(title) == .orderedSame }) else { error = "名稱須為1～100字，且不可與其他歌手重複。"; return }
-                    let id = artist.id.hasPrefix("native:") ? model.editableArtist(named: artist.name).id : artist.id
-                    model.updateArtist(id, name: title, avatar: artwork); onSaved?(id); dismiss()
-                }.frame(minHeight: 44)
-            }
-        }.padding(24).frame(minWidth: 300).themedSheet().onAppear { name = artist.name; artwork = artist.avatar }
+        EntityDetailsForm(title: "編輯歌手資料", placeholder: "歌手名稱", initialName: artist.name, initialArtwork: artist.avatar, circular: true) { name, artwork in
+            let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !clean.isEmpty, clean.count <= 100, !model.collection.artists.contains(where: { $0.id != artist.id && $0.name.localizedCaseInsensitiveCompare(clean) == .orderedSame }) else { return "名稱須為1～100字，且不可與其他歌手重複。" }
+            guard artwork == nil || artwork!.count <= 5_000_000 else { return "圖片須小於5 MB。" }
+            let id = artist.id.hasPrefix("native:") ? model.editableArtist(named: artist.name).id : artist.id
+            model.updateArtist(id, name: clean, avatar: artwork, replaceAvatar: true); onSaved?(id)
+            return nil
+        }
     }
 }
 struct PlaylistSongsEditor: View {

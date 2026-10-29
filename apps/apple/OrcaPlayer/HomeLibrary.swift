@@ -9,9 +9,6 @@ struct MusicHomeView: View {
     private var artistSort: String { model.collection.artistSort ?? ((model.collection.artistOrder ?? []).isEmpty ? "歌曲數目" : "自訂順序") }
     private var monthly: Bool { get { navigation.monthly } nonmutating set { navigation.monthly = newValue } }
     @ViewState private var newList = false
-    @ViewState private var name = ""
-    @ViewState private var listError: String?
-    @ViewState private var newPlaylistArtwork: Data?
     @ViewState private var editingPlaylist: String?
     @ViewState private var editingSongs: String?
     @ViewState private var deletingPlaylist: String?
@@ -25,7 +22,6 @@ struct MusicHomeView: View {
     private var selectedPlaylist: String? { get { navigation.selectedPlaylist } nonmutating set { navigation.selectedPlaylist = newValue } }
     private var selectedArtist: String? { get { navigation.selectedArtist } nonmutating set { navigation.selectedArtist = newValue } }
     @ViewState private var newArtist = false
-    @ViewState private var artistName = ""
     var body: some View {
         Group {
         if selectedPlaylist != nil {
@@ -38,9 +34,9 @@ struct MusicHomeView: View {
                 ForEach(["播放清單", "歌手列表", "全部歌曲"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented).labelsHidden().padding(.horizontal, 20).frame(height: 56)
         ScrollViewReader { reader in
-        ScrollView { LazyVStack(alignment: .leading, spacing: 18) {
+        ScrollView { LazyVStack(alignment: .leading, spacing: 12) {
             if !model.importSummary.isEmpty { Text(model.importSummary).font(.caption).foregroundStyle(OrcaTheme.cyan) }
-            Color.clear.frame(height: 1).id("home-top")
+            Color.clear.frame(height: 0).id("home-top")
             if section == "播放清單" { playlistRows }
             else if section == "歌手列表" { artistRows }
             else {
@@ -53,8 +49,13 @@ struct MusicHomeView: View {
             Picker("排行榜範圍", selection: Binding(get: { monthly }, set: { monthly = $0 })) { Text("當月").tag(true); Text("累計").tag(false) }.pickerStyle(.segmented).labelsHidden()
             rankingRows
             }
-        }.padding(20).scrollTargetLayout() }
-        .refreshable { if section == "播放清單" { navigation.allPlaylistsExpanded = true } }
+        }.padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 20).scrollTargetLayout() }
+        .simultaneousGesture(DragGesture(minimumDistance: 24).onEnded { value in
+            guard draggedPlaylist == nil, draggedArtist == nil, draggedSong == nil else { return }
+            navigation.handleSwipe(horizontal: value.translation.width, vertical: value.translation.height)
+        })
+        .accessibilityAction(named: "展開全部播放清單") { navigation.allPlaylistsExpanded = true }
+        .accessibilityAction(named: "收合播放清單") { navigation.allPlaylistsExpanded = false }
         .scrollPosition(id: Binding(get: { navigation.scrollPositions[section] }, set: { value in
             navigation.recordScrollPosition(value, in: section)
         }))
@@ -65,18 +66,13 @@ struct MusicHomeView: View {
         }
         }
         .sheet(isPresented: $newArtist) {
-            VStack(spacing: 20) {
-                Text("新增歌手").font(.title2)
-                TextField("歌手名稱", text: $artistName).textFieldStyle(.roundedBorder)
-                HStack { Button("取消") { newArtist = false }; Spacer(); Button("新增") {
-                    let value = artistName.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !value.isEmpty, value.count <= 100 else { return }
-                    if !model.collection.artists.contains(where: { $0.name.localizedCaseInsensitiveCompare(value) == .orderedSame }), !groups.contains(where: { $0.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
-                        model.collection.artists.append(MusicArtist(name: value))
-                    }
-                    newArtist = false
-                } }
-            }.padding(24).frame(minWidth: 300).presentationBackground(OrcaTheme.sheet)
+            EntityDetailsForm(title: "新增歌手", placeholder: "歌手名稱", circular: true) { name, artwork in
+                let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !clean.isEmpty, clean.count <= 100, !groups.contains(where: { $0.localizedCaseInsensitiveCompare(clean) == .orderedSame }) else { return "名稱須為1～100字，且不可與其他歌手重複。" }
+                guard artwork == nil || artwork!.count <= 5_000_000 else { return "圖片須小於5 MB。" }
+                model.collection.artists.append(MusicArtist(name: clean, avatar: artwork))
+                return nil
+            }
         }
         .sheet(isPresented: $newList) { newPlaylist }
         .sheet(isPresented: Binding(get: { editingPlaylist != nil }, set: { if !$0 { editingPlaylist = nil } })) {
@@ -117,15 +113,12 @@ struct MusicHomeView: View {
                 .onDrag { draggedPlaylist = id; return NSItemProvider(object: id as NSString) }
                 .onDrop(of: [.text], delegate: LibraryReorderDrop(target: id, dragged: $draggedPlaylist) { source, target in model.movePlaylist(source, to: target) })
             }
-            Button { name = ""; newPlaylistArtwork = nil; listError = nil; newList = true } label: {
+            Button { newList = true } label: {
                 GeometryReader { geo in
                     Image(systemName: "plus").font(.system(size: 40, weight: .light))
                         .frame(width: geo.size.width, height: geo.size.height).background(.white.opacity(0.2), in: RoundedRectangle(cornerRadius: 18))
                 }.aspectRatio(1, contentMode: .fit).foregroundStyle(.white).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityLabel("新增播放清單")
-            if model.visiblePlaylistIDs.count > 3 {
-                Button(navigation.allPlaylistsExpanded ? "收合播放清單" : "顯示全部播放清單") { navigation.allPlaylistsExpanded.toggle() }.buttonStyle(.plain).frame(minHeight: 44)
-            }
             if !(model.collection.hiddenPlaylists ?? []).isEmpty {
                 Button { hiddenLists = true } label: { Label("管理隱藏清單", systemImage: "eye.slash").frame(minHeight: 44) }.buttonStyle(.plain)
             }
@@ -175,6 +168,7 @@ struct MusicHomeView: View {
     private var artistRows: some View {
         LazyVStack(alignment: .leading, spacing: 12) {
             HStack {
+                Text("\(groups.count) 位歌手").font(.caption).foregroundStyle(OrcaTheme.muted)
                 Spacer()
                 Button { sortingArtists = true } label: {
                     Label(artistSort, systemImage: "arrow.up.arrow.down").font(.subheadline).foregroundStyle(.white).frame(minHeight: 44).contentShape(Rectangle())
@@ -212,7 +206,7 @@ struct MusicHomeView: View {
                     model.moveArtist(source, to: target, in: groups.map { model.artistKey($0) }); model.collection.artistSort = "自訂順序"
                 })
             }
-            Button { artistName = ""; newArtist = true } label: {
+            Button { newArtist = true } label: {
                 GeometryReader { geo in
                     Image(systemName: "plus").font(.system(size: 38, weight: .light))
                         .frame(width: geo.size.width, height: geo.size.height).background(.white.opacity(0.3), in: Circle())
@@ -250,24 +244,14 @@ struct MusicHomeView: View {
         }.scrollTargetLayout()
     }
     private var newPlaylist: some View {
-        VStack(spacing: 20) {
-            Text("新增播放清單").font(.title2)
-            ArtworkChooser(data: $newPlaylistArtwork, compactEditor: true, useDefaultCover: true)
-                .frame(maxWidth: .infinity).padding(.vertical, 16)
-            TextField("清單名稱", text: $name).songEditorField().accessibilityLabel("清單名稱")
-            if let listError { Text(listError).font(.caption).foregroundStyle(.orange) }
-            HStack {
-                Button("取消") { newList = false }.frame(minHeight: 44)
-                Spacer()
-                Button("儲存") {
-                    let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !title.isEmpty, title.count <= 60 else { listError = "名稱須為1～60字。"; return }
-                    guard !(PlayerModel.systemPlaylistIDs + model.collection.playlists.map(\.id)).contains(where: { model.playlistTitle($0).localizedCaseInsensitiveCompare(title) == .orderedSame }) else { listError = "已有相同名稱。"; return }
-                    if model.createPlaylist(title, artwork: newPlaylistArtwork) != nil { newList = false }
-                }.frame(minHeight: 44)
-            }
-        }.padding(24).frame(minWidth: 280).themedSheet().presentationDetents([.height(480), .large])
+        EntityDetailsForm(title: "新增播放清單", placeholder: "清單名稱", useDefaultCover: true) { name, artwork in
+            let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !clean.isEmpty, clean.count <= 60, !(PlayerModel.systemPlaylistIDs + model.collection.playlists.map(\.id)).contains(where: { model.playlistTitle($0).localizedCaseInsensitiveCompare(clean) == .orderedSame }) else { return "名稱須為1～60字，且不可與其他清單重複。" }
+            guard model.createPlaylist(clean, artwork: artwork) != nil else { return "無法儲存清單，請檢查名稱與圖片大小。" }
+            return nil
+        }
     }
+
 }
 
 struct LibraryReorderDrop: DropDelegate {

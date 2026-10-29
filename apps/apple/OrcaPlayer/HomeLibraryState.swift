@@ -17,6 +17,15 @@ import OSLog
         if artist { selectedPlaylist = nil; selectedArtist = id }
         else { selectedArtist = nil; selectedPlaylist = id }
     }
+    static let sections = ["播放清單", "歌手列表", "全部歌曲"]
+    func handleSwipe(horizontal x: Double, vertical y: Double) {
+        if abs(x) >= 60, abs(x) > abs(y) * 1.3, let index = Self.sections.firstIndex(of: section) {
+            let next = min(Self.sections.count - 1, max(0, index + (x < 0 ? 1 : -1)))
+            if next != index { section = Self.sections[next] }
+        } else if section == "播放清單", y >= 50, y > abs(x) * 1.3 {
+            allPlaylistsExpanded = true
+        }
+    }
     var showsRankings: Bool { section == "播放清單" }
     @Published var scrollPositions: [String: String] = [:]
     func recordScrollPosition(_ id: String?, in section: String) {

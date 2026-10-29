@@ -63,12 +63,13 @@ extension PlayerModel {
         else { let artist = MusicArtist(name: artistName); state.artists.append(artist); info.artistID = artist.id }
         state.songs[track.id] = info; collection = state
     }
-    func updateArtist(_ id: String, name: String, avatar: Data?) {
+    func updateArtist(_ id: String, name: String, avatar: Data?, replaceAvatar: Bool = false) {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, name.count <= 100, let index = collection.artists.firstIndex(where: { $0.id == id }) else { return }
         guard !collection.artists.contains(where: { $0.id != id && $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }) else { message = "已有相同名稱的歌手。"; return }
         var state = collection; state.artists[index].name = name
-        if let avatar { guard avatar.count <= 5_000_000 else { message = "頭貼請小於5 MB。"; return }; state.artists[index].avatar = avatar }
+        if let avatar, avatar.count > 5_000_000 { message = "頭貼請小於5 MB。"; return }
+        if replaceAvatar || avatar != nil { state.artists[index].avatar = avatar }
         collection = state
     }
     @discardableResult func createPlaylist(_ name: String, artwork: Data? = nil) -> String? {
@@ -189,13 +190,13 @@ enum RatingInteraction {
         state.playlistOrder = ids + state.playlistOrder.filter { !ids.contains($0) }
         collection = state
     }
-    func updatePlaylist(_ id: String, name: String, artwork: Data?) -> Bool {
+    func updatePlaylist(_ id: String, name: String, artwork: Data?, replaceArtwork: Bool = false) -> Bool {
         let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty, title.count <= 60, artwork == nil || artwork!.count <= 5_000_000 else { return false }
         let ids = Self.systemPlaylistIDs + collection.playlists.map(\.id)
         guard ids.contains(id), !ids.contains(where: { $0 != id && playlistTitle($0).localizedCaseInsensitiveCompare(title) == .orderedSame }) else { return false }
         var state = collection; var appearances = state.playlistAppearance ?? [:]
-        appearances[id] = PlaylistAppearance(name: title, artwork: artwork ?? appearances[id]?.artwork)
+        appearances[id] = PlaylistAppearance(name: title, artwork: replaceArtwork ? artwork : (artwork ?? appearances[id]?.artwork))
         state.playlistAppearance = appearances
         if let i = state.playlists.firstIndex(where: { $0.id == id }) { state.playlists[i].name = title }
         collection = state; return true

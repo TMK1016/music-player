@@ -70,20 +70,57 @@ struct LibraryDetailPage: View {
     private var carousel: some View {
         GeometryReader { geo in
             let side = min(240.0, geo.size.width * 0.64)
+            CollectionCoverCarousel(ids: visibleIDs, selection: Binding(get: { selectedID }, set: { navigation.selectDetail($0, artist: artist) }), side: side, inset: max(0, (geo.size.width - side) / 2), title: title, artwork: artwork)
+
+        }.frame(height: 250)
+    }
+}
+
+/// A local scroll binding separates layout reports from the selected collection.
+/// Restore the requested ID after layout before accepting visible-position reports.
+private struct CollectionCoverCarousel: View {
+    let ids: [String]
+    @Binding var selection: String
+    let side: CGFloat
+    let inset: CGFloat
+    let title: (String) -> String
+    let artwork: (String) -> Data?
+    @ViewState private var position: String?
+    @ViewState private var ready = false
+    var body: some View {
+        ScrollViewReader { reader in
             ScrollView(.horizontal) {
                 LazyHStack(spacing: 16) {
-                    ForEach(visibleIDs, id: \.self) { id in
-                        Button { navigation.selectDetail(id, artist: artist) } label: {
+                    ForEach(ids, id: \.self) { id in
+                        Button { selection = id } label: {
                             CollectionDetailCover(data: artwork(id)).frame(width: side, height: side)
                                 .clipShape(RoundedRectangle(cornerRadius: 20))
-                                .brightness(id == selectedID ? 0 : -0.35).scaleEffect(id == selectedID ? 1 : 0.93)
-                        }.buttonStyle(.plain).id(id).accessibilityLabel("切換至\(artist ? "歌手" : "清單")：\(title(id))")
+                                .brightness(id == selection ? 0 : -0.35).scaleEffect(id == selection ? 1 : 0.93)
+                        }.buttonStyle(.plain).id(id).accessibilityLabel("切換至：\(title(id))")
+                            .accessibilityValue(id == selection ? "目前選取" : "相鄰封面")
                     }
                 }.scrollTargetLayout()
-            }.contentMargins(.horizontal, max(0, (geo.size.width - side) / 2), for: .scrollContent)
+            }.contentMargins(.horizontal, inset, for: .scrollContent)
                 .scrollIndicators(.hidden).scrollTargetBehavior(.viewAligned)
-                .scrollPosition(id: Binding<String?>(get: { selectedID }, set: { if let id = $0, id != selectedID { navigation.selectDetail(id, artist: artist) } }), anchor: .center)
-        }.frame(height: 250)
+                .scrollPosition(id: $position, anchor: .center)
+                .task {
+                    ready = false
+                    await Task.yield()
+                    guard !Task.isCancelled else { return }
+                    position = selection
+                    reader.scrollTo(selection, anchor: .center)
+                    ready = true
+                }
+                .onChange(of: selection) { _, id in
+                    guard position != id else { return }
+                    position = id
+                    reader.scrollTo(id, anchor: .center)
+                }
+                .onChange(of: position) { _, id in
+                    guard ready, let id, ids.contains(id), id != selection else { return }
+                    selection = id
+                }
+        }
     }
 }
 

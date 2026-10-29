@@ -87,7 +87,7 @@ struct SongEditor: View {
                 }.accessibilityLabel("已有歌手標籤")
             }
 
-            HStack { Button("取消") { dismiss() }; Spacer(); Button("儲存") { model.editSong(track, title: title, artistName: artist); model.setCover(track.id, data: cover); if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { dismiss() } }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 200 || artist.count > 100) }.buttonStyle(.bordered).padding(.top, 8)
+            HStack { Button("取消") { dismiss() }; Spacer(); Button("儲存") { model.editSong(track, title: title, artistName: artist); model.setCover(track.id, data: cover); if !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { dismiss() } }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 200 || artist.count > 100) }.buttonStyle(.plain).foregroundStyle(.white).padding(.top, 8)
         }.padding(20) }.frame(minWidth: 280, maxWidth: 500).themedSheet().presentationDetents(artistFocused ? [.height(570), .large] : [.height(500), .large]).onAppear { title = model.title(track); cover = model.details(track.id).cover; artist = model.artist(track) == "未知歌手" ? "" : model.artist(track) }
     }
 }

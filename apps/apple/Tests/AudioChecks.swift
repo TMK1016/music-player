@@ -416,6 +416,23 @@ private final class PreparationProbe: @unchecked Sendable {
         precondition(!offRestored.eqEnabled && offRestored.gains == EQBands.flat && offRestored.presetName == "原聲", "Master off survives reload even with a saved song binding")
         model.bindSong(to: "") // Keep later independent binding scenarios isolated.
         let home = model.homeState
+        home.section = "播放清單"
+        home.allPlaylistsExpanded = false
+        let audioCallsBeforeSwipe = audio.configurationCalls
+        home.handleSwipe(horizontal: 5, vertical: 90)
+        precondition(home.allPlaylistsExpanded, "Downward swipe expands playlists without a show-all button")
+        home.handleSwipe(horizontal: -90, vertical: 10)
+        precondition(home.section == "歌手列表", "Left swipe selects the next Home category")
+        home.handleSwipe(horizontal: -90, vertical: 10)
+        precondition(home.section == "全部歌曲", "Second left swipe selects All Songs")
+        home.handleSwipe(horizontal: -90, vertical: 10)
+        precondition(home.section == "全部歌曲", "Home swipe stops at the last category")
+        home.handleSwipe(horizontal: 90, vertical: 10)
+        precondition(home.section == "歌手列表", "Right swipe selects the previous category")
+        home.handleSwipe(horizontal: 40, vertical: 45)
+        precondition(home.section == "歌手列表" && audio.configurationCalls == audioCallsBeforeSwipe, "Short diagonal swipes do not navigate or configure audio")
+        model.openHome()
+        precondition(!home.allPlaylistsExpanded, "Home returns to collapsed playlist preview")
         home.selectDetail("list.test", artist: false)
         precondition(home.isShowingDetail && home.selectedArtist == nil, "Selecting a list opens only its own detail")
         home.selectDetail("artist.test", artist: true)
@@ -426,6 +443,7 @@ private final class PreparationProbe: @unchecked Sendable {
         let cover = Data([1, 2, 3])
         let created = model.createPlaylist("V10測試清單", artwork: cover)!
         precondition(model.collection.playlistAppearance?[created]?.artwork == cover, "New playlist atomically saves its chosen cover")
+        precondition(model.updatePlaylist(created, name: "V10測試清單", artwork: nil, replaceArtwork: true) && model.collection.playlistAppearance?[created]?.artwork == nil, "Removing a playlist photo restores its default cover")
         let selection: Set<String> = [model.tracks[0].id, model.tracks[1].id, "not-in-library"]
         model.addSongs(selection, toPlaylist: created)
         model.addSongs(selection, toPlaylist: created)
@@ -436,6 +454,9 @@ private final class PreparationProbe: @unchecked Sendable {
         let oldArtist = model.artist(model.tracks[0])
         let target = model.assignSongs([model.tracks[0].id], toArtistNamed: "V10測試歌手")!
         precondition(model.artist(model.tracks[0]) == "V10測試歌手" && model.collection.songs[model.tracks[0].id]?.artistID == target, "Artist picker assigns the selected song to its target artist")
+        model.updateArtist(target, name: "V10測試歌手", avatar: cover)
+        model.updateArtist(target, name: "V10測試歌手", avatar: nil, replaceAvatar: true)
+        precondition(model.collection.artists.first(where: { $0.id == target })?.avatar == nil, "Removing an artist photo persists the default avatar")
         model.editSong(model.tracks[0], title: model.title(model.tracks[0]), artistName: oldArtist)
         model.collection.artists.removeAll { $0.id == target }
         model.deletePlaylist(created)
